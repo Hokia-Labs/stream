@@ -601,12 +601,17 @@ const sidebar = (model: Model, h: H): Html =>
             ],
           ),
           currentOrg.tenant === 'Gov'
-            ? h.div(
+            ? h.dl(
                 [h.Class('system-notice mono')],
                 [
-                  h.span([], [`Accredited to ${systemHigh} · ${enclaveName}`]),
-                  h.span([], ['Last login 2026-10-02 14:03Z · WS-0412']),
-                ],
+                  ['System high', systemHigh],
+                  ['Enclave', enclaveName],
+                  ['Last login', '10-02 14:03Z'],
+                  ['Workstation', 'WS-0412'],
+                ].flatMap(([term, value]) => [
+                  h.dt([], [term ?? '']),
+                  h.dd([], [value ?? '']),
+                ]),
               )
             : h.empty,
         ],
