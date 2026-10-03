@@ -1,0 +1,60 @@
+{
+  "name": "stream",
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": "1.4.2",
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "cf dev",
+    "dev:ui": "vite --mode ui",
+    "dev:local": "node scripts/dev-local.ts",
+    "build": "cf build",
+    "preview": "vite preview",
+    "typecheck": "tsc --project tsconfig.json --noEmit && tsc --project worker/tsconfig.json --noEmit",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "test": "vitest run",
+    "lint": "oxlint --type-aware --deny-warnings --report-unused-disable-directives-severity error .",
+    "lint:fix": "bun run lint --fix",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test && bun run build && bun run deploy:check",
+    "deploy:check": "cf deploy --dry-run"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "1.0.0",
+    "@earendil-works/pi-durable": "1.0.0",
+    "@effect/platform-browser": "4.0.0",
+    "@foldkit/ui": "0.165.0",
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans-condensed": "^5.3.0",
+    "agents": "0.26.0",
+    "effect": "4.0.0",
+    "foldkit": "0.165.0",
+    "marked": "^14",
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^2.0.0-beta.sha-52b0dc0e9",
+    "@cloudflare/workers-types": "5.20261003.1",
+    "@foldkit/devtools": "0.165.0",
+    "@foldkit/devtools-mcp": "0.24.0",
+    "@foldkit/oxlint-plugin": "0.15.1",
+    "@foldkit/vite-plugin": "0.26.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "24.19.1",
+    "@types/three": "0.169.0",
+    "cf": "1.0.0-beta.12",
+    "happy-dom": "20.14.5",
+    "miniflare": "5.20261001.0-alpha",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.85.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

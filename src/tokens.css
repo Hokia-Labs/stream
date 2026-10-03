@@ -1,0 +1,60 @@
+/* Drafting Sheet tokens. DESIGN.md is the source of truth. */
+:root {
+  --font-body: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
+  --font-display:
+    'IBM Plex Sans Condensed', 'IBM Plex Sans Variable', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 16px;
+  --text-xl: 19px;
+  --text-2xl: 23px;
+  --text-3xl: 28px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius: 2px;
+
+  --paper: oklch(0.975 0.004 250);
+  --sheet: oklch(0.995 0.002 250);
+  --surface: oklch(0.955 0.006 250);
+  --ink: oklch(0.24 0.02 260);
+  --muted: oklch(0.47 0.015 260);
+  --rule: oklch(0.89 0.008 255);
+  --rule-strong: oklch(0.76 0.012 255);
+  --accent: oklch(0.46 0.19 258);
+  --accent-strong: oklch(0.38 0.17 258);
+  --accent-line: oklch(0.78 0.08 258);
+  --accent-wash: oklch(0.955 0.022 258);
+  --accent-fg: oklch(0.995 0.002 250);
+  --grid-minor: oklch(0.46 0.19 258 / 0.06);
+  --grid-major: oklch(0.46 0.19 258 / 0.12);
+  --success: oklch(0.5 0.11 155);
+  --success-wash: oklch(0.95 0.03 155);
+  --warning: oklch(0.52 0.12 65);
+  --warning-wash: oklch(0.95 0.04 80);
+  --error: oklch(0.52 0.19 28);
+  --error-wash: oklch(0.95 0.03 28);
+
+  --primary: var(--accent);
+  --line: var(--rule);
+
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}

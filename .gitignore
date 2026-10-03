@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.cloudflare/
+build/
+.local/
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.*.local
+.dev.vars
+.dev.vars.*
+.wrangler/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Claude Code worktrees
+.claude/worktrees/
