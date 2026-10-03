@@ -5007,6 +5007,25 @@ const modal = (model: Model, h: H, isClosing = false): Html =>
 
 // VIEW
 
+const markingBanner = (h: H): Html =>
+  h.div(
+    [
+      h.Class('marking-banner'),
+      h.Attribute('role', 'note'),
+      h.AriaLabel(
+        'CUI, specified export controlled. Air-gapped enclave. ITAR-controlled data, authorized U.S. persons only.',
+      ),
+    ],
+    [
+      h.strong([h.Class('marking-level')], ['CUI // SP-EXPT']),
+      h.span([h.Class('marking-detail')], ['Air-gapped enclave']),
+      h.span(
+        [h.Class('marking-detail')],
+        ['ITAR-controlled · Authorized U.S. persons only'],
+      ),
+    ],
+  )
+
 export const view = (sourceModel: Model, h: H): Document => {
   const model = modifyFields(sourceModel, {
     workspace: workspace =>
@@ -5019,11 +5038,12 @@ export const view = (sourceModel: Model, h: H): Document => {
     body: h.div(
       [
         h.Class(
-          `app-shell ${model.isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${model.isResizingSidebar ? 'is-resizing' : ''}`,
+          `app-shell ${model.isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${model.isResizingSidebar ? 'is-resizing' : ''} ${currentOrg.tenant === 'Gov' ? 'has-marking' : ''}`,
         ),
         h.Attribute('style', `--sidebar-width: ${model.sidebarWidth}px`),
       ],
       [
+        ...(currentOrg.tenant === 'Gov' ? [markingBanner(h)] : []),
         sidebar(model, h),
         h.div(
           [h.Class('main-shell')],
