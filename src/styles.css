@@ -6508,10 +6508,11 @@ button:disabled,
   }
 }
 
-/* CUI / ITAR marking banner (Gov tenant) */
+/* Classification marking banner (Gov tenant) */
 .has-marking {
   --marking-h: 22px;
   padding-top: var(--marking-h);
+  padding-bottom: var(--marking-h);
 }
 .marking-banner {
   position: fixed;
@@ -6523,7 +6524,7 @@ button:disabled,
   gap: 14px;
   height: var(--marking-h, 22px);
   padding: 0 12px;
-  background: #502b85;
+  background: #c8102e;
   color: #fff;
   font: 500 10.5px/1 var(--font-mono, monospace);
   letter-spacing: 0.08em;
@@ -6535,29 +6536,36 @@ button:disabled,
 .marking-level {
   font-weight: 700;
 }
-.marking-detail::before {
-  content: '·';
-  margin-right: 14px;
-  opacity: 0.6;
-}
 .has-marking .sidebar,
 .has-marking .finding-drawer,
 .has-marking .modal-backdrop {
   top: var(--marking-h);
+}
+.marking-banner.bottom {
+  inset: auto 0 0;
+}
+.has-marking .sidebar,
+.has-marking .inspector,
+.has-marking .finding-drawer,
+.has-marking .modal-backdrop {
+  bottom: var(--marking-h);
+}
+.has-marking .toast {
+  bottom: calc(25px + var(--marking-h));
+}
+.has-marking .bulk-bar.floating {
+  bottom: calc(24px + var(--marking-h));
 }
 .has-marking .inspector {
   top: calc(70px + var(--marking-h));
 }
 @media (min-width: 761px) {
   .has-marking .main-shell:has(> .main-content > .graph-page) {
-    height: calc(100vh - var(--marking-h));
+    height: calc(100vh - 2 * var(--marking-h));
   }
 }
 @media (max-width: 760px) {
   .has-marking .inspector {
     top: var(--marking-h);
-  }
-  .marking-detail + .marking-detail {
-    display: none;
   }
 }
