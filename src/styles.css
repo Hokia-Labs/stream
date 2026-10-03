@@ -6566,3 +6566,20 @@ button:disabled,
     top: var(--marking-h);
   }
 }
+.marking-banner.top {
+  view-transition-name: marking-top;
+}
+.marking-banner.bottom {
+  view-transition-name: marking-bottom;
+}
+::view-transition-group(marking-top),
+::view-transition-group(marking-bottom) {
+  z-index: 1000;
+  animation: none;
+}
+::view-transition-old(marking-top),
+::view-transition-new(marking-top),
+::view-transition-old(marking-bottom),
+::view-transition-new(marking-bottom) {
+  animation: none;
+}
