@@ -631,24 +631,30 @@ const topbar = (model: Model, h: H): Html =>
             ],
             [icon('search', h), 'Jump to…', h.kbd([], ['⌘K'])],
           ),
-          h.select(
+          h.label(
+            [h.Class('branch-field')],
             [
-              h.Class('branch-select'),
-              h.AriaLabel('Active branch'),
-              h.Value(Option.getOrElse(model.maybeActiveBranch, () => '')),
-              h.OnChange(id => Message.SelectedBranch({ id })),
-            ],
-            [
-              h.option([h.Value('')], ['Base']),
-              ...model.workspace.branches
-                .filter(branch => branch.status === 'Draft')
-                .map(branch =>
-                  h.keyed('option')(
-                    branch.id,
-                    [h.Value(branch.id)],
-                    [branch.title],
-                  ),
-                ),
+              h.span([h.Class('branch-field-label')], ['Branch:']),
+              h.select(
+                [
+                  h.Class('branch-select'),
+                  h.AriaLabel('Active branch'),
+                  h.Value(Option.getOrElse(model.maybeActiveBranch, () => '')),
+                  h.OnChange(id => Message.SelectedBranch({ id })),
+                ],
+                [
+                  h.option([h.Value('')], ['Base']),
+                  ...model.workspace.branches
+                    .filter(branch => branch.status === 'Draft')
+                    .map(branch =>
+                      h.keyed('option')(
+                        branch.id,
+                        [h.Value(branch.id)],
+                        [branch.title],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
           h.span(
@@ -804,7 +810,13 @@ const graph = (model: Model, compact: boolean, h: H): Html => {
           h.div([
             h.Class('graph-backdrop'),
             h.AriaHidden(true),
-            h.OnClick(Message.ClosedInspector()),
+            h.OnPointerDown(
+              (_pointerType, mouseButton, _screenX, _screenY, _time, x, y) =>
+                mouseButton === 0
+                  ? Option.some(Message.PressedGraphCanvas({ x, y }))
+                  : Option.none(),
+            ),
+            h.OnClick(Message.ClickedGraphBackdrop()),
           ]),
           h.div(
             [

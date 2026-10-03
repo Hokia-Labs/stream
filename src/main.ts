@@ -73,6 +73,10 @@ export const Model = Schema.Struct({
   search: Schema.String,
   filter: Schema.String,
   maybeSelectedNode: Schema.Option(Schema.String),
+  maybeGraphPan: Schema.Option(
+    Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+  ),
+  didPanGraph: Schema.Boolean,
   maybeSelectedRun: Schema.Option(Schema.String),
   maybeActiveBranch: Schema.Option(Schema.String),
   modal: Modal,
@@ -145,6 +149,8 @@ export const initialModel: Model = {
   search: '',
   filter: 'All artifacts',
   maybeSelectedNode: Option.none(),
+  maybeGraphPan: Option.none(),
+  didPanGraph: false,
   maybeSelectedRun: Option.none(),
   maybeActiveBranch: Option.none(),
   modal: Modal.Closed(),
@@ -770,6 +776,18 @@ export const motionTransition = (
   return false
 }
 
+const PanGraph = Command.define('PanGraph', {
+  args: { dx: Schema.Number, dy: Schema.Number },
+  messages: [Message.CompletedPanGraph],
+  execute: ({ dx, dy }) =>
+    Effect.try(() => {
+      document.querySelector('.graph-page .graph-scroll')?.scrollBy(dx, dy)
+    }).pipe(
+      Effect.catch(() => Effect.void),
+      Effect.as(Message.CompletedPanGraph()),
+    ),
+})
+
 const inspectorWidth = 340
 const RevealGraphNode = Command.define('RevealGraphNode', {
   args: { id: Schema.String },
@@ -1114,6 +1132,36 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     ClosedInspector: () => ({
       model: modifyFields(model, { maybeSelectedNode: () => Option.none() }),
     }),
+    PressedGraphCanvas: ({ x, y }) => ({
+      model: modifyFields(model, {
+        maybeGraphPan: () => Option.some({ x, y }),
+        didPanGraph: () => false,
+      }),
+    }),
+    MovedGraphPan: ({ x, y }) =>
+      Option.match(model.maybeGraphPan, {
+        onNone: () => ({ model }),
+        onSome: start => {
+          const dx = start.x - x
+          const dy = start.y - y
+          return {
+            model: modifyFields(model, {
+              maybeGraphPan: () => Option.some({ x, y }),
+              didPanGraph: moved => moved || Math.abs(dx) + Math.abs(dy) > 2,
+            }),
+            commands: [PanGraph({ dx, dy })],
+          }
+        },
+      }),
+    ReleasedGraphPan: () => ({
+      model: modifyFields(model, { maybeGraphPan: () => Option.none() }),
+    }),
+    ClickedGraphBackdrop: () => ({
+      model: model.didPanGraph
+        ? modifyFields(model, { didPanGraph: () => false })
+        : modifyFields(model, { maybeSelectedNode: () => Option.none() }),
+    }),
+    CompletedPanGraph: () => ({ model }),
     SelectedRun: ({ id }) => ({
       model: modifyFields(model, {
         maybeSelectedRun: () => Option.some(id),
@@ -2783,6 +2831,7 @@ const choosePaletteItem = (model: Model, index: number): UpdateReturn => {
 // SUBSCRIPTION
 
 const panelSafeZone = [
+  '.graph-backdrop',
   '.finding-drawer',
   '.inspector',
   '.toast',
@@ -2968,6 +3017,30 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                   ? Option.some(Message.ClickedOutsidePanel())
                   : Option.none(),
             })
+          : Stream.empty,
+    },
+  ),
+  graphPan: entry(
+    { isPanning: Schema.Boolean },
+    {
+      modelToDependencies: model => ({
+        isPanning: Option.isSome(model.maybeGraphPan),
+      }),
+      dependenciesToStream: ({ isPanning }) =>
+        isPanning
+          ? Stream.merge(
+              Subscription.fromEvent({
+                target: document,
+                type: 'pointermove',
+                mapEvent: event =>
+                  Message.MovedGraphPan({ x: event.clientX, y: event.clientY }),
+              }),
+              Subscription.fromEvent({
+                target: document,
+                type: 'pointerup',
+                mapEvent: () => Message.ReleasedGraphPan(),
+              }),
+            )
           : Stream.empty,
     },
   ),
