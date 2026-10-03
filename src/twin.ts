@@ -1,4 +1,5 @@
 import type { Requirement, TwinRevision } from './domain'
+import { artifactPortion, portionText, systemHigh } from './marking'
 
 export type TwinArtifact = Readonly<{
   id: string
@@ -307,18 +308,27 @@ export const hrdDocument = (
   const rows = twinArtifacts.filter(item => item.kind === 'Requirement')
   const line = (artifact: TwinArtifact): string => {
     const item = current(artifact.id)
-    return `| ${artifact.id} | ${cell(item?.description ?? artifact.revA)} | ${artifact.verification} | r${item?.revision ?? 1} · ${item?.status ?? 'Verified'} |`
+    return `| ${artifact.id} | ${portionText(artifactPortion(artifact))} ${cell(item?.description ?? artifact.revA)} | ${artifact.verification} | r${item?.revision ?? 1} · ${item?.status ?? 'Verified'} |`
   }
+  const declassifyOn = `${Number(date.slice(0, 4)) + 25}${date.slice(5, 7)}${date.slice(8, 10)}`
   return [
+    `**${systemHigh}**`,
+    '',
     `# Hardware Requirements Document — Aft Power Supply Unit`,
     '',
     `Document: ${hrdName(revision)} · Date: ${date} · Program: F-35 aft power supply upgrade (demo)`,
     '',
-    '> Prepared by Stream from the systems model. Analysis values are SAMPLE precomputed data, not ANSYS solver output. Not releasable until the sign-offs in section 12 are complete.',
+    '```',
+    'Classified By: Responsible engineer, Moneywell Gov',
+    'Derived From: F-35 Program Security Classification Guide (notional)',
+    `Declassify On: ${declassifyOn}`,
+    '```',
+    '',
+    '> (U) Prepared by Stream from the systems model. Analysis values are SAMPLE precomputed data, not ANSYS solver output. Not releasable until the sign-offs in section 12 are complete. Classification markings are notional for demonstration.',
     '',
     '## 1. Introduction & scope',
     '',
-    'This document specifies the hardware requirements for the aft power supply unit (PSU) and the interfaces it shares with the thermal management and structures subsystems. It covers electrical performance, heat rejection, mass, envelope, mounting, and verification. Software and firmware requirements are out of scope.',
+    '(U) This document specifies the hardware requirements for the aft power supply unit (PSU) and the interfaces it shares with the thermal management and structures subsystems. It covers electrical performance, heat rejection, mass, envelope, mounting, and verification. Software and firmware requirements are out of scope.',
     '',
     changes.length > 0
       ? `This revision (Rev ${revision}) replaces the Rev A unit with a higher-power unit and updates ${changes.length} artifacts in the systems model.`
@@ -352,7 +362,7 @@ export const hrdDocument = (
       .filter(item => item.kind === 'Interface')
       .map(
         item =>
-          `| ${item.id} | ${cell(current(item.id)?.description ?? item.revA)} | r${current(item.id)?.revision ?? 1} · ${current(item.id)?.status ?? 'Verified'} |`,
+          `| ${item.id} | ${portionText(artifactPortion(item))} ${cell(current(item.id)?.description ?? item.revA)} | r${current(item.id)?.revision ?? 1} · ${current(item.id)?.status ?? 'Verified'} |`,
       ),
     '',
     '## 6. Design constraints',
@@ -411,6 +421,8 @@ export const hrdDocument = (
     '| Thermal analysis | | | |',
     '| Structures | | | |',
     '| Customer | | | |',
+    '',
+    `**${systemHigh}**`,
     '',
   ].join('\n')
 }

@@ -125,6 +125,7 @@ export const Model = Schema.Struct({
   graphPreviewTab: GraphPreviewTab,
   isViewsCollapsed: Schema.Boolean,
   isWorkspaceMenuOpen: Schema.Boolean,
+  hasAcknowledgedConsent: Schema.Boolean,
   sidebarWidth: Schema.Number,
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
@@ -185,6 +186,7 @@ export const initialModel: Model = {
   graphPreviewTab: 'Output',
   isViewsCollapsed: false,
   isWorkspaceMenuOpen: false,
+  hasAcknowledgedConsent: false,
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
@@ -1162,6 +1164,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : modifyFields(model, { maybeSelectedNode: () => Option.none() }),
     }),
     CompletedPanGraph: () => ({ model }),
+
+    AcknowledgedConsent: () => ({
+      model: modifyFields(model, { hasAcknowledgedConsent: () => true }),
+    }),
     SelectedRun: ({ id }) => ({
       model: modifyFields(model, {
         maybeSelectedRun: () => Option.some(id),

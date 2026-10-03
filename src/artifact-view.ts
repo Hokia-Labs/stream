@@ -2,6 +2,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { ArtifactView, type Requirement } from './domain'
 import type { Model } from './main'
+import { artifactPortion, portionTag } from './marking'
 import { Message } from './message'
 
 const chevronIcon = (h: H): Html =>
@@ -106,6 +107,7 @@ export const artifactTreeView = (
               ],
               [
                 h.span([h.Class('mono muted')], [row.item.id]),
+                portionTag(artifactPortion(row.item), h),
                 h.strong([], [row.item.title]),
               ],
             ),
@@ -137,7 +139,7 @@ export const artifactReaderView = (
               h.span([h.Class('mono')], [`r${item.revision}`]),
             ],
           ),
-          h.h2([], [item.title]),
+          h.h2([], [portionTag(artifactPortion(item), h), ' ', item.title]),
           h.p([h.Class('reader-description')], [item.description]),
           h.div(
             [h.Class('reader-links')],

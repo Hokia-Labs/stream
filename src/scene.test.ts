@@ -28,6 +28,7 @@ import { Message } from './message'
 const ready = modifyFields(initialModel, {
   storage: () => 'Ready',
   executionMode: () => 'Simulation',
+  hasAcknowledgedConsent: () => true,
 })
 
 describe('workspace UI wiring', () => {
@@ -217,6 +218,23 @@ describe('workspace UI wiring', () => {
       click(role('button', { name: 'GitHub connection details' })),
       expect(role('dialog')).toContainText('No OAuth request is made'),
       click(role('button', { name: 'Got it' })),
+      expect(role('dialog')).not.toExist(),
+    )
+  })
+
+  it('requires acknowledging the USG consent notice on entry', () => {
+    scene(
+      { update, view },
+      given(
+        modifyFields(initialModel, {
+          storage: () => 'Ready',
+          executionMode: () => 'Simulation',
+        }),
+      ),
+      expect(role('dialog')).toContainText(
+        'U.S. Government Information System',
+      ),
+      click(role('button', { name: 'OK' })),
       expect(role('dialog')).not.toExist(),
     )
   })

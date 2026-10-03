@@ -91,6 +91,8 @@ describe('digital twin', () => {
     }
     expect(document).toContain('45 kW continuous')
     expect(document).toContain('SAMPLE')
+    expect(document).toContain('Declassify On: 20511003')
+    expect(document.startsWith('**SECRET//NOFORN**')).toBe(true)
     expect(
       twinPackageFiles(revB.workspace.requirements, '2026-10-03', []).map(
         file => file.name,

@@ -54,6 +54,13 @@ import {
   summarizeFinding,
 } from './markdown'
 import { markdownView } from './markdown-view'
+import {
+  artifactPortion,
+  enclaveName,
+  findingPortion,
+  portionTag,
+  systemHigh,
+} from './marking'
 import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
@@ -593,6 +600,15 @@ const sidebar = (model: Model, h: H): Html =>
               h.span([h.Class('profile-indicator')]),
             ],
           ),
+          currentOrg.tenant === 'Gov'
+            ? h.div(
+                [h.Class('system-notice mono')],
+                [
+                  h.span([], [`Accredited to ${systemHigh} · ${enclaveName}`]),
+                  h.span([], ['Last login 2026-10-02 14:03Z · WS-0412']),
+                ],
+              )
+            : h.empty,
         ],
       ),
       sidebarResizer(model, h),
@@ -884,7 +900,14 @@ const graph = (model: Model, compact: boolean, h: H): Html => {
                             ]),
                           ],
                         ),
-                        h.strong([], [item.title]),
+                        h.strong(
+                          [],
+                          [
+                            portionTag(artifactPortion(item), h),
+                            ' ',
+                            item.title,
+                          ],
+                        ),
                         h.span(
                           [h.Class('node-kind')],
                           [item.kind, h.span([], [`r${item.revision}`])],
@@ -1957,6 +1980,7 @@ const requirementsPage = (model: Model, h: H): Html => {
                                           [h.Class('mono muted')],
                                           [item.id],
                                         ),
+                                        portionTag(artifactPortion(item), h),
                                         h.strong([], [item.title]),
                                       ],
                                     ),
@@ -2136,7 +2160,11 @@ const graphPreview = (model: Model, h: H): Html => {
     [
       h.div(
         [h.Class('graph-preview-head')],
-        [h.span([h.Class('mono muted')], [id]), h.strong([], [item.title])],
+        [
+          h.span([h.Class('mono muted')], [id]),
+          portionTag(artifactPortion(item), h),
+          h.strong([], [item.title]),
+        ],
       ),
       h.div(
         [h.Class('segmented run-view-toggle preview-tabs'), h.Role('tablist')],
@@ -2613,6 +2641,7 @@ const findingPreview = (finding: FindingSource, h: H): Html => {
         [h.Class('finding-preview-head')],
         [
           severityChip(summary.severity, h),
+          portionTag(findingPortion, h),
           h.strong([h.Class('finding-preview-title')], [summary.title]),
         ],
       ),
@@ -2783,6 +2812,7 @@ const findingPanel = (
             [h.Class('finding-drawer-title')],
             [
               severityChip(summary.severity, h),
+              portionTag(findingPortion, h),
               h.h2([h.Id('finding-title')], [summary.title || agentName]),
             ],
           ),
@@ -4015,7 +4045,7 @@ const inspector = (model: Model, h: H, isClosing = false): Html =>
             [h.Class('mono muted')],
             [item.id, ` · REVISION ${item.revision}`],
           ),
-          h.h2([], [item.title]),
+          h.h2([], [portionTag(artifactPortion(item), h), ' ', item.title]),
           badge(item.status, h),
           h.p([h.Class('inspector-description')], [item.description]),
           h.dl(
@@ -5007,6 +5037,63 @@ const modal = (model: Model, h: H, isClosing = false): Html =>
 
 // VIEW
 
+const consentNotice: ReadonlyArray<string> = [
+  'The USG routinely intercepts and monitors communications on this IS for purposes including, but not limited to, penetration testing, COMSEC monitoring, network operations and defense, personnel misconduct (PM), law enforcement (LE), and counterintelligence (CI) investigations.',
+  'At any time, the USG may inspect and seize data stored on this IS.',
+  'Communications using, or data stored on, this IS are not private, are subject to routine monitoring, interception, and search, and may be disclosed or used for any USG-authorized purpose.',
+  'This IS includes security measures (e.g., authentication and access controls) to protect USG interests, not for your personal benefit or privacy.',
+  'Notwithstanding the above, using this IS does not constitute consent to PM, LE or CI investigative searching or monitoring of the content of privileged communications, or work product, related to personal representation or services by attorneys, psychotherapists, or clergy, and their assistants. Such communications and work product are private and confidential. See User Agreement for details.',
+]
+
+const consentDialog = (h: H): Html =>
+  h.div(
+    [h.Class('consent-backdrop')],
+    [
+      h.div(
+        [
+          h.Class('consent-dialog'),
+          h.Role('dialog'),
+          h.Attribute('aria-modal', 'true'),
+          h.Attribute('aria-labelledby', 'consent-title'),
+        ],
+        [
+          h.p(
+            [h.Class('consent-eyebrow mono')],
+            [`${systemHigh} · ${enclaveName} enclave`],
+          ),
+          h.h2([h.Id('consent-title')], ['U.S. Government Information System']),
+          h.p(
+            [],
+            [
+              'You are accessing a U.S. Government (USG) Information System (IS) that is provided for USG-authorized use only. By using this IS (which includes any device attached to this IS), you consent to the following conditions:',
+            ],
+          ),
+          h.ul(
+            [],
+            consentNotice.map(item => h.li([], [item])),
+          ),
+          h.div(
+            [h.Class('consent-foot')],
+            [
+              h.span(
+                [h.Class('muted small-text')],
+                ['Demonstration build. Markings are notional.'],
+              ),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button primary'),
+                  h.OnClick(Message.AcknowledgedConsent()),
+                ],
+                ['OK'],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+
 const markingBanner = (h: H, edge: 'top' | 'bottom'): Html =>
   h.div(
     [
@@ -5018,7 +5105,7 @@ const markingBanner = (h: H, edge: 'top' | 'bottom'): Html =>
             h.AriaLabel('Classification: Secret, no foreign nationals.'),
           ]),
     ],
-    [h.strong([h.Class('marking-level')], ['SECRET//NOFORN'])],
+    [h.strong([h.Class('marking-level')], [systemHigh])],
   )
 
 export const view = (sourceModel: Model, h: H): Document => {
@@ -5040,6 +5127,9 @@ export const view = (sourceModel: Model, h: H): Document => {
       [
         ...(currentOrg.tenant === 'Gov'
           ? [markingBanner(h, 'top'), markingBanner(h, 'bottom')]
+          : []),
+        ...(currentOrg.tenant === 'Gov' && !model.hasAcknowledgedConsent
+          ? [consentDialog(h)]
           : []),
         sidebar(model, h),
         h.div(

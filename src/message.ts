@@ -86,6 +86,7 @@ export const Message = defineMessageUnion({
   ReleasedGraphPan: {},
   ClickedGraphBackdrop: {},
   CompletedPanGraph: {},
+  AcknowledgedConsent: {},
   SelectedRun: { id: Schema.String },
   ClickedNewBranch: {},
   SubmittedBranch: {},
