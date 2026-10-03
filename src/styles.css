@@ -6526,15 +6526,12 @@ button:disabled,
   padding: 0 12px;
   background: #c8102e;
   color: #fff;
-  font: 500 10.5px/1 var(--font-mono, monospace);
-  letter-spacing: 0.08em;
+  font: 700 12px/1 var(--font-body);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   user-select: none;
-}
-.marking-level {
-  font-weight: 700;
 }
 .has-marking .sidebar,
 .has-marking .finding-drawer,
