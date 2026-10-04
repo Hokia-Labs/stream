@@ -1416,24 +1416,21 @@ const do254Panel = (model: Model, h: H): Html => {
                   h.p(
                     [h.Class('muted small-text')],
                     [
-                      isVerified
-                        ? 'Drafts the HRD and DO-254 reports from the systems model for you to review and edit.'
-                        : 'Available once Rev B passes the requirement check.',
-                    ],
-                  ),
-                  h.button(
-                    [
-                      h.Type('button'),
-                      h.Class('button primary'),
-                      h.Disabled(!isVerified || model.isGeneratingTwinPackage),
-                      h.OnClick(Message.ClickedGenerateTwinPackage()),
-                    ],
-                    [
                       model.isGeneratingTwinPackage
-                        ? 'Packaging…'
-                        : 'Draft DO-254 reports',
+                        ? 'Drafting the HRD and DO-254 reports from the systems model…'
+                        : 'Drafts automatically once Rev B passes the requirement check.',
                     ],
                   ),
+                  isVerified && !model.isGeneratingTwinPackage
+                    ? h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button'),
+                          h.OnClick(Message.ClickedGenerateTwinPackage()),
+                        ],
+                        ['Draft reports'],
+                      )
+                    : h.empty,
                 ],
               ),
         onSome: item =>

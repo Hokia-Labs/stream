@@ -3422,8 +3422,13 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       const pending = twinChanges(requirements).filter(
         change => change.status !== 'Verified',
       ).length
-      return persist(
-        modifyFields(model, { twinCheck: () => 'Done' }),
+      const shouldDraft =
+        model.twinReports.length === 0 && !model.isGeneratingTwinPackage
+      const result = persist(
+        modifyFields(model, {
+          twinCheck: () => 'Done',
+          isGeneratingTwinPackage: isGenerating => isGenerating || shouldDraft,
+        }),
         record(
           model.clockMs,
           model.workspace,
@@ -3431,6 +3436,15 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ),
         `${passed} of ${checks.length} checks pass on Rev B. ${pending} artifacts need re-verification.`,
       )
+      return shouldDraft
+        ? {
+            ...result,
+            commands: [
+              ...(result.commands ?? []),
+              DraftTwinReports({ requirements }),
+            ],
+          }
+        : result
     },
     ClickedResetTwin: () => {
       const requirements = workingRequirements(model)
@@ -3526,7 +3540,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return {
         model: modifyFields(model, {
           isGeneratingTwinPackage: () => false,
-          twinPanelTab: () => 'DO-254',
           twinReports: () => files,
           twinReportTab: () =>
             files.find(file => file.name.endsWith('.md'))?.name ?? '',

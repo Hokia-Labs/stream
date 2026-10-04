@@ -200,13 +200,16 @@ describe('digital twin', () => {
       Message.ToggledTwinReview({ item: 'Requirements' }),
     ).model
     expect(early.twinReviewed).toHaveLength(0)
-    const verified = update(
+    const started = update(
       update(revB, Message.ClickedRunTwinCheck()).model,
       Message.CompletedTwinCheck(),
-    ).model
-    const started = update(verified, Message.ClickedGenerateTwinPackage())
-    expect(started.commands).toHaveLength(1)
+    )
+    expect(started.commands).toHaveLength(2)
     expect(started.model.isGeneratingTwinPackage).toBe(true)
+    expect(
+      update(started.model, Message.ClickedGenerateTwinPackage()).commands ??
+        [],
+    ).toHaveLength(0)
     const drafted = update(
       started.model,
       Message.DraftedTwinReports({
