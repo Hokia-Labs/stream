@@ -84,6 +84,30 @@ const boardSpec = CustomElement.define({
   events: {},
 })
 
+const imageCanvasSpec = CustomElement.define({
+  tag: 'stream-image-canvas',
+  properties: {
+    src: Schema.String,
+    alt: Schema.String,
+  },
+  events: {},
+})
+
+const imageCanvas = (
+  className: string,
+  src: string,
+  alt: string,
+  h: H,
+): Html => {
+  const canvas = imageCanvasSpec.withMessage(h)
+  return canvas([
+    h.Class(`image-canvas ${className}`),
+    canvas.Src(src),
+    canvas.Alt(alt),
+    h.AriaLabel(alt),
+  ])
+}
+
 const reportEditorSpec = CustomElement.define({
   tag: 'stream-report-editor',
   properties: {
@@ -2024,13 +2048,12 @@ const schematicViewer = (model: Model, h: H): Html => {
           schematicNote(model.schematicBoard, sheet, h),
         ],
       ),
-      h.img([
-        h.Class('schematic-image'),
-        h.Src(
-          `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
-        ),
-        h.Alt(`KiCad schematic, ${board.name}, ${sheet}`),
-      ]),
+      imageCanvas(
+        'schematic-image',
+        `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
+        `KiCad schematic, ${board.name}, ${sheet}`,
+        h,
+      ),
     ],
   )
 }
@@ -2103,18 +2126,16 @@ const heatMap = (revision: 'A' | 'B', h: H): Html =>
     [h.Class('heat-map')],
     [
       h.figcaption([], [revision === 'A' ? 'Rev A' : 'Rev B']),
-      h.img([
-        h.Src(
-          revision === 'A'
-            ? '/ansys-thermal-rev-a.webp'
-            : '/ansys-thermal-rev-b.webp',
-        ),
-        h.Alt(
-          revision === 'A'
-            ? 'Ansys steady-state thermal result, Rev A'
-            : 'Ansys steady-state thermal result, Rev B',
-        ),
-      ]),
+      imageCanvas(
+        'heat-map-canvas',
+        revision === 'A'
+          ? '/ansys-thermal-rev-a.webp'
+          : '/ansys-thermal-rev-b.webp',
+        revision === 'A'
+          ? 'Ansys steady-state thermal result, Rev A'
+          : 'Ansys steady-state thermal result, Rev B',
+        h,
+      ),
     ],
   )
 

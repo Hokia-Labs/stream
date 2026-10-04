@@ -7666,9 +7666,10 @@ button.graph-cluster-head:hover {
   font-weight: 600;
 }
 .schematic-image {
-  display: block;
-  width: 100%;
-  height: auto;
+  height: 520px;
+}
+.heat-map-canvas {
+  height: 360px;
 }
 .diff-added {
   color: #15803d;
@@ -7710,10 +7711,9 @@ button.graph-cluster-head:hover {
 .board-review-table .badge {
   margin-left: 6px;
 }
-.heat-map img {
+.image-canvas {
   display: block;
   width: 100%;
-  height: auto;
 }
 .board-review-facts {
   display: grid;
