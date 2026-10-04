@@ -590,13 +590,7 @@ const sidebar = (model: Model, h: H): Html =>
             [h.Class('profile')],
             [
               h.span([h.Class('avatar dark')], ['BJ']),
-              h.div(
-                [],
-                [
-                  h.strong([], ['Ben Juntilla']),
-                  h.span([], ['Workspace owner']),
-                ],
-              ),
+              h.div([], [h.strong([], ['Ben Juntilla'])]),
               h.span([h.Class('profile-indicator')]),
             ],
           ),
