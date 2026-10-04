@@ -8184,3 +8184,45 @@ p.launch-estimate {
 .twin-budget .twin-capacity-scale {
   display: none;
 }
+.toc-panel .artifact-tree-row {
+  min-width: 0;
+  gap: 4px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-right: 12px;
+  border-bottom: 0;
+}
+.toc-panel .tree-expander,
+.toc-panel .tree-spacer {
+  width: 18px;
+  height: 18px;
+  font-size: var(--text-sm);
+}
+.toc-panel .artifact-tree-row .tree-title {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  line-height: 20px;
+  text-align: left;
+}
+.toc-panel .tree-title > * {
+  flex-shrink: 0;
+  margin: 0;
+}
+.toc-panel .tree-title > .mono {
+  font-size: var(--text-xs);
+}
+.toc-panel .tree-title > strong {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.toc-panel .tree-title > :not(.mono):not(strong) {
+  order: 3;
+  font-size: 10px;
+}
