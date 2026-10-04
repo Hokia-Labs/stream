@@ -4,6 +4,8 @@ import {
   DirectionalLight,
   Group,
   HemisphereLight,
+  Mesh,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
   Vector3,
@@ -43,10 +45,10 @@ export class StreamBoard extends HTMLElement {
     renderer.setClearColor('#eef1f6')
     root.append(renderer.domElement)
     this.#scene.add(
-      new HemisphereLight('#ffffff', '#b8c0cc', 1.6),
+      new HemisphereLight('#ffffff', '#b8c0cc', 1.1),
       new AmbientLight('#ffffff', 0.4),
     )
-    const sun = new DirectionalLight('#ffffff', 2.2)
+    const sun = new DirectionalLight('#ffffff', 1.6)
     sun.position.set(200, 400, 250)
     this.#scene.add(sun)
     this.#controls = new OrbitControls(this.#camera, renderer.domElement)
@@ -89,6 +91,20 @@ export class StreamBoard extends HTMLElement {
       )
       scenes.forEach((gltf, index) => {
         gltf.scene.scale.setScalar(1000)
+        gltf.scene.traverse(node => {
+          if (!(node instanceof Mesh)) {
+            return
+          }
+          const materials: ReadonlyArray<unknown> = Array.isArray(node.material)
+            ? node.material
+            : [node.material]
+          materials.forEach(material => {
+            if (material instanceof MeshStandardMaterial) {
+              material.metalness = Math.min(material.metalness, 0.15)
+              material.roughness = Math.min(material.roughness, 0.85)
+            }
+          })
+        })
         gltf.scene.position.x = index * spacing
         boards.add(gltf.scene)
       })
@@ -104,8 +120,8 @@ export class StreamBoard extends HTMLElement {
     this.#controls?.target.copy(center)
     this.#camera.position.set(
       center.x + size * 0.15,
-      center.y + size * 0.55,
-      center.z + size * 0.6,
+      center.y + size * 0.65,
+      center.z + size * 0.7,
     )
     this.toggleAttribute('data-ready', true)
   }
