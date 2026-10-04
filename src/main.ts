@@ -2665,8 +2665,11 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     SelectedTwinCondition: ({ condition }) => ({
       model: modifyFields(model, { twinCondition: () => condition }),
     }),
-    ClickedTwinPart: () => ({
-      model: modifyFields(model, { twinFocus: () => 'Aft bay' }),
+    ClickedTwinPart: ({ part }) => ({
+      model: modifyFields(model, {
+        twinFocus: () =>
+          part === 'Cockpit avionics' ? 'Cockpit avionics' : 'Aft bay',
+      }),
     }),
     ClickedSwapTwinAvionics: () => {
       const requirements = workingRequirements(model)

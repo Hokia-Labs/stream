@@ -29,14 +29,14 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 
 import { avionicsChange, busDemandKw, capacityKw } from './twin'
 
-type Focus = 'Airframe' | 'Aft bay'
+type Focus = 'Airframe' | 'Aft bay' | 'Cockpit avionics'
 type Overlay = 'Shaded' | 'Thermal'
 type Revision = 'A' | 'B'
 type Condition = 'Normal' | 'Module failed'
 
-const presets: Readonly<
-  Record<Focus, Readonly<{ position: Vector3; target: Vector3 }>>
-> = {
+type Preset = Readonly<{ position: Vector3; target: Vector3 }>
+
+const presets: Readonly<Record<'Airframe' | 'Aft bay', Preset>> = {
   Airframe: {
     position: new Vector3(4.4, 2.6, 5.6),
     target: new Vector3(0, 0, 0.1),
@@ -207,7 +207,9 @@ export class StreamTwin extends HTMLElement {
 
   set twinFocus(value: unknown) {
     if (
-      (value === 'Airframe' || value === 'Aft bay') &&
+      (value === 'Airframe' ||
+        value === 'Aft bay' ||
+        value === 'Cockpit avionics') &&
       value !== this.#focus
     ) {
       this.#focus = value
@@ -286,11 +288,15 @@ export class StreamTwin extends HTMLElement {
     }
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
     root.innerHTML =
-      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;pointer-events:none}.label.amber{background:#92400e}.label.red{background:#b91c1c}.label.green{background:#166534}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:inherit}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
+      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;cursor:pointer}.label.amber{background:#92400e}.label.red{background:#b91c1c}.label.green{background:#166534}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:inherit}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
     this.#label = document.createElement('div')
     this.#label.className = 'label'
     this.#cockpitLabel = document.createElement('div')
     this.#cockpitLabel.className = 'label amber'
+    this.#label.addEventListener('click', () => this.#pick('Power supply'))
+    this.#cockpitLabel.addEventListener('click', () =>
+      this.#pick('Cockpit avionics'),
+    )
     this.#status = document.createElement('div')
     this.#status.className = 'status'
     this.#status.textContent = 'Loading F-35 model…'
@@ -323,9 +329,9 @@ export class StreamTwin extends HTMLElement {
     grid.position.y = -0.87
     this.#scene.add(grid)
     this.#buildPsu()
-    this.#camera.position.copy(presets[this.#focus].position)
+    this.#camera.position.copy(this.#preset().position)
     this.#controls = new OrbitControls(this.#camera, renderer.domElement)
-    this.#controls.target.copy(presets[this.#focus].target)
+    this.#controls.target.copy(this.#preset().target)
     this.#controls.enableDamping = true
     this.#controls.minDistance = 0.6
     this.#controls.maxDistance = 14
@@ -364,7 +370,7 @@ export class StreamTwin extends HTMLElement {
         this.#applyFocus()
         if (this.#status) {
           this.#status.textContent =
-            'Drag to orbit · scroll to zoom · click the aft bay to inspect the power assembly'
+            'Drag to orbit · scroll to zoom · click the cockpit avionics or the aft power assembly to fly there'
         }
         return undefined
       })
@@ -419,12 +425,18 @@ export class StreamTwin extends HTMLElement {
     if (this.#airframe) {
       targets.push(this.#airframe)
     }
+    if (raycaster.intersectObject(this.#cockpit).length > 0) {
+      this.#pick('Cockpit avionics')
+      return
+    }
     const hit = raycaster.intersectObjects(targets, true)[0]
     if (hit && hit.point.z > 0.85) {
-      this.dispatchEvent(
-        new CustomEvent('twin-pick', { detail: { part: 'Power supply' } }),
-      )
+      this.#pick('Power supply')
     }
+  }
+
+  #pick(part: string): void {
+    this.dispatchEvent(new CustomEvent('twin-pick', { detail: { part } }))
   }
 
   #resize(): void {
@@ -439,8 +451,19 @@ export class StreamTwin extends HTMLElement {
     this.#camera.updateProjectionMatrix()
   }
 
+  #preset(): Preset {
+    if (this.#focus !== 'Cockpit avionics') {
+      return presets[this.#focus]
+    }
+    const target = this.#cockpitPosition.clone().lerp(psuCenter, 0.18)
+    return {
+      target,
+      position: target.clone().add(new Vector3(1.15, 0.7, -1.35)),
+    }
+  }
+
   #fly(): void {
-    const preset = presets[this.#focus]
+    const preset = this.#preset()
     this.#flight = {
       from: this.#camera.position.clone(),
       to: preset.position.clone(),
@@ -451,7 +474,7 @@ export class StreamTwin extends HTMLElement {
   }
 
   #applyFocus(): void {
-    const isAft = this.#focus === 'Aft bay'
+    const isAft = this.#focus !== 'Airframe'
     if (this.#airframe) {
       for (const material of materialsOf(this.#airframe)) {
         material.transparent = isAft
@@ -660,7 +683,7 @@ export class StreamTwin extends HTMLElement {
       }
     }
     const pulse =
-      this.#focus === 'Aft bay' ? 1 : 1 + Math.sin(time / 380) * 0.05
+      this.#focus !== 'Airframe' ? 1 : 1 + Math.sin(time / 380) * 0.05
     this.#psu.scale.setScalar(pulse)
     if (this.#dropPending) {
       this.#dropPending = false
