@@ -54,11 +54,6 @@ describe('digital twin', () => {
     expect(isAvionicsUpgraded(swapped.workspace.requirements)).toBe(true)
     expect(
       twinRevision(
-        pick(swapped, 'Power', 'MW-MPA-48-6').workspace.requirements,
-      ),
-    ).toBe('A')
-    expect(
-      twinRevision(
         pick(swapped, 'Power', 'MW-MPA-48-5').workspace.requirements,
       ),
     ).toBe('A')

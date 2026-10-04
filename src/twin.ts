@@ -926,28 +926,8 @@ const assemblyRevB: CatalogItem = {
 export const twinCatalog: ReadonlyArray<CatalogItem> = [
   legacyAvionics,
   upgradedAvionics,
-  {
-    id: 'MW-AVN-3100',
-    revision: '–',
-    slot: 'Cockpit',
-    title: 'Panoramic display processor (prototype)',
-    status: 'In work',
-    released: 'Not released',
-    value: 3.1,
-    specs: ['3.1 kW', '4.2 kW / 200 ms', '3.1 kW', '65 A'],
-  },
   assemblyRevA,
   assemblyRevB,
-  {
-    id: 'MW-MPA-48-6',
-    revision: '–',
-    slot: 'Power',
-    title: 'Modular power assembly, 6-slot (concept)',
-    status: 'In work',
-    released: 'Not released',
-    value: 6,
-    specs: ['6 × 3.0 kW', '18.0 kW', '15.0 kW', '0.80 kW', '75 A SSPC · 8 AWG'],
-  },
 ]
 
 export const installedPart = (
