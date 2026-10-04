@@ -8653,3 +8653,8 @@ p.launch-estimate {
 .twin-proposal-lead {
   margin: 0 0 12px;
 }
+
+.twin-tab .twin-tab-icon {
+  width: 15px;
+  height: 15px;
+}

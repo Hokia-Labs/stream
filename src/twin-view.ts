@@ -1815,6 +1815,13 @@ const panelTabs = (model: Model, h: H): Html => {
           h.OnClick(Message.SelectedTwinPanelTab({ tab })),
         ],
         [
+          h.span([
+            h.Class('icon twin-tab-icon'),
+            h.AriaHidden(true),
+            h.InnerHTML(
+              `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${twinTabIcons[tab]}</svg>`,
+            ),
+          ]),
           tab,
           counts[tab]
             ? h.span([h.Class('twin-tab-count')], [counts[tab]])
@@ -1823,6 +1830,17 @@ const panelTabs = (model: Model, h: H): Html => {
       ),
     ),
   )
+}
+
+const twinTabIcons: Readonly<Record<TwinPanelTab, string>> = {
+  Change: '<path d="m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5M12 13v9"/>',
+  Requirements:
+    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  'Sign-off':
+    '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  'DO-254':
+    '<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Z"/><path d="m8 12 3 3 5-6"/>',
+  Activity: '<path d="M2 12h5l3-9 4 18 3-9h5"/>',
 }
 
 const changePanel = (model: Model, h: H): Html => {
