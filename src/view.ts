@@ -88,6 +88,8 @@ import { teamcenterSync } from './twin'
 import { boardReview, twinPage, twinPartPicker } from './twin-view'
 
 type H = HtmlBuilder<Message>
+const showsConfirmationToasts = false
+
 const paths: Readonly<Record<string, string>> = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   graph:
@@ -4999,49 +5001,53 @@ export const view = (sourceModel: Model, h: H): Document => {
         h.div(
           [h.Class('toast-region'), h.Role('status'), h.AriaLive('polite')],
           [
-            ...model.stackedToasts.map(item =>
-              toast(
-                model,
-                {
-                  key: `stack-${item.id}`,
-                  text: item.text,
-                  isError: item.isError,
-                  isLeaving: false,
-                  dismiss: Message.DismissedStackedToast({ id: item.id }),
-                },
-                h,
-              ),
-            ),
-            Option.match(model.maybeToast, {
-              onSome: text =>
+            ...model.stackedToasts
+              .filter(item => item.isError || showsConfirmationToasts)
+              .map(item =>
                 toast(
                   model,
                   {
-                    key: text,
-                    text,
-                    isError: model.isToastError,
+                    key: `stack-${item.id}`,
+                    text: item.text,
+                    isError: item.isError,
                     isLeaving: false,
-                    dismiss: Message.DismissedToast(),
+                    dismiss: Message.DismissedStackedToast({ id: item.id }),
                   },
                   h,
                 ),
-              onNone: () =>
-                Option.match(model.maybeLeavingToast, {
-                  onNone: () => h.empty,
-                  onSome: ({ text }) =>
+              ),
+            !model.isToastError && !showsConfirmationToasts
+              ? h.empty
+              : Option.match(model.maybeToast, {
+                  onSome: text =>
                     toast(
                       model,
                       {
                         key: text,
                         text,
                         isError: model.isToastError,
-                        isLeaving: true,
+                        isLeaving: false,
                         dismiss: Message.DismissedToast(),
                       },
                       h,
                     ),
+                  onNone: () =>
+                    Option.match(model.maybeLeavingToast, {
+                      onNone: () => h.empty,
+                      onSome: ({ text }) =>
+                        toast(
+                          model,
+                          {
+                            key: text,
+                            text,
+                            isError: model.isToastError,
+                            isLeaving: true,
+                            dismiss: Message.DismissedToast(),
+                          },
+                          h,
+                        ),
+                    }),
                 }),
-            }),
           ],
         ),
       ],
