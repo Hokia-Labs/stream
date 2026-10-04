@@ -39,7 +39,7 @@ type Preset = Readonly<{ position: Vector3; target: Vector3 }>
 
 const presets: Readonly<Record<'Airframe' | 'Aft bay', Preset>> = {
   Airframe: {
-    position: new Vector3(4.4, 2.6, 5.6),
+    position: new Vector3(-6, 2.5, 3.3),
     target: new Vector3(0, 0, 0.1),
   },
   'Aft bay': {
