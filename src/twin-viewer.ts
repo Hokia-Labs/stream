@@ -341,6 +341,10 @@ export class StreamTwin extends HTMLElement {
           bounds.min.z + size.z * 0.24,
         )
         this.#cockpit.position.copy(this.#cockpitPosition)
+        if (this.#focus === 'Cockpit' && this.#controls) {
+          this.#controls.target.copy(this.#preset().target)
+          this.#camera.position.copy(this.#preset().position)
+        }
         this.#buildFeeder()
         this.#paint()
         this.#applyFocus()
@@ -440,13 +444,20 @@ export class StreamTwin extends HTMLElement {
   }
 
   #fly(): void {
+    if (!this.#controls) {
+      this.#flight = undefined
+      return
+    }
     const preset = this.#preset()
-    const fromTarget = this.#controls?.target.clone() ?? preset.target.clone()
+    const fromTarget = this.#controls.target.clone()
     const fromOffset = this.#camera.position.clone().sub(fromTarget)
-    const distance = preset.position.distanceTo(preset.target)
+    const presetOffset = preset.position.clone().sub(preset.target)
     this.#flight = {
       fromOffset,
-      toOffset: fromOffset.clone().setLength(distance),
+      toOffset:
+        fromOffset.length() < 0.01
+          ? presetOffset
+          : fromOffset.clone().setLength(presetOffset.length()),
       fromTarget,
       toTarget: preset.target.clone(),
       start: undefined,
