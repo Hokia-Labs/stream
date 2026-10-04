@@ -77,6 +77,7 @@ import {
   proposalPartChanges,
   proposalReviewer,
   requirementChecks,
+  requirementsChangeLabel,
   seedTwinArtifacts,
   signoffTitle,
   stampHrdSignoff,
@@ -186,6 +187,7 @@ export const Model = Schema.Struct({
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
   twinPanelTab: TwinPanelTab,
+  seenRequirementsLabel: Schema.String,
   twinReviewed: Schema.Array(TwinReviewItem),
   twinProposal: TwinProposal,
   twinCheck: TwinCheck,
@@ -270,6 +272,7 @@ export const initialModel: Model = {
   isResizingSidebar: false,
   twinFocus: 'Airframe',
   twinPanelTab: 'Change',
+  seenRequirementsLabel: '',
   twinReviewed: [],
   twinProposal: 'None',
   twinCheck: 'Not run',
@@ -2887,7 +2890,17 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       model: modifyFields(model, { twinFocus: () => focus }),
     }),
     SelectedTwinPanelTab: ({ tab }) => ({
-      model: modifyFields(model, { twinPanelTab: () => tab }),
+      model: modifyFields(model, {
+        twinPanelTab: () => tab,
+        seenRequirementsLabel: seen =>
+          tab === 'Requirements' || model.twinPanelTab === 'Requirements'
+            ? requirementsChangeLabel(
+                model.workspace.requirements,
+                model.twinProposal === 'Pending' ||
+                  model.twinProposal === 'Rejected',
+              )
+            : seen,
+      }),
     }),
     ClickedTwinPart: ({ part }) => ({
       model: modifyFields(model, {

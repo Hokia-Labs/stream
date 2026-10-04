@@ -52,6 +52,7 @@ import {
   lowMargin,
   proposalReviewer,
   requirementChecks,
+  requirementsChangeLabel,
   signoffTitle,
   slotHealth,
   twinCatalog,
@@ -700,11 +701,6 @@ const analysisSummary = (): ReadonlyArray<
     { label: 'KiCad schematic', tab: 'Schematic' },
   ]
 }
-
-const requirementCountLabel = (hasProposal: boolean): string =>
-  hasProposal
-    ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived`
-    : String(avionicsRequirementIds.length)
 
 const analysisLine = (isReviewable: boolean, h: H): Html =>
   h.p(
@@ -1580,13 +1576,10 @@ const panelTabs = (model: Model, h: H): Html => {
   const requirements = model.workspace.requirements
   const counts: Readonly<Record<TwinPanelTab, string>> = {
     Change: '',
-    Requirements: isAvionicsUpgraded(requirements)
-      ? requirementCountLabel(
-          twinRevision(requirements) === 'B' ||
-            model.twinProposal === 'Pending' ||
-            model.twinProposal === 'Rejected',
-        )
-      : '',
+    Requirements: requirementsChangeLabel(
+      requirements,
+      model.twinProposal === 'Pending' || model.twinProposal === 'Rejected',
+    ),
     'Sign-off': `${model.twinReviewed.length}/${twinSignoffs.length}`,
     'DO-254': '',
     Activity: String(twinActivity(model).length),
@@ -1612,9 +1605,21 @@ const panelTabs = (model: Model, h: H): Html => {
             ),
           ]),
           tab,
-          counts[tab]
-            ? h.span([h.Class('twin-tab-count')], [counts[tab]])
-            : h.empty,
+          !counts[tab] ||
+          (tab === 'Requirements' &&
+            (model.twinPanelTab === 'Requirements' ||
+              counts[tab] === model.seenRequirementsLabel))
+            ? h.empty
+            : tab === 'Requirements'
+              ? h.span(
+                  [
+                    h.Class('twin-tab-dot'),
+                    h.Title(`${counts[tab]} changed`),
+                    h.AriaLabel('Changed'),
+                  ],
+                  [],
+                )
+              : h.span([h.Class('twin-tab-count')], [counts[tab]]),
         ],
       ),
     ),

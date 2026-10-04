@@ -1227,3 +1227,13 @@ export const teamcenterSync = (
       : []
   return [...parts, ...proposed]
 }
+
+export const requirementsChangeLabel = (
+  requirements: ReadonlyArray<Requirement>,
+  hasProposal: boolean,
+): string =>
+  !isAvionicsUpgraded(requirements)
+    ? ''
+    : hasProposal || twinRevision(requirements) === 'B'
+      ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived`
+      : String(avionicsRequirementIds.length)
