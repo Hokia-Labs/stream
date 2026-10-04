@@ -20,7 +20,7 @@ export const boardModels = [
   { name: 'Rev B', url: '/models/board1-rev-b.glb' },
 ] as const
 
-const spacing = 210
+const spacing = 145
 
 export class StreamBoard extends HTMLElement {
   #renderer: WebGLRenderer | undefined
