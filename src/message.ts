@@ -207,6 +207,8 @@ export const Message = defineMessageUnion({
   SubmittedPalette: {},
   ChosePaletteItem: { index: Schema.Number },
   CompletedFocusPalette: {},
+  ClickedTwinSignoffStep: {},
+  CompletedScrollTwinSignoff: {},
   PressedPageShortcut: { page: Page },
   PressedArtifactShortcut: {
     action: Schema.Literals(['Next', 'Previous', 'Toggle', 'Edit']),

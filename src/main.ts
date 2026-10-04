@@ -1276,6 +1276,16 @@ const CopyFinding = Command.define('CopyFinding', {
     ),
 })
 
+const ScrollTwinSignoff = Command.define('ScrollTwinSignoff', {
+  messages: [Message.CompletedScrollTwinSignoff],
+  execute: Dom.scrollIntoViewAfterPaint('#twin-signoff', {
+    block: 'start',
+  }).pipe(
+    Effect.catch(() => Effect.void),
+    Effect.as(Message.CompletedScrollTwinSignoff()),
+  ),
+})
+
 export const FocusPalette = Command.define('FocusPalette', {
   messages: [Message.CompletedFocusPalette],
   execute: Dom.focus('#palette-input').pipe(
@@ -3678,6 +3688,17 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : { model },
     ChosePaletteItem: ({ index }) => choosePaletteItem(model, index),
     CompletedFocusPalette: () => ({ model }),
+    ClickedTwinSignoffStep: () => {
+      const result = updateMessage(
+        model,
+        Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
+      )
+      return {
+        ...result,
+        commands: [...(result.commands ?? []), ScrollTwinSignoff()],
+      }
+    },
+    CompletedScrollTwinSignoff: () => ({ model }),
     PressedPageShortcut: ({ page }) =>
       update(model, Message.SelectedPage({ page })),
     PressedArtifactShortcut: ({ action }) => {

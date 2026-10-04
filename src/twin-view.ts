@@ -251,13 +251,17 @@ const signoffGate = (
   h: H,
 ): Html => {
   const canSign = isRevB && model.twinReports.length > 0
-  return h.section(
-    [h.Class('panel twin-wide'), h.AriaLabel('Engineering sign-off')],
+  return h.div(
+    [
+      h.Class('twin-signoff'),
+      h.Id('twin-signoff'),
+      h.AriaLabel('Engineering sign-off'),
+    ],
     [
       h.div(
         [h.Class('twin-section-head')],
         [
-          h.h2([h.Class('twin-heading')], ['Sign-off']),
+          h.h3([h.Class('twin-heading')], ['Sign-off']),
           h.span(
             [h.Class('muted small-text')],
             [`${model.twinReviewed.length} of ${twinSignoffs.length} signed`],
@@ -328,22 +332,6 @@ const signoffGate = (
           ),
         ],
       ),
-      model.twinReviewed.length === twinSignoffs.length
-        ? h.p(
-            [h.Class('twin-signoff-done')],
-            [
-              'All disciplines signed. ',
-              h.button(
-                [
-                  h.Type('button'),
-                  h.Class('text-button'),
-                  h.OnClick(Message.SelectedTwinPanelTab({ tab: 'DO-254' })),
-                ],
-                ['Download the package in DO-254 →'],
-              ),
-            ],
-          )
-        : h.empty,
     ],
   )
 }
@@ -1349,32 +1337,13 @@ const do254Panel = (model: Model, h: H): Html => {
             ? reportEditor(
                 model,
                 [
-                  isReviewed
-                    ? h.empty
-                    : h.span(
-                        [h.Class('muted small-text')],
-                        [
-                          `${model.twinReviewed.length} of ${twinSignoffs.length} signed`,
-                        ],
-                      ),
-                  isReviewed
-                    ? h.empty
-                    : h.button(
-                        [
-                          h.Type('button'),
-                          h.Class('button outline'),
-                          h.OnClick(
-                            Message.SelectedTwinPanelTab({
-                              tab: 'Sign-off',
-                            }),
-                          ),
-                        ],
-                        ['Open sign-off'],
-                      ),
                   h.button(
                     [
                       h.Type('button'),
                       h.Class('button primary'),
+                      h.Title(
+                        isReviewed ? '' : 'Sign off all disciplines first',
+                      ),
                       h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
                       h.OnClick(Message.ClickedDownloadTwinPackage()),
                     ],
@@ -1454,6 +1423,7 @@ const do254Panel = (model: Model, h: H): Html => {
             ],
           ),
       }),
+      hasReports ? signoffPanel(model, h) : h.empty,
     ],
   )
 }
@@ -1647,7 +1617,7 @@ const lifecycle = (model: Model, h: H): Html => {
         ? 'Sent to customer'
         : `${model.twinReviewed.length}/${twinSignoffs.length} disciplines`,
       isDone: Option.exists(model.maybeTwinPackage, item => item.isSent),
-      message: Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
+      message: Message.ClickedTwinSignoffStep(),
     },
   ]
   const current = stages.findIndex(stage => !stage.isDone)
@@ -1750,8 +1720,10 @@ const panelTabs = (model: Model, h: H): Html => {
       requirements,
       model.twinProposal === 'Pending' || model.twinProposal === 'Rejected',
     ),
-    'Sign-off': `${model.twinReviewed.length}/${twinSignoffs.length}`,
-    'DO-254': '',
+    'DO-254':
+      model.twinReports.length > 0
+        ? `${model.twinReviewed.length}/${twinSignoffs.length}`
+        : '',
     Activity: String(twinActivity(model).length),
   }
   return h.div(
@@ -1800,8 +1772,6 @@ const twinTabIcons: Readonly<Record<TwinPanelTab, string>> = {
   Change: '<path d="m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5M12 13v9"/>',
   Requirements:
     '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
-  'Sign-off':
-    '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   'DO-254':
     '<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6Z"/><path d="m8 12 3 3 5-6"/>',
   Activity: '<path d="M2 12h5l3-9 4 18 3-9h5"/>',
@@ -1838,13 +1808,11 @@ const signoffPanel = (model: Model, h: H): Html => {
 const detailPanel = (model: Model, h: H): Html =>
   model.twinPanelTab === 'Requirements'
     ? requirementChangesPanel(model, h)
-    : model.twinPanelTab === 'Sign-off'
-      ? signoffPanel(model, h)
-      : model.twinPanelTab === 'DO-254'
-        ? do254Panel(model, h)
-        : model.twinPanelTab === 'Activity'
-          ? activityPanel(model, h)
-          : changePanel(model, h)
+    : model.twinPanelTab === 'DO-254'
+      ? do254Panel(model, h)
+      : model.twinPanelTab === 'Activity'
+        ? activityPanel(model, h)
+        : changePanel(model, h)
 
 export const twinPage = (model: Model, h: H): Html => {
   const twin = twinSpec.withMessage(h)

@@ -8836,15 +8836,6 @@ p.launch-estimate {
   padding: 0 12px 12px;
 }
 
-.twin-signoff-done {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: var(--space-3) 0 0;
-  color: var(--success);
-  font-size: var(--text-sm);
-}
-
 .report-prose img {
   display: block;
   max-width: 100%;
@@ -8856,4 +8847,11 @@ p.launch-estimate {
 
 .twin-req-set-actions {
   margin: var(--space-3) 0 0;
+}
+
+.twin-signoff {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: var(--space-4);
 }
