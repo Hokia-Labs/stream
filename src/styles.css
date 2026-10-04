@@ -4205,9 +4205,6 @@ body:has(.modal-backdrop) .toast {
 }
 
 /* Inbox, views, setup */
-.inbox-item {
-  margin-top: var(--space-2);
-}
 .sidebar-views {
   margin-top: var(--space-4);
 }

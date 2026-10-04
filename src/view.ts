@@ -457,39 +457,41 @@ const sidebar = (model: Model, h: H): Html =>
         [
           h.nav(
             [h.AriaLabel('Workspace navigation')],
-            pages.map(item =>
-              h.keyed('button')(
-                item.page,
-                [
-                  h.Type('button'),
-                  h.Class(
-                    `nav-item ${model.page === item.page ? 'active' : ''}`,
-                  ),
-                  h.OnClick(Message.SelectedPage({ page: item.page })),
-                  h.Title(item.page),
-                  h.AriaCurrent(model.page === item.page ? 'page' : 'false'),
-                ],
-                [
-                  icon(item.icon, h),
+            [
+              sidebarInbox(model, h),
+              ...pages.map(item =>
+                h.keyed('button')(
                   item.page,
-                  item.page === 'Runs' &&
-                  model.workspace.runs.some(run => run.status === 'Running')
-                    ? h.span(
-                        [h.Class('nav-count')],
-                        [
-                          String(
-                            model.workspace.runs.filter(
-                              run => run.status === 'Running',
-                            ).length,
-                          ),
-                        ],
-                      )
-                    : h.empty,
-                ],
+                  [
+                    h.Type('button'),
+                    h.Class(
+                      `nav-item ${model.page === item.page ? 'active' : ''}`,
+                    ),
+                    h.OnClick(Message.SelectedPage({ page: item.page })),
+                    h.Title(item.page),
+                    h.AriaCurrent(model.page === item.page ? 'page' : 'false'),
+                  ],
+                  [
+                    icon(item.icon, h),
+                    item.page,
+                    item.page === 'Runs' &&
+                    model.workspace.runs.some(run => run.status === 'Running')
+                      ? h.span(
+                          [h.Class('nav-count')],
+                          [
+                            String(
+                              model.workspace.runs.filter(
+                                run => run.status === 'Running',
+                              ).length,
+                            ),
+                          ],
+                        )
+                      : h.empty,
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          sidebarInbox(model, h),
           setupChecklist(model, h),
         ],
       ),
