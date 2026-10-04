@@ -261,7 +261,7 @@ export class StreamTwin extends HTMLElement {
     }
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
     root.innerHTML =
-      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;cursor:pointer}.label.amber{background:#92400e}.label.red{background:#b91c1c}.label.green{background:#166534}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:inherit}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
+      '<style>:host{display:block;position:relative;overflow:hidden;background:#eef1f6}canvas{display:block;width:100%;height:100%;outline:none;opacity:0;transform:scale(1.015);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}:host([data-ready]) canvas{opacity:1;transform:none}@media (prefers-reduced-motion:reduce){canvas{transition:opacity .2s linear;transform:none}}:host(:not([data-ready])) .label{opacity:0}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;cursor:pointer}.label.amber{background:#92400e}.label.red{background:#b91c1c}.label.green{background:#166534}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:inherit}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
     this.#label = document.createElement('div')
     this.#label.className = 'label'
     this.#cockpitLabel = document.createElement('div')
@@ -351,12 +351,14 @@ export class StreamTwin extends HTMLElement {
         if (this.#status) {
           this.#status.hidden = true
         }
+        requestAnimationFrame(() => this.toggleAttribute('data-ready', true))
         return undefined
       })
       .catch(() => {
         if (this.#status) {
           this.#status.textContent = 'The F-35 model could not be loaded.'
         }
+        this.toggleAttribute('data-ready', true)
       })
     const tick = (time: number): void => {
       this.#frame = requestAnimationFrame(tick)

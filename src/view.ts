@@ -4041,15 +4041,6 @@ const runsPage = (model: Model, h: H): Html => {
   )
 }
 
-const cloudflareModeLabels: Record<Model['cloudflareAiMode'], string> = {
-  WorkersAI: 'Local backend · Workers AI',
-  Mock: 'Local backend · mock model',
-  Locked: 'Local backend locked',
-  Unavailable: 'No local backend',
-  Unknown: 'Checking…',
-}
-const cloudflareModeLabel = (model: Model): string =>
-  cloudflareModeLabels[model.cloudflareAiMode]
 const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
   const canSave =
     validCloudflareAccountId(model.cloudflareAccountId) &&
@@ -5007,14 +4998,18 @@ const modalContent = (model: Model, h: H): Html =>
             [h.Class('settings-head')],
             [
               h.h2([h.Id('dialog-title')], ['Cloudflare Workers AI']),
-              h.span(
-                [
-                  h.Class(
-                    `badge ${model.cloudflareAiMode === 'WorkersAI' ? 'positive' : 'neutral'}`,
+              model.hasStoredCloudflareToken
+                ? h.span(
+                    [h.Class('token-status saved'), h.Role('status')],
+                    [
+                      h.span([h.Class('live-dot')]),
+                      'Token saved in this browser',
+                    ],
+                  )
+                : h.span(
+                    [h.Class('token-status'), h.Role('status')],
+                    ['No token saved'],
                   ),
-                ],
-                [cloudflareModeLabel(model)],
-              ),
             ],
           ),
           h.p([h.Class('subtitle')], ['Credentials stay in this browser.']),

@@ -6349,10 +6349,21 @@ button:disabled,
   border-color: var(--rule-strong);
   color: var(--muted);
 }
-.button.outline:disabled,
-.button.ghost:disabled {
+.button:disabled,
+.button.outline:disabled {
+  background: var(--surface);
+  border: 1px dashed var(--rule-strong);
   color: var(--muted);
-  border-color: var(--rule);
+  box-shadow: none;
+}
+.button.ghost:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  opacity: 0.6;
+}
+.button:disabled:hover {
+  background: var(--surface);
 }
 
 /* UI polish: narrow layouts */
@@ -7993,4 +8004,16 @@ p.launch-estimate {
 }
 .launch-stage-line > .muted {
   font-size: var(--text-sm);
+}
+.token-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.token-status.saved {
+  color: var(--success);
+  font-weight: 600;
 }

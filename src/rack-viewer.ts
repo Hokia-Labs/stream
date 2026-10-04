@@ -64,7 +64,7 @@ export class StreamRack extends HTMLElement {
     }
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
     root.innerHTML =
-      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}p{margin:0;position:absolute;inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563}</style>'
+      '<style>:host{display:block;position:relative;overflow:hidden;background:#eef1f6}canvas{display:block;width:100%;height:100%;outline:none;opacity:0;transform:scale(1.015);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}:host([data-ready]) canvas{opacity:1;transform:none}@media (prefers-reduced-motion:reduce){canvas{transition:opacity .2s linear;transform:none}}p{margin:0;position:absolute;inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563}</style>'
     try {
       this.#renderer = new WebGLRenderer({ antialias: true })
     } catch {
@@ -88,6 +88,9 @@ export class StreamRack extends HTMLElement {
     const tick = (): void => {
       this.#controls?.update()
       renderer.render(this.#scene, this.#camera)
+      if (!this.hasAttribute('data-ready')) {
+        this.toggleAttribute('data-ready', true)
+      }
       this.#frame = requestAnimationFrame(tick)
     }
     this.#frame = requestAnimationFrame(tick)
