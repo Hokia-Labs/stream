@@ -183,33 +183,6 @@ const badgeClass = (status: Requirement['status']): string =>
       ? 'badge warning'
       : 'badge neutral'
 
-const segmented = <A extends string>(
-  label: string,
-  options: ReadonlyArray<A>,
-  active: A,
-  toMessage: (value: A) => Message,
-  h: H,
-): Html =>
-  h.div(
-    [
-      h.Class('segmented run-view-toggle twin-toggle'),
-      h.Role('group'),
-      h.AriaLabel(label),
-    ],
-    options.map(option =>
-      h.keyed('button')(
-        option,
-        [
-          h.Type('button'),
-          h.Class(option === active ? 'active' : ''),
-          h.AriaPressed(String(option === active)),
-          h.OnClick(toMessage(option)),
-        ],
-        [option],
-      ),
-    ),
-  )
-
 const svgIcon = (path: string, h: H): Html =>
   h.span([
     h.Class('icon'),
@@ -1918,18 +1891,6 @@ export const twinPage = (model: Model, h: H): Html => {
           h.section(
             [h.Class('panel twin-stage')],
             [
-              h.div(
-                [h.Class('twin-toolbar')],
-                [
-                  segmented(
-                    'Camera',
-                    ['Airframe', 'Aft bay', 'Cockpit'] as const,
-                    model.twinFocus,
-                    focus => Message.SelectedTwinFocus({ focus }),
-                    h,
-                  ),
-                ],
-              ),
               twin([
                 h.Class('twin-canvas'),
                 h.AriaLabel(
@@ -1955,6 +1916,23 @@ export const twinPage = (model: Model, h: H): Html => {
                     ],
                   ),
                 ],
+              ),
+              h.div(
+                [h.Class('twin-views'), h.Role('group'), h.AriaLabel('Camera')],
+                (['Airframe', 'Aft bay', 'Cockpit'] as const).map(focus =>
+                  h.keyed('button')(
+                    focus,
+                    [
+                      h.Type('button'),
+                      h.Class(
+                        `twin-view ${focus === model.twinFocus ? 'active' : ''}`,
+                      ),
+                      h.AriaPressed(String(focus === model.twinFocus)),
+                      h.OnClick(Message.SelectedTwinFocus({ focus })),
+                    ],
+                    [focus],
+                  ),
+                ),
               ),
             ],
           ),

@@ -8120,7 +8120,7 @@ p.launch-estimate {
 /* Power budget overlay on the 3D view */
 .twin-overlay {
   position: absolute;
-  top: 64px;
+  top: 12px;
   right: 12px;
   left: 12px;
   display: flex;
@@ -8698,4 +8698,41 @@ p.launch-estimate {
     right: 16px;
     align-items: stretch;
   }
+}
+
+.twin-views {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 2px;
+}
+.twin-view {
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.twin-view:hover {
+  color: var(--ink);
+}
+.twin-view.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.twin-view:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.twin-stage {
+  display: flex;
+  flex-direction: column;
+}
+.twin-stage .twin-canvas {
+  flex: 1 1 auto;
+  min-height: 440px;
+  height: auto;
 }
