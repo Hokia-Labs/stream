@@ -4,9 +4,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   accomplishmentSummaryDocument,
+  changeImpactDocument,
   do254Files,
   problemReports,
   verificationResultsDocument,
+  withFigureFiles,
+  withFigureUrls,
 } from './do254'
 import { type Model, initialModel, update } from './main'
 import { Message } from './message'
@@ -286,7 +289,12 @@ describe('digital twin', () => {
       'HVR-PSU-001-RevB.md',
       'CIA-PSU-001-RevB.md',
       'problem-reports.csv',
+      'figures/n-1-capacity.svg',
     ])
+    const cia = changeImpactDocument(requirements, '2026-10-03')
+    expect(cia).toContain('](figures/schematic-buck-power-rev-b.png)')
+    expect(withFigureFiles(withFigureUrls(cia))).toBe(cia)
+    expect(withFigureUrls(cia)).toContain('](/schematics/rev-b/page-05.png)')
     const has = accomplishmentSummaryDocument(requirements, '2026-10-03')
     expect(has).toContain('DO-254 §10.9')
     expect(has).toContain('Compliance is not yet claimed')

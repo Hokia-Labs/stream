@@ -6,6 +6,8 @@ import {
   type TwinArtifact,
   affectedSubsystems,
   analysisRows,
+  busDemandKw,
+  capacityKw,
   limitLabel,
   presentDerived,
   twinArtifacts,
@@ -315,6 +317,7 @@ export const changeImpactDocument = (
       ? `(U) ${unchanged.map(item => item.id).join(', ')} are unchanged. They are covered by regression analysis against the changed interfaces; no re-verification is planned.`
       : '(U) None.',
     '',
+    ...(changes.length > 0 ? figuresSection() : []),
     ...footer,
   ].join('\n')
 }
@@ -532,4 +535,91 @@ export const do254Files = (
     content: changeImpactDocument(requirements, date),
   },
   { name: 'problem-reports.csv', content: problemReportsCsv(requirements) },
+  { name: capacityFigure, content: capacitySvg() },
 ]
+
+const capacityFigure = 'figures/n-1-capacity.svg'
+
+const capacitySvg = (): string => {
+  const scale = capacityKw('B', 0)
+  const x = (value: number): number =>
+    Math.round(120 + (Math.min(value, scale) / scale) * 360)
+  const rows = (['A', 'B'] as const).map((revision, index) => {
+    const capacity = capacityKw(revision, 1)
+    const y = 44 + index * 44
+    const isShort = busDemandKw > capacity
+    const color = isShort ? '#b42318' : '#1a7f37'
+    return [
+      `<text x="16" y="${y + 15}" font-size="14">Rev ${revision}</text>`,
+      `<rect x="120" y="${y}" width="360" height="20" fill="#fff" stroke="#999"/>`,
+      `<rect x="120" y="${y}" width="${x(capacity) - 120}" height="20" fill="${color}"/>`,
+      `<text x="496" y="${y + 15}" font-size="13" fill="${color}">${capacity.toFixed(2)} kW</text>`,
+    ].join('')
+  })
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="140" viewBox="0 0 600 140" font-family="Helvetica, Arial, sans-serif">',
+    '<rect width="600" height="140" fill="#fff"/>',
+    `<text x="16" y="24" font-size="13" fill="#555">N-1 capacity vs ${busDemandKw.toFixed(2)} kW bus demand</text>`,
+    ...rows,
+    `<line x1="${x(busDemandKw)}" y1="36" x2="${x(busDemandKw)}" y2="116" stroke="#111" stroke-width="2"/>`,
+    '</svg>',
+  ].join('')
+}
+
+export type Do254Figure = Readonly<{
+  file: string
+  url: string
+  caption: string
+}>
+
+export const do254Figures: ReadonlyArray<Do254Figure> = [
+  {
+    file: capacityFigure,
+    url: `data:image/svg+xml;base64,${btoa(capacitySvg())}`,
+    caption: `N−1 converter capacity against the ${busDemandKw.toFixed(2)} kW bus demand, Rev A and Rev B.`,
+  },
+  {
+    file: 'figures/schematic-buck-power-rev-a.png',
+    url: '/schematics/rev-a/page-05.png',
+    caption:
+      'Buck power sheet, Rev A (KiCad export). Q401–Q404 are replaced in Rev B.',
+  },
+  {
+    file: 'figures/schematic-buck-power-rev-b.png',
+    url: '/schematics/rev-b/page-05.png',
+    caption: 'Buck power sheet, Rev B (KiCad export). Q401–Q404 changed.',
+  },
+  {
+    file: 'figures/thermal-rev-a.webp',
+    url: '/ansys-thermal-rev-a.webp',
+    caption: 'Ansys steady-state thermal map, Rev A power stage.',
+  },
+  {
+    file: 'figures/thermal-rev-b.webp',
+    url: '/ansys-thermal-rev-b.webp',
+    caption: 'Ansys steady-state thermal map, Rev B power stage.',
+  },
+]
+
+const figuresSection = (): ReadonlyArray<string> => [
+  '## 7. Figures',
+  '',
+  ...do254Figures.flatMap((figure, index) => [
+    `![Figure ${index + 1}](${figure.file})`,
+    '',
+    `*(U) Figure ${index + 1}. ${figure.caption}*`,
+    '',
+  ]),
+]
+
+export const withFigureUrls = (markdown: string): string =>
+  do254Figures.reduce(
+    (text, figure) => text.replaceAll(`](${figure.file})`, `](${figure.url})`),
+    markdown,
+  )
+
+export const withFigureFiles = (markdown: string): string =>
+  do254Figures.reduce(
+    (text, figure) => text.replaceAll(`](${figure.url})`, `](${figure.file})`),
+    markdown,
+  )

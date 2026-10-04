@@ -1,7 +1,10 @@
 import { Editor } from '@tiptap/core'
+import { Image } from '@tiptap/extension-image'
 import { TableKit } from '@tiptap/extension-table'
 import { Markdown } from '@tiptap/markdown'
 import { StarterKit } from '@tiptap/starter-kit'
+
+import { withFigureFiles, withFigureUrls } from './do254'
 
 type Tool = Readonly<{
   label: string
@@ -143,8 +146,13 @@ export class StreamReportEditor extends HTMLElement {
     this.append(toolbar, surface)
     this.#editor = new Editor({
       element: surface,
-      extensions: [StarterKit, TableKit, Markdown],
-      content: this.#markdown,
+      extensions: [
+        StarterKit,
+        TableKit,
+        Image.configure({ allowBase64: true }),
+        Markdown,
+      ],
+      content: withFigureUrls(this.#markdown),
       contentType: 'markdown',
       editorProps: {
         attributes: {
@@ -156,7 +164,7 @@ export class StreamReportEditor extends HTMLElement {
         },
       },
       onUpdate: ({ editor }) => {
-        const markdown = decodeEntities(editor.getMarkdown())
+        const markdown = withFigureFiles(decodeEntities(editor.getMarkdown()))
         this.#shownName = this.#name
         this.#shownMarkdown = markdown
         this.dispatchEvent(
@@ -197,7 +205,7 @@ export class StreamReportEditor extends HTMLElement {
     ) {
       return
     }
-    editor.commands.setContent(this.#markdown, {
+    editor.commands.setContent(withFigureUrls(this.#markdown), {
       contentType: 'markdown',
       emitUpdate: false,
     })

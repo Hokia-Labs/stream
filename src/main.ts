@@ -12,7 +12,7 @@ import {
   workingRequirements,
   writeRequirements,
 } from './branches'
-import { do254Files } from './do254'
+import { do254Figures, do254Files } from './do254'
 import type { Agent, Branch, Run } from './domain'
 import {
   ArtifactField,
@@ -873,11 +873,33 @@ const BuildTwinPackage = Command.define('BuildTwinPackage', {
     Effect.tryPromise(async () => {
       const now = new Date()
       const encoder = new TextEncoder()
-      const entries = files.map(file => ({
-        name: file.name,
-        data: encoder.encode(file.content),
-        isEdited: file.isEdited,
-      }))
+      const figures = await Promise.all(
+        do254Figures
+          .filter(
+            figure =>
+              !figure.url.startsWith('data:') &&
+              files.some(file => file.content.includes(`](${figure.file})`)),
+          )
+          .map(async figure => {
+            const response = await fetch(figure.url)
+            if (!response.ok) {
+              throw new Error(`Missing figure ${figure.url}`)
+            }
+            return {
+              name: figure.file,
+              data: new Uint8Array(await response.arrayBuffer()),
+              isEdited: false,
+            }
+          }),
+      )
+      const entries = [
+        ...files.map(file => ({
+          name: file.name,
+          data: encoder.encode(file.content),
+          isEdited: file.isEdited,
+        })),
+        ...figures,
+      ]
       const hashes = await Promise.all(
         entries.map(async entry => ({
           name: entry.name,
@@ -922,7 +944,7 @@ const BuildTwinPackage = Command.define('BuildTwinPackage', {
         name,
         digest,
         bytes: archive.length,
-        files: files.map(file => file.name).concat(['manifest.json']),
+        files: entries.map(entry => entry.name).concat(['manifest.json']),
       })
     }).pipe(
       Effect.catch(() =>

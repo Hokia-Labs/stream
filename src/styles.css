@@ -8844,3 +8844,12 @@ p.launch-estimate {
   color: var(--success);
   font-size: var(--text-sm);
 }
+
+.report-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-2) 0 var(--space-1);
+  border: 1px solid var(--line);
+  background: #fff;
+}
