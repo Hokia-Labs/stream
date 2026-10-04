@@ -2819,6 +2819,8 @@ a:focus-visible {
 
 /* Graph plane on a drafting grid: 16px minor, 80px major. */
 .graph-scroll {
+  --grid-minor: oklch(0.46 0.19 258 / 0.025);
+  --grid-major: oklch(0.46 0.19 258 / 0.055);
   background-color: var(--sheet);
   background-image:
     linear-gradient(var(--grid-major) 1px, transparent 1px),
