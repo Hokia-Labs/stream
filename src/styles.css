@@ -8649,3 +8649,7 @@ p.launch-estimate {
 .twin-derived li > :last-child {
   grid-column: 2;
 }
+
+.twin-proposal-lead {
+  margin: 0 0 12px;
+}
