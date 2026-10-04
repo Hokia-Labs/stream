@@ -7908,7 +7908,6 @@ button.graph-cluster-head:hover {
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--line);
 }
 .profile-menu-root > .profile:hover,
 .profile-menu-root > .profile[aria-expanded='true'] {
