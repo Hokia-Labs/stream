@@ -207,7 +207,7 @@ export type Model = typeof Model.Type
 type UpdateReturn = Update.Return<Model, Message>
 export const initialModel: Model = {
   workspace: seedWorkspace,
-  page: 'Datasets',
+  page: 'Requirements',
   artifactView: 'Table',
   collapsedArtifactIds: [],
   visibleArtifactFields: ArtifactField.literals,
@@ -4152,7 +4152,7 @@ const withHiddenPages = (
 ): Model =>
   modifyFields(model, {
     hiddenPages: () => hiddenPages,
-    page: page => (isPageHidden(hiddenPages, page) ? 'Datasets' : page),
+    page: page => (isPageHidden(hiddenPages, page) ? 'Requirements' : page),
     maybeActiveBranch: branch =>
       hiddenPages.includes('Branches') ? Option.none() : branch,
   })
