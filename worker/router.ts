@@ -1,7 +1,7 @@
 import { Schema } from 'effect'
 import { modifyFields } from 'foldkit/struct'
 
-import { Execution, Run } from '../src/domain'
+import { Execution, Run, TwinReport } from '../src/domain'
 import {
   RunControl,
   maxAgents,
@@ -14,14 +14,28 @@ export interface FleetHandle {
   snapshot(): Promise<Run | undefined>
   control(action: RunControl): Promise<Run | undefined>
 }
+export interface ReportStore {
+  loadReports(): Promise<ReadonlyArray<TwinReport>>
+  saveReports(files: ReadonlyArray<TwinReport>): Promise<number>
+}
 export interface WorkerServices {
   readonly accessToken: string | undefined
   readonly publicOrigin: string | undefined
   readonly gateway: string
   readonly model: string
   fleet(id: string): FleetHandle
+  reports(): ReportStore
   assets(request: Request): Promise<Response>
 }
+
+const TwinReports = Schema.Array(TwinReport)
+
+export const validReports = (files: ReadonlyArray<TwinReport>): boolean =>
+  files.length <= 20 &&
+  new Set(files.map(file => file.name)).size === files.length &&
+  files.every(
+    file => /^[\w.-]{1,80}$/.test(file.name) && file.content.length <= 100_000,
+  )
 
 const json = (data: unknown, status = 200): Response =>
   Response.json(data, {
@@ -167,6 +181,36 @@ export const handleRequest = async (
   if (!url.pathname.startsWith('/api/')) {
     return services.assets(request)
   }
+  const origin = request.headers.get('Origin')
+  const isCrossOrigin =
+    request.method !== 'GET' &&
+    Boolean(origin) &&
+    origin !== url.origin &&
+    origin !== services.publicOrigin
+  if (url.pathname === '/api/reports') {
+    if (request.method === 'GET') {
+      return json({ files: await services.reports().loadReports() })
+    }
+    if (isCrossOrigin) {
+      return json({ error: 'Cross-origin report writes are not allowed.' }, 403)
+    }
+    if (
+      request.method !== 'PUT' ||
+      !request.headers.get('Content-Type')?.startsWith('application/json')
+    ) {
+      return json({ error: 'Use a JSON PUT to save reports.' }, 405)
+    }
+    const files = await readBody(request)
+      .then(text => Schema.decodeUnknownSync(TwinReports)(JSON.parse(text)))
+      .catch(() => undefined)
+    if (!files || !validReports(files)) {
+      return json(
+        { error: 'Invalid reports. Save at most 20 uniquely named files.' },
+        400,
+      )
+    }
+    return json({ saved: await services.reports().saveReports(files) })
+  }
   const route =
     /^\/api\/runs\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\/(control))?$/.exec(
       url.pathname,
@@ -175,13 +219,7 @@ export const handleRequest = async (
   if (!id) {
     return json({ error: 'Unknown executor route.' }, 404)
   }
-  const origin = request.headers.get('Origin')
-  if (
-    request.method !== 'GET' &&
-    origin &&
-    origin !== url.origin &&
-    origin !== services.publicOrigin
-  ) {
+  if (isCrossOrigin) {
     return json({ error: 'Cross-origin fleet mutations are not allowed.' }, 403)
   }
   const fleet = services.fleet(id)

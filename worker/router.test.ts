@@ -7,6 +7,7 @@ import { Run, TaskSession } from '../src/domain'
 import { maxRequestBytes } from '../src/executor'
 import {
   type FleetHandle,
+  type ReportStore,
   type WorkerServices,
   authorized,
   handleRequest,
@@ -20,17 +21,28 @@ const setup = () => {
     control: vi.fn<FleetHandle['control']>().mockResolvedValue(undefined),
   }
   const fleetLookup = vi.fn<WorkerServices['fleet']>(() => fleet)
+  const store = {
+    loadReports: vi
+      .fn<ReportStore['loadReports']>()
+      .mockResolvedValue([
+        { name: 'HAS.md', content: '# HAS', isEdited: true },
+      ]),
+    saveReports: vi
+      .fn<ReportStore['saveReports']>()
+      .mockImplementation(files => Promise.resolve(files.length)),
+  }
   const services: WorkerServices = {
     accessToken: fixtureToken,
     publicOrigin: undefined,
     gateway: 'stream',
     model: '@cf/zai-org/glm-5.3',
     fleet: fleetLookup,
+    reports: () => store,
     assets: vi.fn<WorkerServices['assets']>(() =>
       Promise.resolve(new Response('Stream')),
     ),
   }
-  return { fleet, services, fleetLookup }
+  return { fleet, services, fleetLookup, store }
 }
 const request = (path: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers)
@@ -43,6 +55,40 @@ const request = (path: string, init: RequestInit = {}) => {
 const route = `/api/runs/${runId}`
 
 describe('Worker API boundary', () => {
+  it('stores twin reports durably', async () => {
+    const { services, store } = setup()
+    const loaded = await handleRequest(request('/api/reports'), services)
+    expect(await loaded.json()).toEqual({
+      files: [{ name: 'HAS.md', content: '# HAS', isEdited: true }],
+    })
+    const files = [
+      { name: 'HCI-PSU-001-RevB.md', content: '# HCI', isEdited: false },
+    ]
+    const saved = await handleRequest(
+      request('/api/reports', { method: 'PUT', body: JSON.stringify(files) }),
+      services,
+    )
+    expect(await saved.json()).toEqual({ saved: 1 })
+    expect(store.saveReports).toHaveBeenCalledWith(files)
+    const invalid = await handleRequest(
+      request('/api/reports', {
+        method: 'PUT',
+        body: JSON.stringify([{ name: '../x', content: '', isEdited: false }]),
+      }),
+      services,
+    )
+    expect(invalid.status).toBe(400)
+    const crossOrigin = await handleRequest(
+      request('/api/reports', {
+        method: 'PUT',
+        body: JSON.stringify(files),
+        headers: { Origin: 'https://evil.example' },
+      }),
+      services,
+    )
+    expect(crossOrigin.status).toBe(403)
+  })
+
   it('reports configuration without exposing credentials or invoking Pi', async () => {
     const { services, fleet } = setup()
     const locked = await handleRequest(

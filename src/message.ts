@@ -195,6 +195,10 @@ export const Message = defineMessageUnion({
   SelectedTwinReport: { name: Schema.String },
   EditedTwinReport: { name: Schema.String, markdown: Schema.String },
   ClickedDownloadTwinPackage: {},
+  LoadedTwinReports: { files: Schema.Array(TwinReport) },
+  ElapsedTwinReportSave: { token: Schema.Number },
+  SavedTwinReports: { token: Schema.Number },
+  FailedSaveTwinReports: { token: Schema.Number },
   GeneratedTwinPackage: {
     name: Schema.String,
     digest: Schema.String,

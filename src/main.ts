@@ -34,6 +34,7 @@ import {
   TwinOverlay,
   TwinPackage,
   TwinReport,
+  TwinReportSync,
   TwinReviewItem,
   Workspace,
   agentOutput,
@@ -147,6 +148,8 @@ export const Model = Schema.Struct({
   maybeTwinPackage: Schema.Option(TwinPackage),
   twinReports: Schema.Array(TwinReport),
   twinReportTab: Schema.String,
+  twinReportSync: TwinReportSync,
+  twinReportSaveToken: Schema.Number,
   isGeneratingTwinPackage: Schema.Boolean,
   cloudflareAccountId: Schema.String,
   cloudflareTokenDraft: Schema.String,
@@ -212,6 +215,8 @@ export const initialModel: Model = {
   maybeTwinPackage: Option.none(),
   twinReports: [],
   twinReportTab: '',
+  twinReportSync: 'Local',
+  twinReportSaveToken: 0,
   isGeneratingTwinPackage: false,
   cloudflareAccountId: '3d275686d20e190931adbada39b35957',
   cloudflareTokenDraft: '',
@@ -582,6 +587,61 @@ const sha256 = async (data: Uint8Array<ArrayBuffer>): Promise<string> => {
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
 }
+const LoadTwinReports = Command.define('LoadTwinReports', {
+  messages: [Message.LoadedTwinReports],
+  execute: Effect.tryPromise(async () => {
+    const response = await fetch('/api/reports', {
+      signal: AbortSignal.timeout(10_000),
+      credentials: 'same-origin',
+    })
+    if (!response.ok) {
+      throw new Error('Report store unavailable.')
+    }
+    const data: unknown = await response.json()
+    return Message.LoadedTwinReports(
+      Schema.decodeUnknownSync(
+        Schema.Struct({ files: Schema.Array(TwinReport) }),
+      )(data),
+    )
+  }).pipe(
+    Effect.catch(() =>
+      Effect.succeed(Message.LoadedTwinReports({ files: [] })),
+    ),
+  ),
+})
+
+const WaitTwinReportSave = Command.define('WaitTwinReportSave', {
+  args: { token: Schema.Number },
+  messages: [Message.ElapsedTwinReportSave],
+  execute: ({ token }) =>
+    Effect.sleep('700 millis').pipe(
+      Effect.as(Message.ElapsedTwinReportSave({ token })),
+    ),
+})
+
+const SaveTwinReports = Command.define('SaveTwinReports', {
+  args: { files: Schema.Array(TwinReport), token: Schema.Number },
+  messages: [Message.SavedTwinReports, Message.FailedSaveTwinReports],
+  execute: ({ files, token }) =>
+    Effect.tryPromise(async () => {
+      const response = await fetch('/api/reports', {
+        method: 'PUT',
+        signal: AbortSignal.timeout(10_000),
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(files),
+      })
+      if (!response.ok) {
+        throw new Error('Report store rejected the save.')
+      }
+      return Message.SavedTwinReports({ token })
+    }).pipe(
+      Effect.catch(() =>
+        Effect.succeed(Message.FailedSaveTwinReports({ token })),
+      ),
+    ),
+})
+
 const DraftTwinReports = Command.define('DraftTwinReports', {
   args: {
     requirements: Schema.Array(Requirement),
@@ -2550,30 +2610,81 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ],
       }
     },
-    DraftedTwinReports: ({ files }) => ({
-      model: modifyFields(model, {
-        isGeneratingTwinPackage: () => false,
-        twinReports: () => files,
-        twinReportTab: () =>
-          files.find(file => file.name.endsWith('.md'))?.name ?? '',
-      }),
+    DraftedTwinReports: ({ files }) => {
+      const token = model.twinReportSaveToken + 1
+      return {
+        model: modifyFields(model, {
+          isGeneratingTwinPackage: () => false,
+          twinReports: () => files,
+          twinReportTab: () =>
+            files.find(file => file.name.endsWith('.md'))?.name ?? '',
+          twinReportSync: () => 'Saving',
+          twinReportSaveToken: () => token,
+        }),
+        commands: [SaveTwinReports({ files, token })],
+      }
+    },
+    LoadedTwinReports: ({ files }) =>
+      files.length === 0 ||
+      model.twinReports.length > 0 ||
+      twinRevision(workingRequirements(model)) !== 'B'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              twinReports: () => files,
+              twinReportTab: () =>
+                files.find(file => file.name.endsWith('.md'))?.name ?? '',
+              twinReportSync: () => 'Saved',
+            }),
+          },
+    ElapsedTwinReportSave: ({ token }) =>
+      token === model.twinReportSaveToken
+        ? {
+            model,
+            commands: [SaveTwinReports({ files: model.twinReports, token })],
+          }
+        : { model },
+    SavedTwinReports: ({ token }) => ({
+      model:
+        token === model.twinReportSaveToken
+          ? modifyFields(model, { twinReportSync: () => 'Saved' })
+          : model,
+    }),
+    FailedSaveTwinReports: ({ token }) => ({
+      model:
+        token === model.twinReportSaveToken
+          ? modifyFields(model, { twinReportSync: () => 'Failed' })
+          : model,
     }),
     SelectedTwinReport: ({ name }) => ({
       model: modifyFields(model, { twinReportTab: () => name }),
     }),
-    EditedTwinReport: ({ name, markdown }) => ({
-      model: modifyFields(model, {
-        twinReports: reports =>
-          reports.map(report =>
-            report.name === name && report.content !== markdown
-              ? modifyFields(report, {
-                  content: () => markdown,
-                  isEdited: () => true,
-                })
-              : report,
-          ),
-      }),
-    }),
+    EditedTwinReport: ({ name, markdown }) => {
+      if (
+        !model.twinReports.some(
+          report => report.name === name && report.content !== markdown,
+        )
+      ) {
+        return { model }
+      }
+      const token = model.twinReportSaveToken + 1
+      return {
+        commands: [WaitTwinReportSave({ token })],
+        model: modifyFields(model, {
+          twinReportSync: () => 'Saving',
+          twinReportSaveToken: () => token,
+          twinReports: reports =>
+            reports.map(report =>
+              report.name === name && report.content !== markdown
+                ? modifyFields(report, {
+                    content: () => markdown,
+                    isEdited: () => true,
+                  })
+                : report,
+            ),
+        }),
+      }
+    },
     ClickedDownloadTwinPackage: () =>
       model.twinReports.length === 0 || model.isGeneratingTwinPackage
         ? { model }
@@ -3207,6 +3318,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
   commands: [
     LoadWorkspace(),
     LoadSidebarWidth(),
+    LoadTwinReports(),
     SyncCloudflareCredentials({
       operation: 'Load',
       accountId: initialModel.cloudflareAccountId,

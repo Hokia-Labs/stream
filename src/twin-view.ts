@@ -53,6 +53,13 @@ const reportEditorSpec = CustomElement.define({
 const reportLabel = (name: string): string =>
   name.replace(/-PSU-001-Rev[AB]\.md$/, '')
 
+const syncLabel: Readonly<Record<Model['twinReportSync'], string>> = {
+  Local: '',
+  Saving: 'Saving…',
+  Saved: 'Saved to Durable Object SQLite',
+  Failed: 'Not saved: backend locked or offline',
+}
+
 const reportEditor = (model: Model, h: H): Html => {
   const editor = reportEditorSpec.withMessage(h)
   const reports = model.twinReports.filter(report =>
@@ -94,9 +101,14 @@ const reportEditor = (model: Model, h: H): Html => {
           h.span(
             [h.Class('muted small-text')],
             [
-              editedCount > 0
-                ? `${editedCount} edited · edits go into the zip`
-                : 'Drafts · edit before you download',
+              [
+                editedCount > 0
+                  ? `${editedCount} edited`
+                  : 'Drafts · edit before you download',
+                syncLabel[model.twinReportSync],
+              ]
+                .filter(Boolean)
+                .join(' · '),
             ],
           ),
         ],

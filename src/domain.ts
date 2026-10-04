@@ -107,6 +107,13 @@ export const TwinReport = Schema.Struct({
   isEdited: Schema.Boolean,
 })
 export type TwinReport = typeof TwinReport.Type
+export const TwinReportSync = Schema.Literals([
+  'Local',
+  'Saving',
+  'Saved',
+  'Failed',
+])
+export type TwinReportSync = typeof TwinReportSync.Type
 export const GraphPreviewTab = Schema.Literals(['Inputs', 'Output', 'Settings'])
 export type GraphPreviewTab = typeof GraphPreviewTab.Type
 export const GroupBy = Schema.Literals(['None', 'Status', 'Owner', 'Type'])

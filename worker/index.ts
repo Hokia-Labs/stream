@@ -12,7 +12,7 @@ import {
   createRegistry,
 } from '@earendil-works/pi-durable'
 
-import { type Run, downstream } from '../src/domain'
+import { type Run, type TwinReport, downstream } from '../src/domain'
 import type { RunControl } from '../src/executor'
 import {
   FleetCoordinator,
@@ -32,6 +32,8 @@ interface Env {
   STREAM_ACCESS_TOKEN?: string
   PUBLIC_ORIGIN?: string
 }
+
+const reportStoreName = 'stream-twin-reports'
 
 const ArtifactInput = Type.Object({ id: Type.String() })
 const readable = (data: unknown): ToolExecutionResult => ({
@@ -190,6 +192,47 @@ export class Fleet extends Agent<Env, FleetState> {
     return this.coordinator.snapshot()
   }
 
+  loadReports(): Promise<ReadonlyArray<TwinReport>> {
+    this.ensureReportTable()
+    return Promise.resolve(
+      this.ctx.storage.sql
+        .exec<{ name: string; content: string; is_edited: number }>(
+          'SELECT name, content, is_edited FROM twin_reports ORDER BY position',
+        )
+        .toArray()
+        .map(row => ({
+          name: row.name,
+          content: row.content,
+          isEdited: row.is_edited === 1,
+        })),
+    )
+  }
+
+  saveReports(files: ReadonlyArray<TwinReport>): Promise<number> {
+    this.ensureReportTable()
+    const sql = this.ctx.storage.sql
+    this.ctx.storage.transactionSync(() => {
+      sql.exec('DELETE FROM twin_reports')
+      files.forEach((file, position) => {
+        sql.exec(
+          'INSERT INTO twin_reports (name, position, content, is_edited, updated_at) VALUES (?, ?, ?, ?, ?)',
+          file.name,
+          position,
+          file.content,
+          file.isEdited ? 1 : 0,
+          Effect.runSync(Clock.currentTimeMillis),
+        )
+      })
+    })
+    return Promise.resolve(files.length)
+  }
+
+  private ensureReportTable(): void {
+    this.ctx.storage.sql.exec(
+      'CREATE TABLE IF NOT EXISTS twin_reports (name TEXT PRIMARY KEY, position INTEGER NOT NULL, content TEXT NOT NULL, is_edited INTEGER NOT NULL, updated_at INTEGER NOT NULL)',
+    )
+  }
+
   async advance(): Promise<void> {
     if (this.advancing) {
       return this.advancing
@@ -230,6 +273,7 @@ export default {
         gateway: env.AI_GATEWAY_ID,
         model: env.AI_MODEL,
         fleet: id => env.FLEETS.getByName(id),
+        reports: () => env.FLEETS.getByName(reportStoreName),
         assets: assetRequest => env.ASSETS.fetch(assetRequest),
       })
     } catch {
