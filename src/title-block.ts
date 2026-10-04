@@ -14,7 +14,10 @@ export const pageHeading = (
     [
       h.div(
         [h.Class('page-title')],
-        [h.h1([], [page]), h.p([h.Class('subtitle')], [subtitle])],
+        [
+          h.h1([], [page]),
+          subtitle ? h.p([h.Class('subtitle')], [subtitle]) : h.empty,
+        ],
       ),
       action,
     ],

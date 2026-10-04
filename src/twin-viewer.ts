@@ -349,8 +349,7 @@ export class StreamTwin extends HTMLElement {
         this.#paint()
         this.#applyFocus()
         if (this.#status) {
-          this.#status.textContent =
-            'Drag to orbit · scroll to zoom · click the cockpit or the aft power assembly to fly there'
+          this.#status.hidden = true
         }
         return undefined
       })

@@ -1316,7 +1316,7 @@ export const twinPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Digital twin',
-        'Inspect the hardware, place a change in the systems model, review its impact, and package the updated DO-254 data.',
+        '',
         isLoaded
           ? h.empty
           : h.button(
@@ -1367,12 +1367,6 @@ export const twinPage = (model: Model, h: H): Html => {
                       h.span([], ['40 °C']),
                       h.span([h.Class('twin-ramp')], []),
                       h.span([], ['95 °C']),
-                    ],
-                  ),
-                  h.p(
-                    [h.Class('muted small-text twin-note')],
-                    [
-                      'Airframe: supplied F-35 model. Power assembly and avionics geometry are placeholders until the supplier models arrive.',
                     ],
                   ),
                 ],
