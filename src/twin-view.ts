@@ -182,7 +182,7 @@ const signoffButton = (
   return h.button(
     [
       h.Type('button'),
-      h.Class(`button small ${isSigned ? 'ghost' : 'outline'}`),
+      h.Class('button outline small'),
       h.AriaPressed(String(isSigned)),
       h.AriaLabel(`${isSigned ? 'Revoke' : 'Sign off'} ${signoffTitle(item)}`),
       h.Disabled(!isEnabled),
@@ -667,7 +667,7 @@ export const twinPage = (model: Model, h: H): Html => {
                                       h.button(
                                         [
                                           h.Type('button'),
-                                          h.Class('button ghost small'),
+                                          h.Class('button outline small'),
                                           h.OnClick(
                                             Message.ClickedTraceTwinArtifact({
                                               id: change.artifact.id,
