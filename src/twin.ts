@@ -1,4 +1,4 @@
-import type { Requirement, TwinRevision } from './domain'
+import type { Requirement, TwinReviewItem, TwinRevision } from './domain'
 import { artifactPortion, portionText, systemHigh } from './marking'
 
 export type TwinArtifact = Readonly<{
@@ -510,3 +510,25 @@ export const twinPackageFiles = (
     },
   ]
 }
+
+export const twinSignoffs: ReadonlyArray<
+  Readonly<{ item: TwinReviewItem; title: string; role: string }>
+> = [
+  {
+    item: 'Requirements',
+    title: 'Requirement impact',
+    role: 'Systems engineering',
+  },
+  { item: 'Thermal', title: 'Thermal analysis', role: 'Thermal' },
+  { item: 'Mechanical', title: 'Mechanical analysis', role: 'Structures' },
+]
+
+export const signoffTitle = (item: TwinReviewItem): string =>
+  twinSignoffs.find(signoff => signoff.item === item)?.title ?? item
+
+export const lowMargin = (row: AnalysisRow): boolean =>
+  (row.limit.kind === 'Max'
+    ? row.limit.value - row.revB
+    : row.revB - row.limit.value) /
+    row.limit.value <
+  0.1

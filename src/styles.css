@@ -4896,20 +4896,42 @@ body:has(.modal-backdrop) .toast {
 .twin-after {
   color: var(--accent);
 }
-.twin-review {
+.twin-signoff-footers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.twin-signoff-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+.twin-signed {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  cursor: pointer;
+  gap: 4px;
+  font-weight: 550;
 }
-.twin-review.done {
-  color: var(--accent);
+.twin-signed .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--success);
 }
-.twin-review-row {
-  display: flex;
-  gap: var(--space-4);
-  margin-top: var(--space-3);
+.twin-signoff-table td {
+  vertical-align: middle;
+}
+.twin-signoff-table th:last-child,
+.twin-signoff-action {
+  width: 96px;
+  text-align: right;
+}
+.twin-signoff-note {
+  margin: var(--space-3) 0 0;
 }
 .twin-package-actions {
   display: flex;
@@ -4935,7 +4957,7 @@ body:has(.modal-backdrop) .toast {
   height: 6px;
   margin-left: 6px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--warning);
   display: inline-block;
   vertical-align: middle;
 }
@@ -4943,7 +4965,7 @@ stream-report-editor {
   display: block;
   border: 1px solid var(--rule);
   border-radius: 6px;
-  background: var(--surface);
+  background: #fff;
   overflow: hidden;
 }
 stream-report-editor:focus-within {
@@ -5525,7 +5547,6 @@ stream-report-editor:focus-within {
 .stage-column,
 .approval-row,
 .twin-steps li,
-.twin-review,
 .run-view-toggle button {
   transition:
     background-color var(--motion-base) var(--ease-out),

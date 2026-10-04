@@ -17,8 +17,11 @@ import {
   analysisRows,
   hasTwinScenario,
   limitLabel,
+  lowMargin,
+  signoffTitle,
   twinChanges,
   twinRevision,
+  twinSignoffs,
   withinLimit,
 } from './twin'
 
@@ -56,8 +59,8 @@ const reportLabel = (name: string): string =>
 const syncLabel: Readonly<Record<Model['twinReportSync'], string>> = {
   Local: '',
   Saving: 'Saving…',
-  Saved: 'Saved to Durable Object SQLite',
-  Failed: 'Not saved: backend locked or offline',
+  Saved: 'Saved',
+  Failed: 'Not saved',
 }
 
 const reportEditor = (model: Model, h: H): Html => {
@@ -159,25 +162,177 @@ const segmented = <A extends string>(
     ),
   )
 
-const reviewBox = (
+const svgIcon = (path: string, h: H): Html =>
+  h.span([
+    h.Class('icon'),
+    h.AriaHidden(true),
+    h.InnerHTML(
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`,
+    ),
+  ])
+const checkPath = '<path d="m5 12.5 4.5 4.5L19 7.5"/>'
+
+const signoffButton = (
   model: Model,
   item: TwinReviewItem,
-  label: string,
+  isEnabled: boolean,
+  h: H,
+): Html => {
+  const isSigned = model.twinReviewed.includes(item)
+  return h.button(
+    [
+      h.Type('button'),
+      h.Class(`button small ${isSigned ? 'ghost' : 'outline'}`),
+      h.AriaPressed(String(isSigned)),
+      h.AriaLabel(`${isSigned ? 'Revoke' : 'Sign off'} ${signoffTitle(item)}`),
+      h.Disabled(!isEnabled),
+      h.OnClick(Message.ToggledTwinReview({ item })),
+    ],
+    [isSigned ? 'Revoke' : 'Sign off'],
+  )
+}
+
+const signatory = (h: H): Html =>
+  h.span([h.Class('twin-signed')], [svgIcon(checkPath, h), 'Ben Juntilla'])
+
+const signoffFooter = (
+  model: Model,
+  item: TwinReviewItem,
+  prompt: string,
   isEnabled: boolean,
   h: H,
 ): Html =>
-  h.label(
-    [h.Class(`twin-review ${model.twinReviewed.includes(item) ? 'done' : ''}`)],
+  h.div(
+    [h.Class('twin-signoff-footer')],
     [
-      h.input([
-        h.Type('checkbox'),
-        h.Checked(model.twinReviewed.includes(item)),
-        h.Disabled(!isEnabled),
-        h.OnChange(() => Message.ToggledTwinReview({ item })),
-      ]),
-      label,
+      model.twinReviewed.includes(item)
+        ? h.span(
+            [],
+            [signatory(h), h.span([h.Class('muted')], [' signed off'])],
+          )
+        : h.span(
+            [h.Class('muted')],
+            [isEnabled ? prompt : 'Place Rev B before signing off.'],
+          ),
+      signoffButton(model, item, isEnabled, h),
     ],
   )
+
+const signoffEvidence = (
+  item: TwinReviewItem,
+  changeCount: number,
+  subsystemCount: number,
+): string => {
+  if (item === 'Requirements') {
+    return `${changeCount} artifacts revised across ${subsystemCount} subsystems`
+  }
+  const rows = analysisRows.filter(row => row.domain === item)
+  const over = rows.filter(row => !withinLimit(row, row.revB)).length
+  const low = rows.filter(
+    row => withinLimit(row, row.revB) && lowMargin(row),
+  ).length
+  return [
+    `${rows.length} checks`,
+    over > 0 ? `${over} over limit` : 'all within limits',
+    low > 0 ? `${low} under 10% margin` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+const signoffGate = (
+  model: Model,
+  isRevB: boolean,
+  changeCount: number,
+  subsystemCount: number,
+  h: H,
+): Html => {
+  const remaining = twinSignoffs.length - model.twinReviewed.length
+  return h.section(
+    [h.Class('panel twin-wide'), h.AriaLabel('Engineering sign-off')],
+    [
+      h.div(
+        [h.Class('twin-section-head')],
+        [
+          h.h2([h.Class('twin-heading')], ['Sign-off']),
+          h.span(
+            [h.Class('muted small-text')],
+            [`${model.twinReviewed.length} of ${twinSignoffs.length} signed`],
+          ),
+        ],
+      ),
+      h.table(
+        [h.Class('twin-table twin-signoff-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                [
+                  h.th([], ['Discipline']),
+                  h.th([], ['Scope']),
+                  h.th([], ['Signatory']),
+                  h.th([h.AriaLabel('Action')], []),
+                ],
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            twinSignoffs.map(signoff =>
+              h.keyed('tr')(
+                signoff.item,
+                [],
+                [
+                  h.td(
+                    [],
+                    [
+                      h.div([], [signoff.title]),
+                      h.div([h.Class('muted small-text')], [signoff.role]),
+                    ],
+                  ),
+                  h.td(
+                    [h.Class('muted')],
+                    [
+                      isRevB
+                        ? signoffEvidence(
+                            signoff.item,
+                            changeCount,
+                            subsystemCount,
+                          )
+                        : '—',
+                    ],
+                  ),
+                  h.td(
+                    [],
+                    [
+                      model.twinReviewed.includes(signoff.item)
+                        ? signatory(h)
+                        : h.span([h.Class('muted')], ['Pending']),
+                    ],
+                  ),
+                  h.td(
+                    [h.Class('twin-signoff-action')],
+                    [signoffButton(model, signoff.item, isRevB, h)],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.p(
+        [h.Class('muted small-text twin-signoff-note')],
+        [
+          remaining === 0
+            ? 'All disciplines signed. DO-254 drafting is available, and sign-offs are recorded in the change record.'
+            : `DO-254 drafting is available once all three disciplines sign off. ${remaining} remaining.`,
+        ],
+      ),
+    ],
+  )
+}
 
 const emptyState = (h: H): Html =>
   h.section(
@@ -268,7 +423,7 @@ export const twinPage = (model: Model, h: H): Html => {
             h.Title(
               isReviewed
                 ? 'Draft DO-254 reports'
-                : 'Review the impact to generate',
+                : 'Sign off all three reviews to draft',
             ),
             h.OnClick(
               hasReports
@@ -444,13 +599,6 @@ export const twinPage = (model: Model, h: H): Html => {
                         [h.Class('twin-heading')],
                         [`Requirement changes · ${changes.length}`],
                       ),
-                      reviewBox(
-                        model,
-                        'Requirements',
-                        'Requirement changes reviewed',
-                        isRevB,
-                        h,
-                      ),
                     ],
                   ),
                   changes.length === 0
@@ -536,6 +684,13 @@ export const twinPage = (model: Model, h: H): Html => {
                           ),
                         ],
                       ),
+                  signoffFooter(
+                    model,
+                    'Requirements',
+                    `Reviewed the ${changes.length} requirement changes above?`,
+                    isRevB,
+                    h,
+                  ),
                 ],
               ),
               h.section(
@@ -617,19 +772,19 @@ export const twinPage = (model: Model, h: H): Html => {
                     ],
                   ),
                   h.div(
-                    [h.Class('twin-review-row')],
+                    [h.Class('twin-signoff-footers')],
                     [
-                      reviewBox(
+                      signoffFooter(
                         model,
                         'Thermal',
-                        'Thermal results reviewed',
+                        'Reviewed the thermal results?',
                         isRevB,
                         h,
                       ),
-                      reviewBox(
+                      signoffFooter(
                         model,
                         'Mechanical',
-                        'Mechanical results reviewed',
+                        'Reviewed the mechanical results?',
                         isRevB,
                         h,
                       ),
@@ -637,6 +792,7 @@ export const twinPage = (model: Model, h: H): Html => {
                   ),
                 ],
               ),
+              signoffGate(model, isRevB, changes.length, subsystems.length, h),
               h.section(
                 [h.Class('panel twin-wide')],
                 [
@@ -681,7 +837,7 @@ export const twinPage = (model: Model, h: H): Html => {
                                 [
                                   isRevB && isReviewed
                                     ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, SAMPLE analysis, and a SHA-256 manifest as one zip.'
-                                    : 'Available after Rev B is placed and all three reviews are checked.',
+                                    : 'Available after Rev B is placed and all three sign-offs are in.',
                                 ],
                               ),
                               h.button(

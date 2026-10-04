@@ -61,6 +61,7 @@ import {
   hasTwinScenario,
   installTwinRevision,
   seedTwinArtifacts,
+  signoffTitle,
   twinPackageFiles,
   twinRevision,
 } from './twin'
@@ -2578,14 +2579,22 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         `${summary}.`,
       )
     },
-    ToggledTwinReview: ({ item }) => ({
-      model: modifyFields(model, {
-        twinReviewed: reviewed =>
-          reviewed.includes(item)
-            ? reviewed.filter(value => value !== item)
-            : reviewed.concat([item]),
-      }),
-    }),
+    ToggledTwinReview: ({ item }) => {
+      if (twinRevision(workingRequirements(model)) !== 'B') {
+        return { model }
+      }
+      const summary = `${signoffTitle(item)} ${model.twinReviewed.includes(item) ? 'sign-off revoked' : 'signed off'}`
+      return persist(
+        modifyFields(model, {
+          twinReviewed: reviewed =>
+            reviewed.includes(item)
+              ? reviewed.filter(value => value !== item)
+              : reviewed.concat([item]),
+        }),
+        record(model.workspace, `${summary} · Ben Juntilla`),
+        `${summary}.`,
+      )
+    },
     ClickedGenerateTwinPackage: () => {
       const requirements = workingRequirements(model)
       if (twinRevision(requirements) !== 'B') {
