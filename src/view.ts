@@ -107,6 +107,8 @@ const paths: Readonly<Record<string, string>> = {
   requirements: '<path d="m3 7 2 2 4-4M3 17l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
   database:
     '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  inbox:
+    '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
@@ -216,7 +218,7 @@ const sidebarInbox = (model: Model, h: H): Html => {
       h.OnClick(Message.SelectedInbox()),
     ],
     [
-      icon('check', h),
+      icon('inbox', h),
       'Inbox',
       pending > 0
         ? h.span(
