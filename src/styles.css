@@ -8736,3 +8736,20 @@ p.launch-estimate {
   min-height: 440px;
   height: auto;
 }
+
+.report-workspace {
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 0;
+}
+.report-workspace > * {
+  min-width: 0;
+}
+.report-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+.twin-package-meta {
+  margin: 0 0 var(--space-3);
+}

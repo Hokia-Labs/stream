@@ -111,7 +111,11 @@ const syncLabel: Readonly<Record<Model['twinReportSync'], string>> = {
   Failed: 'Not saved',
 }
 
-const reportEditor = (model: Model, h: H): Html => {
+const reportEditor = (
+  model: Model,
+  actions: ReadonlyArray<Html>,
+  h: H,
+): Html => {
   const editor = reportEditorSpec.withMessage(h)
   const reports = model.twinReports.filter(report =>
     report.name.endsWith('.md'),
@@ -149,17 +153,21 @@ const reportEditor = (model: Model, h: H): Html => {
               ),
             ),
           ),
-          h.span(
-            [h.Class('muted small-text')],
+          h.div(
+            [h.Class('report-head-actions')],
             [
-              [
-                editedCount > 0
-                  ? `${editedCount} edited`
-                  : 'Drafts · edit before you download',
-                syncLabel[model.twinReportSync],
-              ]
-                .filter(Boolean)
-                .join(' · '),
+              h.span(
+                [h.Class('muted small-text')],
+                [
+                  [
+                    editedCount > 0 ? `${editedCount} edited` : '',
+                    syncLabel[model.twinReportSync],
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                ],
+              ),
+              ...actions,
             ],
           ),
         ],
@@ -1219,60 +1227,49 @@ const do254Panel = (model: Model, h: H): Html => {
   return h.section(
     [h.Class('panel twin-wide')],
     [
-      h.div(
-        [h.Class('twin-section-head')],
-        [h.h2([h.Class('twin-heading')], ['DO-254 data package'])],
-      ),
       Option.match(pkg, {
         onNone: () =>
           hasReports
-            ? h.div(
-                [],
+            ? reportEditor(
+                model,
                 [
-                  reportEditor(model, h),
-                  h.div(
-                    [h.Class('twin-package-actions')],
-                    [
-                      isReviewed
-                        ? h.empty
-                        : h.span(
-                            [h.Class('muted small-text')],
-                            [
-                              `Sign-off required before release · ${model.twinReviewed.length} of ${twinSignoffs.length} signed`,
-                            ],
-                          ),
-                      isReviewed
-                        ? h.empty
-                        : h.button(
-                            [
-                              h.Type('button'),
-                              h.Class('button outline'),
-                              h.OnClick(
-                                Message.SelectedTwinPanelTab({
-                                  tab: 'Sign-off',
-                                }),
-                              ),
-                            ],
-                            ['Open sign-off'],
-                          ),
-                      h.button(
+                  isReviewed
+                    ? h.empty
+                    : h.span(
+                        [h.Class('muted small-text')],
                         [
-                          h.Type('button'),
-                          h.Class('button primary'),
-                          h.Disabled(
-                            !isReviewed || model.isGeneratingTwinPackage,
-                          ),
-                          h.OnClick(Message.ClickedDownloadTwinPackage()),
-                        ],
-                        [
-                          model.isGeneratingTwinPackage
-                            ? 'Packaging…'
-                            : 'Download DO-254 package',
+                          `${model.twinReviewed.length} of ${twinSignoffs.length} signed`,
                         ],
                       ),
+                  isReviewed
+                    ? h.empty
+                    : h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button outline'),
+                          h.OnClick(
+                            Message.SelectedTwinPanelTab({
+                              tab: 'Sign-off',
+                            }),
+                          ),
+                        ],
+                        ['Open sign-off'],
+                      ),
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button primary'),
+                      h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
+                      h.OnClick(Message.ClickedDownloadTwinPackage()),
+                    ],
+                    [
+                      model.isGeneratingTwinPackage
+                        ? 'Packaging…'
+                        : 'Download package',
                     ],
                   ),
                 ],
+                h,
               )
             : h.div(
                 [],
@@ -1281,8 +1278,8 @@ const do254Panel = (model: Model, h: H): Html => {
                     [h.Class('muted small-text')],
                     [
                       isVerified
-                        ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, analysis results, and a SHA-256 manifest as one zip.'
-                        : 'Available once Rev B passes the requirement check. Sign-offs follow on the drafted reports.',
+                        ? 'Drafts the HRD and DO-254 reports from the systems model for you to review and edit.'
+                        : 'Available once Rev B passes the requirement check.',
                     ],
                   ),
                   h.button(
@@ -1304,25 +1301,18 @@ const do254Panel = (model: Model, h: H): Html => {
           h.div(
             [h.Class('twin-package')],
             [
-              h.dl(
-                [h.Class('twin-facts')],
+              h.p(
                 [
-                  h.dt([], ['Package']),
-                  h.dd([h.Class('mono')], [item.name]),
-                  h.dt([], ['Size']),
-                  h.dd(
-                    [h.Class('mono')],
-                    [`${(item.bytes / 1024).toFixed(1)} KB`],
-                  ),
-                  h.dt([], ['SHA-256']),
-                  h.dd([h.Class('mono')], [item.digest.slice(0, 16) + '…']),
-                  h.dt([], ['Files']),
-                  h.dd([h.Class('mono')], [item.files.join(' · ')]),
+                  h.Class('twin-package-meta muted small-text'),
+                  h.Title(`${item.files.join('\n')}\nSHA-256 ${item.digest}`),
+                ],
+                [
+                  h.span([h.Class('mono')], [item.name]),
+                  ` · ${(item.bytes / 1024).toFixed(1)} KB · ${item.files.length} files`,
                 ],
               ),
-              reportEditor(model, h),
-              h.div(
-                [h.Class('twin-package-actions')],
+              reportEditor(
+                model,
                 [
                   h.button(
                     [
@@ -1330,7 +1320,7 @@ const do254Panel = (model: Model, h: H): Html => {
                       h.Class('button outline'),
                       h.OnClick(Message.ClickedDownloadTwinPackage()),
                     ],
-                    ['Download again'],
+                    ['Download'],
                   ),
                   item.isSent
                     ? h.span([h.Class('badge positive')], ['Sent to customer'])
@@ -1340,15 +1330,10 @@ const do254Panel = (model: Model, h: H): Html => {
                           h.Class('button primary'),
                           h.OnClick(Message.ClickedMarkTwinPackageSent()),
                         ],
-                        ['Mark as sent to customer'],
+                        ['Mark as sent'],
                       ),
                 ],
-              ),
-              h.p(
-                [h.Class('muted small-text')],
-                [
-                  'Stream does not email the customer. Send the zip through your usual channel, then mark it as sent.',
-                ],
+                h,
               ),
             ],
           ),
