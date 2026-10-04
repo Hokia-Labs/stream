@@ -1104,32 +1104,56 @@ const approvalDiff = (model: Model, approval: Approval, h: H): Html => {
   )
 }
 
+const metaLink = (
+  label: string,
+  maybeMessage: Message | undefined,
+  h: H,
+): Html =>
+  maybeMessage
+    ? h.button(
+        [h.Type('button'), h.Class('meta-link'), h.OnClick(maybeMessage)],
+        [label],
+      )
+    : h.span([], [label])
+
 const impactStrip = (model: Model, approval: Approval, h: H): Html => {
   const counts = impactCounts(model.workspace, approval)
-  const parts: ReadonlyArray<readonly [number, string, boolean]> = [
-    [counts.hasSnapshot ? counts.added : 0, 'added', false],
-    [counts.hasSnapshot ? counts.changed : 0, 'changed', false],
-    [counts.hasSnapshot ? counts.removed : 0, 'removed', false],
-    [counts.downstream, 'downstream', false],
-    [counts.tests, counts.tests === 1 ? 'test' : 'tests', false],
+  const parts: ReadonlyArray<readonly [number, string, boolean, boolean]> = [
+    [counts.hasSnapshot ? counts.added : 0, 'added', false, false],
+    [counts.hasSnapshot ? counts.changed : 0, 'changed', false, false],
+    [counts.hasSnapshot ? counts.removed : 0, 'removed', false, false],
+    [counts.downstream, 'downstream', false, true],
+    [counts.tests, counts.tests === 1 ? 'test' : 'tests', false, true],
     [
       counts.brokenLinks,
       counts.brokenLinks === 1 ? 'broken link' : 'broken links',
       true,
+      true,
     ],
   ]
   const shown = parts.filter(([count]) => count > 0)
+  const trace = Message.ClickedTraceTwinArtifact({ id: approval.targetId })
   return h.p(
     [h.Class('impact-line'), h.AriaLabel(`Impact of ${approval.id}`)],
     Array.isArrayEmpty(shown)
       ? ['No downstream impact']
-      : shown.flatMap(([count, label, isAlert], index) => [
-          index > 0 ? h.span([h.AriaHidden(true)], [' · ']) : h.empty,
-          h.span(
-            [h.Class(isAlert ? 'alert' : '')],
-            [h.strong([], [String(count)]), ` ${label}`],
-          ),
-        ]),
+      : shown.flatMap(([count, label, isAlert, isTrace], index) => {
+          const content = [h.strong([], [String(count)]), ` ${label}`]
+          return [
+            index > 0 ? h.span([h.AriaHidden(true)], [' · ']) : h.empty,
+            isTrace
+              ? h.button(
+                  [
+                    h.Type('button'),
+                    h.Class(`meta-link${isAlert ? ' alert' : ''}`),
+                    h.Title(`Trace ${approval.targetId} in the systems graph`),
+                    h.OnClick(trace),
+                  ],
+                  content,
+                )
+              : h.span([h.Class(isAlert ? 'alert' : '')], content),
+          ]
+        }),
   )
 }
 
@@ -1230,18 +1254,37 @@ const approvals = (
                   h.div(
                     [h.Class('row-meta')],
                     [
-                      h.span([], [approval.targetId]),
-                      h.span([], ['·']),
-                      h.span(
-                        [],
-                        [
-                          model.workspace.agents.find(
-                            agent => agent.id === approval.agentId,
-                          )?.name ?? 'Review coordinator',
-                        ],
+                      metaLink(
+                        approval.targetId,
+                        model.workspace.requirements.some(
+                          item => item.id === approval.targetId,
+                        )
+                          ? Message.OpenedArtifact({ id: approval.targetId })
+                          : undefined,
+                        h,
                       ),
                       h.span([], ['·']),
-                      h.span([], [approval.runId]),
+                      metaLink(
+                        model.workspace.agents.find(
+                          agent => agent.id === approval.agentId,
+                        )?.name ?? 'Review coordinator',
+                        model.workspace.agents.some(
+                          agent => agent.id === approval.agentId,
+                        )
+                          ? Message.OpenedAgent({ id: approval.agentId })
+                          : undefined,
+                        h,
+                      ),
+                      h.span([], ['·']),
+                      metaLink(
+                        approval.runId,
+                        model.workspace.runs.some(
+                          run => run.id === approval.runId,
+                        )
+                          ? Message.SelectedRun({ id: approval.runId })
+                          : undefined,
+                        h,
+                      ),
                     ],
                   ),
                   impactStrip(model, approval, h),

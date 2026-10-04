@@ -141,6 +141,7 @@ export const Model = Schema.Struct({
   ),
   isWorkspaceMenuOpen: Schema.Boolean,
   hasAcknowledgedConsent: Schema.Boolean,
+  hasLoadedNavigation: Schema.Boolean,
   sidebarWidth: Schema.Number,
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
@@ -208,6 +209,7 @@ export const initialModel: Model = {
   maybeTreeDrag: Option.none(),
   isWorkspaceMenuOpen: false,
   hasAcknowledgedConsent: false,
+  hasLoadedNavigation: false,
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
@@ -289,6 +291,62 @@ export const SaveWorkspace = Command.define('SaveWorkspace', {
         ),
       ),
     ),
+})
+const navigationKey = 'stream.navigation.v1'
+const Navigation = Schema.Struct({ page: Page, scrollTop: Schema.Number })
+const nextFrame = () =>
+  new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+export const LoadNavigation = Command.define('LoadNavigation', {
+  messages: [Message.LoadedNavigation],
+  execute: Effect.try(() => {
+    history.scrollRestoration = 'manual'
+    const saved = sessionStorage.getItem(navigationKey)
+    return Message.LoadedNavigation(
+      saved
+        ? Schema.decodeUnknownSync(Navigation)(JSON.parse(saved))
+        : { page: initialModel.page, scrollTop: 0 },
+    )
+  }).pipe(
+    Effect.catch(() =>
+      Effect.succeed(
+        Message.LoadedNavigation({ page: initialModel.page, scrollTop: 0 }),
+      ),
+    ),
+  ),
+})
+const saveNavigation = (page: Page) =>
+  Effect.promise(() => nextFrame().then(nextFrame)).pipe(
+    Effect.andThen(() =>
+      Effect.try(() =>
+        sessionStorage.setItem(
+          navigationKey,
+          JSON.stringify({ page, scrollTop: Math.round(window.scrollY) }),
+        ),
+      ),
+    ),
+    Effect.ignore,
+    Effect.as(Message.CompletedSaveNavigation()),
+  )
+export const RestoreScroll = Command.define('RestoreScroll', {
+  args: { top: Schema.Number },
+  messages: [Message.CompletedRestoreScroll],
+  execute: ({ top }) =>
+    Effect.promise(
+      () =>
+        new Promise<void>(resolve => {
+          const attempt = (frame: number) => {
+            const isTallEnough =
+              document.documentElement.scrollHeight - window.innerHeight >= top
+            if (isTallEnough || frame >= 90) {
+              window.scrollTo({ top, behavior: 'instant' })
+              resolve()
+              return
+            }
+            requestAnimationFrame(() => attempt(frame + 1))
+          }
+          requestAnimationFrame(() => attempt(0))
+        }),
+    ).pipe(Effect.as(Message.CompletedRestoreScroll())),
 })
 export const LoadSidebarWidth = Command.define('LoadSidebarWidth', {
   messages: [Message.LoadedSidebarWidth],
@@ -1186,6 +1244,36 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         search: () => '',
         filter: () => 'All artifacts',
         maybeSelectedNode: () => Option.none(),
+      }),
+      commands: [ScrollActiveNav()],
+    }),
+    LoadedNavigation: ({ page, scrollTop }) =>
+      page === model.page && scrollTop === 0
+        ? {
+            model: modifyFields(model, { hasLoadedNavigation: () => true }),
+          }
+        : {
+            model: modifyFields(model, {
+              page: () => page,
+              hasLoadedNavigation: () => true,
+            }),
+            commands: [RestoreScroll({ top: scrollTop })],
+          },
+    CompletedSaveNavigation: () => ({ model }),
+    CompletedRestoreScroll: () => ({ model }),
+    OpenedArtifact: ({ id }) => ({
+      model: modifyFields(model, {
+        page: () => 'Requirements',
+        search: () => '',
+        filter: () => 'All artifacts',
+        maybeSelectedNode: () => Option.some(id),
+      }),
+      commands: [ScrollActiveNav()],
+    }),
+    OpenedAgent: ({ id }) => ({
+      model: modifyFields(model, {
+        page: () => 'Agent fleet',
+        maybeSelectedAgent: () => Option.some(id),
       }),
       commands: [ScrollActiveNav()],
     }),
@@ -3107,6 +3195,27 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
       },
     },
   ),
+  navigation: entry(
+    { page: Page, isReady: Schema.Boolean },
+    {
+      modelToDependencies: model => ({
+        page: model.page,
+        isReady: model.hasLoadedNavigation,
+      }),
+      dependenciesToStream: ({ page, isReady }) =>
+        isReady
+          ? Stream.concat(
+              Stream.fromEffect(saveNavigation(page)),
+              Stream.fromEventListener(window, 'scroll', {
+                passive: true,
+              }).pipe(
+                Stream.debounce('250 millis'),
+                Stream.mapEffect(() => saveNavigation(page)),
+              ),
+            )
+          : Stream.empty,
+    },
+  ),
   toastExit: entry(
     { token: Schema.Number },
     {
@@ -3327,6 +3436,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
   commands: [
     LoadWorkspace(),
     LoadSidebarWidth(),
+    LoadNavigation(),
     LoadTwinReports(),
     SyncCloudflareCredentials({
       operation: 'Load',

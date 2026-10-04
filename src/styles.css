@@ -1288,7 +1288,7 @@ h3 {
   font-size: var(--text-xs);
   color: var(--muted);
 }
-.row-meta span:first-child {
+.row-meta > :first-child {
   font-family: var(--font-mono);
 }
 .approval-actions {
@@ -4007,6 +4007,22 @@ body:has(.modal-backdrop) .toast {
   border: 1px solid var(--error);
   background: var(--error);
   color: var(--accent-fg);
+}
+.meta-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 2px;
+}
+.meta-link:hover,
+.meta-link:hover strong {
+  color: var(--accent);
+  text-decoration-color: currentColor;
 }
 .impact-line {
   margin: var(--space-2) 0 0;
