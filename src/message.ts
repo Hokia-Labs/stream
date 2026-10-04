@@ -232,6 +232,7 @@ export const Message = defineMessageUnion({
   ClickedOpenTwinMatrix: {},
   ClickedResetTwin: {},
   OpenedBoardReview: {},
+  OpenedReportEditor: {},
   OpenedBoardReviewAt: { tab: BoardReviewTab },
   SelectedBoardReviewTab: { tab: BoardReviewTab },
   SelectedSchematicSheet: { board: Schema.Number, page: Schema.Number },

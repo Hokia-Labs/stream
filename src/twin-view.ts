@@ -108,11 +108,15 @@ const syncLabel: Readonly<Record<Model['twinReportSync'], string>> = {
   Failed: 'Not saved',
 }
 
+const expandPath = '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'
+
 const reportEditor = (
   model: Model,
   actions: ReadonlyArray<Html>,
   h: H,
+  isExpanded = false,
 ): Html => {
+  const isElsewhere = !isExpanded && model.modal._tag === 'ReportEditor'
   const editor = reportEditorSpec.withMessage(h)
   const reports = model.twinReports.filter(report =>
     report.name.endsWith('.md'),
@@ -165,21 +169,47 @@ const reportEditor = (
                 ],
               ),
               ...actions,
+              isExpanded
+                ? h.empty
+                : h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button outline'),
+                      h.Title('Open in a larger editor'),
+                      h.OnClick(Message.OpenedReportEditor()),
+                    ],
+                    [svgIcon(expandPath, h), 'Expand'],
+                  ),
             ],
           ),
         ],
       ),
-      active
-        ? editor([
-            h.Class('report-editor'),
-            editor.ReportName(active.name),
-            editor.Markdown(active.content),
-            editor.OnReportInput(detail => Message.EditedTwinReport(detail)),
-          ])
-        : h.empty,
+      isElsewhere
+        ? h.p(
+            [h.Class('report-elsewhere muted small-text')],
+            ['Editing in the expanded editor.'],
+          )
+        : active
+          ? editor([
+              h.Class('report-editor'),
+              editor.ReportName(active.name),
+              editor.Markdown(active.content),
+              editor.OnReportInput(detail => Message.EditedTwinReport(detail)),
+            ])
+          : h.empty,
     ],
   )
 }
+
+export const reportEditorModal = (model: Model, h: H): Html =>
+  h.div(
+    [h.Class('report-editor-expanded')],
+    [
+      h.p([h.Class('eyebrow')], ['DO-254 reports']),
+      h.h2([h.Id('dialog-title')], ['Report editor']),
+      reportEditor(model, [], h, true),
+    ],
+  )
 
 const badgeClass = (status: Requirement['status']): string =>
   status === 'Verified'

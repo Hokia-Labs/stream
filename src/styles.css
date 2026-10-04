@@ -4984,7 +4984,7 @@ stream-report-editor:focus-within {
   background: var(--rule);
 }
 .report-surface {
-  max-height: 560px;
+  max-height: 380px;
   overflow: auto;
   padding: 0 var(--space-4) var(--space-4);
 }
@@ -8854,4 +8854,19 @@ p.launch-estimate {
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
   scroll-margin-top: var(--space-4);
+}
+
+.modal.report-editor-modal {
+  width: min(1120px, calc(100vw - 48px));
+  max-width: none;
+}
+.report-editor-modal .report-surface {
+  max-height: calc(100vh - 260px);
+}
+.report-elsewhere {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--rule);
+  border-radius: 6px;
+  text-align: center;
 }

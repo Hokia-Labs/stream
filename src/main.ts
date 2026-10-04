@@ -1760,6 +1760,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             Shortcuts: () => modal,
             PartPicker: () => modal,
             BoardReview: () => modal,
+            ReportEditor: () => modal,
           }),
       }),
     }),
@@ -3139,6 +3140,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ),
       )
     },
+    OpenedReportEditor: () =>
+      model.twinReports.length === 0
+        ? { model }
+        : { model: modifyFields(model, { modal: () => Modal.ReportEditor() }) },
     OpenedBoardReview: () =>
       model.twinProposal !== 'Pending' &&
       !(

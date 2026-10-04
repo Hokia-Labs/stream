@@ -318,6 +318,7 @@ export const Modal = defineTaggedUnion({
   Shortcuts: {},
   PartPicker: { slot: TwinSlot, selectedId: Schema.String },
   BoardReview: { tab: BoardReviewTab },
+  ReportEditor: {},
 })
 export type Modal = typeof Modal.Type
 

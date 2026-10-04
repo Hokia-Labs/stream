@@ -87,7 +87,12 @@ import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
 import { teamcenterSync } from './twin'
-import { boardReview, twinPage, twinPartPicker } from './twin-view'
+import {
+  boardReview,
+  reportEditorModal,
+  twinPage,
+  twinPartPicker,
+} from './twin-view'
 
 type H = HtmlBuilder<Message>
 const showsConfirmationToasts = false
@@ -3994,6 +3999,7 @@ const modalContent = (model: Model, h: H): Html =>
   Modal.match(model.modal, {
     PartPicker: picker => twinPartPicker(model, picker, h),
     BoardReview: review => boardReview(model, review.tab, h),
+    ReportEditor: () => reportEditorModal(model, h),
     ArtifactFields: () =>
       h.div(
         [],
@@ -4725,7 +4731,9 @@ const modal = (model: Model, h: H, isClosing = false): Html =>
                     ? 'modal twin-picker-modal'
                     : model.modal._tag === 'BoardReview'
                       ? 'modal board-review-modal'
-                      : 'modal',
+                      : model.modal._tag === 'ReportEditor'
+                        ? 'modal report-editor-modal'
+                        : 'modal',
               ),
               ...(isClosing
                 ? [h.AriaHidden(true)]
