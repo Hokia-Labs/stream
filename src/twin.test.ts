@@ -18,6 +18,9 @@ import {
   isAvionicsUpgraded,
   loadBudget,
   requirementChecks,
+  seedTwinArtifacts,
+  swapTwinAvionics,
+  teamcenterSync,
   twinChanges,
   twinPackageFiles,
   twinRevision,
@@ -298,5 +301,32 @@ describe('digital twin', () => {
     expect(view.getUint32(0, true)).toBe(0x04034b50)
     expect(view.getUint32(archive.length - 22, true)).toBe(0x06054b50)
     expect(view.getUint16(archive.length - 12, true)).toBe(1)
+  })
+})
+
+describe('teamcenterSync', () => {
+  it('flags changed datasets and proposed files', () => {
+    const baseline = teamcenterSync(seedTwinArtifacts(), 'None')
+    expect(
+      baseline
+        .flatMap(group => group.files)
+        .every(file => file.state === 'In sync'),
+    ).toBe(true)
+    const swapped = swapTwinAvionics(seedTwinArtifacts())
+    const pending = teamcenterSync(swapped, 'Pending')
+    expect(pending.map(group => group.id)).toEqual([
+      'MW-AVN-2700/A',
+      'MW-MPA-48-4/A',
+      'MW-MPA-48-5/B',
+      'EPS-SPEC/A',
+    ])
+    expect(pending[0]?.files[0]).toMatchObject({
+      teamcenter: 'MW-AVN-0900_C.prt',
+      stream: 'MW-AVN-2700_A.prt',
+      state: 'Check-in pending',
+    })
+    expect(
+      pending[2]?.files.every(file => file.state === 'Awaiting EE approval'),
+    ).toBe(true)
   })
 })

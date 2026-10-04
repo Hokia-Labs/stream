@@ -82,7 +82,7 @@ import {
 import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
-import { installedPart, twinArtifacts, twinChanges } from './twin'
+import { teamcenterSync } from './twin'
 import { boardReview, twinPage, twinPartPicker } from './twin-view'
 
 type H = HtmlBuilder<Message>
@@ -1760,44 +1760,16 @@ const approvals = (
 }
 
 const teamcenterSyncedAt = '2026-10-03 14:02Z'
+const syncTone = (state: string): string =>
+  state === 'In sync' ? 'ok' : 'pending'
 const overview = (model: Model, h: H): Html => {
-  const requirements = model.workspace.requirements
-  const changes = twinChanges(requirements)
-  const parts = (['Cockpit', 'Power'] as const).map(slot => {
-    const source = installedPart([], slot)
-    const local = installedPart(requirements, slot)
-    return {
-      key: slot,
-      item: `${slot} assembly`,
-      teamcenter: `${source.id} Rev ${source.revision}`,
-      stream: `${local.id} Rev ${local.revision}`,
-      synced: source.id === local.id,
-    }
-  })
-  const proposal =
-    model.twinProposal === 'Pending'
-      ? [
-          {
-            key: 'proposal',
-            item: 'Power assembly proposal',
-            teamcenter: '—',
-            stream: 'Rev B · awaiting EE approval',
-            synced: false,
-          },
-        ]
-      : []
-  const artifacts = {
-    key: 'artifacts',
-    item: 'Requirements and design artifacts',
-    teamcenter: `${twinArtifacts.length} released`,
-    stream:
-      changes.length > 0
-        ? `${changes.length} revised in Stream`
-        : `${twinArtifacts.length} mirrored`,
-    synced: changes.length === 0,
-  }
-  const rows = [...parts, ...proposal, artifacts]
-  const pending = rows.filter(row => !row.synced).length
+  const groups = teamcenterSync(
+    model.workspace.requirements,
+    model.twinProposal,
+  )
+  const pending = groups
+    .flatMap(group => group.files)
+    .filter(file => file.state !== 'In sync').length
   return h.div(
     [],
     [
@@ -1835,39 +1807,73 @@ const overview = (model: Model, h: H): Html => {
                 [
                   h.tr(
                     [],
-                    ['Item', 'Teamcenter', 'Stream', 'Status'].map(label =>
-                      h.th([], [label]),
+                    ['Dataset', 'Type', 'Teamcenter', 'Stream', 'Status'].map(
+                      label => h.th([], [label]),
                     ),
                   ),
                 ],
               ),
-              h.tbody(
-                [],
-                rows.map(row =>
-                  h.keyed('tr')(
-                    row.key,
-                    [],
-                    [
-                      h.td([], [row.item]),
-                      h.td([h.Class('mono')], [row.teamcenter]),
-                      h.td([h.Class('mono')], [row.stream]),
-                      h.td(
+              ...groups.map(group => {
+                const changed = group.files.filter(
+                  file => file.state !== 'In sync',
+                ).length
+                return h.keyed('tbody')(
+                  group.id,
+                  [],
+                  [
+                    h.tr(
+                      [h.Class('sync-group')],
+                      [
+                        h.th(
+                          [h.Colspan(4)],
+                          [
+                            h.span([h.Class('mono')], [group.id]),
+                            h.span([h.Class('muted')], [` · ${group.title}`]),
+                          ],
+                        ),
+                        h.th(
+                          [],
+                          [
+                            h.span(
+                              [
+                                h.Class(
+                                  `sync-state ${changed > 0 ? 'pending' : 'ok'}`,
+                                ),
+                              ],
+                              [
+                                changed > 0
+                                  ? `${changed} of ${group.files.length} changed`
+                                  : `${group.files.length} in sync`,
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    ...group.files.map(file =>
+                      h.keyed('tr')(
+                        `${group.id}:${file.type}:${file.teamcenter}`,
                         [],
                         [
-                          h.span(
+                          h.td([h.Class('sync-file')], [file.name]),
+                          h.td([h.Class('muted')], [file.type]),
+                          h.td([h.Class('mono')], [file.teamcenter]),
+                          h.td([h.Class('mono')], [file.stream]),
+                          h.td(
+                            [],
                             [
-                              h.Class(
-                                `sync-state ${row.synced ? 'ok' : 'pending'}`,
+                              h.span(
+                                [h.Class(`sync-state ${syncTone(file.state)}`)],
+                                [file.state],
                               ),
                             ],
-                            [row.synced ? 'In sync' : 'Check-in pending'],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
+                  ],
+                )
+              }),
             ],
           ),
         ],

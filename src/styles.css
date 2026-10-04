@@ -7888,3 +7888,12 @@ button.graph-cluster-head:hover {
 .sync-status.pending .live-dot {
   background: var(--warning);
 }
+.sync-table .sync-group th {
+  padding-top: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+}
+.sync-table .sync-file {
+  padding-left: 28px;
+}

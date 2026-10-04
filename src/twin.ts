@@ -1,5 +1,6 @@
 import type {
   Requirement,
+  TwinProposal,
   TwinReviewItem,
   TwinRevision,
   TwinSlot,
@@ -1012,3 +1013,110 @@ export const suggestedPart = (
     item =>
       item.slot === slot && catalogBlocker(requirements, item) === undefined,
   ) ?? installedPart(requirements, slot)
+
+export type SyncState = 'In sync' | 'Check-in pending' | 'Awaiting EE approval'
+
+export type SyncFile = Readonly<{
+  name: string
+  type: string
+  teamcenter: string
+  stream: string
+  state: SyncState
+}>
+
+export type SyncGroup = Readonly<{
+  id: string
+  title: string
+  files: ReadonlyArray<SyncFile>
+}>
+
+const partFiles = (
+  item: CatalogItem,
+): ReadonlyArray<Readonly<{ key: string; type: string; name: string }>> => {
+  const stem = `${item.id}_${item.revision}`
+  return [
+    { key: 'prt', type: 'UGMASTER', name: `${stem}.prt` },
+    { key: 'jt', type: 'DirectModel', name: `${stem}.jt` },
+    {
+      key: 'bom',
+      type: 'BOMView Revision',
+      name: `${item.id}/${item.revision}-view`,
+    },
+    ...(item.slot === 'Power'
+      ? [
+          { key: 'ecad', type: 'Xpedition Design', name: `${stem}_ECAD.zip` },
+          { key: 'sch', type: 'PDF', name: `${stem}_schematic.pdf` },
+          { key: 'cae', type: 'CAE Analysis', name: `${stem}_thermal.wbpz` },
+        ]
+      : [{ key: 'icd', type: 'PDF', name: `${stem}_ICD.pdf` }]),
+  ]
+}
+
+const revisionLetter = (revision: number): string =>
+  String.fromCharCode(64 + Math.max(1, revision))
+
+export const teamcenterSync = (
+  requirements: ReadonlyArray<Requirement>,
+  proposal: TwinProposal,
+): ReadonlyArray<SyncGroup> => {
+  const parts = (['Cockpit', 'Power'] as const).map(slot => {
+    const source = installedPart([], slot)
+    const local = installedPart(requirements, slot)
+    const localFiles = partFiles(local)
+    return {
+      id: `${local.id}/${local.revision}`,
+      title: local.title,
+      files: partFiles(source).map(file => {
+        const stream =
+          localFiles.find(candidate => candidate.key === file.key)?.name ??
+          file.name
+        return {
+          name: stream,
+          type: file.type,
+          teamcenter: file.name,
+          stream,
+          state:
+            stream === file.name
+              ? ('In sync' as const)
+              : ('Check-in pending' as const),
+        }
+      }),
+    }
+  })
+  const proposed =
+    proposal === 'Pending' && twinRevision(requirements) === 'A'
+      ? [
+          {
+            id: `${assemblyRevB.id}/${assemblyRevB.revision}`,
+            title: `${assemblyRevB.title} · proposed`,
+            files: partFiles(assemblyRevB).map(file => ({
+              name: file.name,
+              type: file.type,
+              teamcenter: '—',
+              stream: file.name,
+              state: 'Awaiting EE approval' as const,
+            })),
+          },
+        ]
+      : []
+  const specification = {
+    id: 'EPS-SPEC/A',
+    title: 'Electrical power requirements specification',
+    files: twinArtifacts.map(artifact => {
+      const current = requirements.find(item => item.id === artifact.id)
+      const stream = `${artifact.id}/${revisionLetter(current?.revision ?? 1)}`
+      const teamcenter = `${artifact.id}/A`
+      return {
+        name: artifact.title,
+        type: `${artifact.kind} Revision`,
+        teamcenter,
+        stream,
+        state:
+          stream === teamcenter
+            ? ('In sync' as const)
+            : ('Check-in pending' as const),
+      }
+    }),
+  }
+  return [...parts, ...proposed, specification]
+}
