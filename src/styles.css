@@ -7889,6 +7889,47 @@ button.graph-cluster-head:hover {
 .sync-state.pending {
   color: var(--warning);
 }
+.sync-icon {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+}
+.sync-icon.ok {
+  color: var(--success);
+}
+.sync-icon.pending {
+  color: var(--warning);
+}
+.sync-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+.sync-pop {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  z-index: 30;
+  display: none;
+  width: 260px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  white-space: normal;
+  translate: 0 -50%;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.sync-pop strong {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.sync-icon:hover .sync-pop,
+.sync-icon:focus-visible .sync-pop {
+  display: block;
+}
 .sync-status.pending .live-dot {
   background: var(--warning);
 }

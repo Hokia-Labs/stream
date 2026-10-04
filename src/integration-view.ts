@@ -31,6 +31,58 @@ const filePaths: Readonly<Record<string, string>> = {
     '<path d="M10 14V5a2 2 0 0 1 4 0v9"/><circle cx="12" cy="17" r="3"/><path d="M12 9v5"/>',
 }
 
+const syncInfo: Readonly<
+  Record<string, Readonly<{ tone: string; path: string; detail: string }>>
+> = {
+  'In sync': {
+    tone: 'ok',
+    path: '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/>',
+    detail: 'The Stream copy matches the latest revision in the source system.',
+  },
+  'Change set pending': {
+    tone: 'pending',
+    path: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    detail:
+      'Stream has a newer revision than DOORS Next. The edits are held in a change set that has not been pushed back yet.',
+  },
+  'Check-in pending': {
+    tone: 'pending',
+    path: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    detail:
+      'Stream has a new revision of this dataset that has not been checked in to Teamcenter yet.',
+  },
+  'Awaiting EE approval': {
+    tone: 'pending',
+    path: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    detail:
+      'Proposed by the agent. It is checked in to Teamcenter only after the electrical engineer approves it.',
+  },
+}
+
+export const syncStatus = (state: string, h: H): Html => {
+  const info = syncInfo[state] ?? syncInfo['In sync']
+  return h.span(
+    [
+      h.Class(`sync-icon ${info?.tone ?? 'ok'}`),
+      h.Tabindex(0),
+      h.AriaLabel(state),
+    ],
+    [
+      h.span([
+        h.Class('icon'),
+        h.AriaHidden(true),
+        h.InnerHTML(
+          `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${info?.path ?? ''}</svg>`,
+        ),
+      ]),
+      h.span(
+        [h.Class('sync-pop'), h.Role('tooltip')],
+        [h.strong([], [state]), h.span([], [info?.detail ?? ''])],
+      ),
+    ],
+  )
+}
+
 export const fileIcon = (type: string, h: H): Html =>
   h.span([
     h.Class('icon file-icon'),
@@ -262,17 +314,8 @@ export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
                     h.td([h.Class('mono')], [`${row.doorsId} · ${row.doors}`]),
                     h.td([h.Class('mono')], [`${row.id}/${row.stream}`]),
                     h.td(
-                      [],
-                      [
-                        h.span(
-                          [
-                            h.Class(
-                              `sync-state ${row.state === 'In sync' ? 'ok' : 'pending'}`,
-                            ),
-                          ],
-                          [row.state],
-                        ),
-                      ],
+                      [h.Class('sync-status-cell')],
+                      [syncStatus(row.state, h)],
                     ),
                   ],
                 ),

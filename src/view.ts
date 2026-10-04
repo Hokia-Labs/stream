@@ -61,6 +61,7 @@ import {
   fileIcon,
   jiraLogo,
   jiraPanel,
+  syncStatus,
   syncedWith,
 } from './integration-view'
 import { doorsIdFor, doorsSync, jiraHandoffs } from './integrations'
@@ -1656,8 +1657,6 @@ const approvals = (
   )
 }
 
-const syncTone = (state: string): string =>
-  state === 'In sync' ? 'ok' : 'pending'
 const overview = (model: Model, h: H): Html => {
   const groups = teamcenterSync(
     model.workspace.requirements,
@@ -1750,13 +1749,8 @@ const overview = (model: Model, h: H): Html => {
                           h.td([h.Class('mono')], [file.teamcenter]),
                           h.td([h.Class('mono')], [file.stream]),
                           h.td(
-                            [],
-                            [
-                              h.span(
-                                [h.Class(`sync-state ${syncTone(file.state)}`)],
-                                [file.state],
-                              ),
-                            ],
+                            [h.Class('sync-status-cell')],
+                            [syncStatus(file.state, h)],
                           ),
                         ],
                       ),
