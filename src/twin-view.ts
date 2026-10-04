@@ -1385,84 +1385,6 @@ const do254Panel = (model: Model, h: H): Html => {
     ],
   )
 }
-type TwinAction = Readonly<{
-  label: string
-  message: Message
-  isDisabled: boolean
-}>
-
-const twinAction = (
-  label: string,
-  message: Message,
-  isDisabled = false,
-): TwinAction => ({ label, message, isDisabled })
-
-const nextAction = (model: Model): TwinAction => {
-  const requirements = model.workspace.requirements
-  const proposal = model.twinProposal
-  if (!isAvionicsUpgraded(requirements)) {
-    return twinAction(
-      'Replace cockpit avionics…',
-      Message.OpenedTwinPartPicker({ slot: 'Cockpit' }),
-    )
-  }
-  if (twinRevision(requirements) !== 'B') {
-    return proposal === 'Drafting'
-      ? twinAction('Drafting Rev B…', Message.ClickedDraftTwinProposal(), true)
-      : proposal === 'Pending'
-        ? twinAction('Review Rev A → Rev B', Message.OpenedBoardReview())
-        : proposal === 'Rejected'
-          ? twinAction(
-              'Ask agent to revise',
-              Message.ClickedDraftTwinProposal(),
-            )
-          : twinAction(
-              'Ask agent for a redesign',
-              Message.ClickedDraftTwinProposal(),
-            )
-  }
-  if (model.twinCheck !== 'Done') {
-    return model.twinCheck === 'Running'
-      ? twinAction('Checking…', Message.ClickedRunTwinCheck(), true)
-      : twinAction('Check requirements', Message.ClickedRunTwinCheck())
-  }
-  if (model.twinReports.length === 0) {
-    return twinAction(
-      model.isGeneratingTwinPackage
-        ? 'Drafting reports…'
-        : 'Draft DO-254 reports',
-      Message.ClickedGenerateTwinPackage(),
-      model.isGeneratingTwinPackage,
-    )
-  }
-  if (model.twinReviewed.length < twinSignoffs.length) {
-    return twinAction(
-      'Open sign-off',
-      Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
-    )
-  }
-  return Option.match(model.maybeTwinPackage, {
-    onNone: () =>
-      twinAction(
-        model.isGeneratingTwinPackage
-          ? 'Packaging…'
-          : 'Download DO-254 package',
-        Message.ClickedDownloadTwinPackage(),
-        model.isGeneratingTwinPackage,
-      ),
-    onSome: item =>
-      item.isSent
-        ? twinAction(
-            'Open DO-254 package',
-            Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
-          )
-        : twinAction(
-            'Mark as sent to customer',
-            Message.ClickedMarkTwinPackageSent(),
-          ),
-  })
-}
-
 const changeStatus = (
   model: Model,
 ): Readonly<{ label: string; tone: string }> => {
@@ -1501,7 +1423,6 @@ const changeHeader = (model: Model, h: H): Html => {
   const isUpgraded = isAvionicsUpgraded(requirements)
   const isRevB = twinRevision(requirements) === 'B'
   const status = changeStatus(model)
-  const action = nextAction(model)
   const title = !isUpgraded
     ? 'Baseline configuration'
     : isRevB
@@ -1523,15 +1444,6 @@ const changeHeader = (model: Model, h: H): Html => {
       h.div(
         [h.Class('twin-head-actions')],
         [
-          h.button(
-            [
-              h.Type('button'),
-              h.Class('button primary'),
-              h.Disabled(action.isDisabled),
-              h.OnClick(action.message),
-            ],
-            [action.label],
-          ),
           h.div(
             [h.Class('twin-more')],
             [
