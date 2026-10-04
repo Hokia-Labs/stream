@@ -35,6 +35,7 @@ import type { Model } from './main'
 import { Message } from './message'
 import { pageHeading } from './title-block'
 import {
+  type TwinChange,
   affectedSubsystems,
   analysisRows,
   assemblyRevB,
@@ -55,6 +56,7 @@ import {
   requirementsChangeLabel,
   signoffTitle,
   slotHealth,
+  twinArtifacts,
   twinCatalog,
   twinChanges,
   twinRevision,
@@ -867,7 +869,7 @@ const checkPanel = (model: Model, h: H): Html => {
   const head = h.div(
     [h.Class('twin-section-head')],
     [
-      h.h2([h.Class('twin-heading')], ['Requirement check · Rev B']),
+      h.h3([h.Class('twin-subheading')], ['Requirement check']),
       model.twinCheck === 'Done'
         ? h.button(
             [
@@ -881,8 +883,8 @@ const checkPanel = (model: Model, h: H): Html => {
     ],
   )
   if (model.twinCheck !== 'Done') {
-    return h.section(
-      [h.Class('panel twin-wide')],
+    return h.div(
+      [],
       [
         head,
         model.twinCheck === 'Running'
@@ -913,8 +915,8 @@ const checkPanel = (model: Model, h: H): Html => {
       ],
     )
   }
-  return h.section(
-    [h.Class('panel twin-wide'), h.AriaLabel('Requirement check')],
+  return h.div(
+    [h.AriaLabel('Requirement check')],
     [
       head,
       h.p(
@@ -1058,120 +1060,252 @@ const checkPanel = (model: Model, h: H): Html => {
   )
 }
 
-const requirementChangesPanel = (model: Model, h: H): Html => {
+const changeTable = (
+  model: Model,
+  changes: ReadonlyArray<TwinChange>,
+  isDerived: boolean,
+  h: H,
+): Html =>
+  h.table(
+    [h.Class('twin-table')],
+    [
+      h.thead(
+        [],
+        [
+          h.tr(
+            [],
+            [
+              'Artifact',
+              'Subsystem',
+              ...(isDerived ? [] : ['Before']),
+              isDerived ? 'Requirement' : 'After',
+              'Status',
+              '',
+            ].map(label => h.th([], [label])),
+          ),
+        ],
+      ),
+      h.tbody(
+        [],
+        changes.map(change =>
+          h.keyed('tr')(
+            change.artifact.id,
+            [],
+            [
+              h.td(
+                [],
+                [
+                  idLink(model, change.artifact.id, h, 'mono small-text'),
+                  h.div([], [change.artifact.title]),
+                ],
+              ),
+              h.td([], [change.artifact.subsystem]),
+              isDerived
+                ? h.empty
+                : h.td(
+                    [h.Class('twin-before')],
+                    linkifyIds(model, change.before, h),
+                  ),
+              h.td([h.Class('twin-after')], linkifyIds(model, change.after, h)),
+              h.td(
+                [],
+                [
+                  h.span([h.Class(badgeClass(change.status))], [change.status]),
+                  h.div(
+                    [h.Class('mono small-text muted')],
+                    [`r${change.revision}`],
+                  ),
+                ],
+              ),
+              h.td(
+                [],
+                [
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button outline small'),
+                      h.OnClick(
+                        Message.ClickedTraceTwinArtifact({
+                          id: change.artifact.id,
+                        }),
+                      ),
+                    ],
+                    ['Trace in graph'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  )
+
+const baselineTable = (model: Model, h: H): Html =>
+  h.table(
+    [h.Class('twin-table')],
+    [
+      h.thead(
+        [],
+        [
+          h.tr(
+            [],
+            ['Artifact', 'Subsystem', 'Requirement'].map(label =>
+              h.th([], [label]),
+            ),
+          ),
+        ],
+      ),
+      h.tbody(
+        [],
+        twinArtifacts
+          .filter(artifact => avionicsRequirementIds.includes(artifact.id))
+          .map(artifact =>
+            h.keyed('tr')(
+              artifact.id,
+              [],
+              [
+                h.td(
+                  [],
+                  [
+                    idLink(model, artifact.id, h, 'mono small-text'),
+                    h.div([], [artifact.title]),
+                  ],
+                ),
+                h.td([], [artifact.subsystem]),
+                h.td([], linkifyIds(model, artifact.revA, h)),
+              ],
+            ),
+          ),
+      ),
+    ],
+  )
+
+type RequirementSet = Readonly<{
+  id: string
+  title: string
+  trigger: string
+  summary: string
+  body: () => Html
+}>
+
+const requirementSets = (model: Model, h: H): ReadonlyArray<RequirementSet> => {
   const requirements = model.workspace.requirements
   const changes = twinChanges(requirements)
-  const isRevB = twinRevision(requirements) === 'B'
+  const revised = changes.filter(change =>
+    avionicsRequirementIds.includes(change.artifact.id),
+  )
+  const derived = changes.filter(change => change.before === '')
+  const checks = requirementChecks('B')
+  const passed = checks.filter(check => check.isPass).length
+  const baseline: RequirementSet = {
+    id: 'baseline',
+    title: 'Baseline',
+    trigger: 'Rev A power assembly',
+    summary: `${avionicsRequirementIds.length} requirements`,
+    body: () => baselineTable(model, h),
+  }
+  const swap: ReadonlyArray<RequirementSet> =
+    revised.length > 0
+      ? [
+          {
+            id: 'avionics',
+            title: 'Avionics swap',
+            trigger: avionicsChange.title,
+            summary: `${revised.length} changed`,
+            body: () => changeTable(model, revised, false, h),
+          },
+        ]
+      : []
+  const proposal: ReadonlyArray<RequirementSet> =
+    derived.length > 0
+      ? [
+          {
+            id: 'derived',
+            title: 'Power agent proposal',
+            trigger: 'Rev A → Rev B board change',
+            summary: `+${derived.length} derived`,
+            body: () => changeTable(model, derived, true, h),
+          },
+        ]
+      : []
+  const installed: ReadonlyArray<RequirementSet> =
+    twinRevision(requirements) === 'B'
+      ? [
+          {
+            id: 'rev-b',
+            title: 'Rev B installed',
+            trigger: `Approved by ${proposalReviewer.name}`,
+            summary:
+              model.twinCheck === 'Done'
+                ? `${passed}/${checks.length} checks pass`
+                : model.twinCheck === 'Running'
+                  ? 'Checking…'
+                  : 'Check not finished',
+            body: () => checkPanel(model, h),
+          },
+        ]
+      : []
+  return [...installed, ...proposal, ...swap, baseline]
+}
+
+const requirementChangesPanel = (model: Model, h: H): Html => {
+  const sets = requirementSets(model, h)
+  const newest = sets[0]?.id ?? ''
+  const open =
+    model.openRequirementSetOf === newest ? model.openRequirementSet : newest
+  const isPending =
+    twinChanges(model.workspace.requirements).length > 0 &&
+    !(
+      twinRevision(model.workspace.requirements) === 'B' &&
+      model.twinCheck === 'Done'
+    )
   return h.section(
     [h.Class('panel twin-wide')],
     [
       h.div(
         [h.Class('twin-section-head')],
         [
-          h.h2(
-            [h.Class('twin-heading')],
-            [`Requirement changes · ${changes.length}`],
-          ),
-          changes.length > 0 && !(isRevB && model.twinCheck === 'Done')
+          h.h2([h.Class('twin-heading')], ['Requirement history']),
+          isPending
             ? h.span([h.Class('badge warning')], ['DOORS change set pending'])
             : h.empty,
         ],
       ),
-      changes.length === 0
-        ? h.p(
-            [h.Class('muted small-text')],
-            ['Swap in the new avionics to see which requirements change.'],
-          )
-        : h.table(
-            [h.Class('twin-table')],
+      h.ol(
+        [h.Class('twin-req-sets')],
+        sets.map(set => {
+          const isOpen = set.id === open
+          return h.keyed('li')(
+            set.id,
+            [h.Class(`twin-req-set${isOpen ? ' open' : ''}`)],
             [
-              h.thead(
-                [],
+              h.button(
                 [
-                  h.tr(
-                    [],
-                    [
-                      'Artifact',
-                      'Subsystem',
-                      'Before (Rev A)',
-                      'After',
-                      'Status',
-                      '',
-                    ].map(label => h.th([], [label])),
+                  h.Type('button'),
+                  h.Class('twin-req-set-row'),
+                  h.AriaExpanded(isOpen),
+                  h.OnClick(
+                    Message.ToggledRequirementSet({ id: set.id, newest }),
                   ),
                 ],
+                [
+                  h.span([h.Class('twin-req-set-chevron')], []),
+                  h.strong([], [set.title]),
+                  h.span([h.Class('muted')], [set.trigger]),
+                  set.id === newest
+                    ? h.span([h.Class('badge neutral')], ['Current'])
+                    : h.empty,
+                  h.span([h.Class('twin-req-set-summary mono')], [set.summary]),
+                ],
               ),
-              h.tbody(
-                [],
-                changes.map(change =>
-                  h.keyed('tr')(
-                    change.artifact.id,
-                    [],
-                    [
-                      h.td(
-                        [],
-                        [
-                          idLink(
-                            model,
-                            change.artifact.id,
-                            h,
-                            'mono small-text',
-                          ),
-                          h.div([], [change.artifact.title]),
-                        ],
-                      ),
-                      h.td([], [change.artifact.subsystem]),
-                      h.td(
-                        [h.Class('twin-before')],
-                        change.before === ''
-                          ? [
-                              h.span(
-                                [h.Class('badge neutral')],
-                                ['New · derived'],
-                              ),
-                            ]
-                          : linkifyIds(model, change.before, h),
-                      ),
-                      h.td(
-                        [h.Class('twin-after')],
-                        linkifyIds(model, change.after, h),
-                      ),
-                      h.td(
-                        [],
-                        [
-                          h.span(
-                            [h.Class(badgeClass(change.status))],
-                            [change.status],
-                          ),
-                          h.div(
-                            [h.Class('mono small-text muted')],
-                            [`r${change.revision}`],
-                          ),
-                        ],
-                      ),
-                      h.td(
-                        [],
-                        [
-                          h.button(
-                            [
-                              h.Type('button'),
-                              h.Class('button outline small'),
-                              h.OnClick(
-                                Message.ClickedTraceTwinArtifact({
-                                  id: change.artifact.id,
-                                }),
-                              ),
-                            ],
-                            ['Trace in graph'],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              isOpen
+                ? h.div([h.Class('twin-req-set-body')], [set.body()])
+                : h.empty,
             ],
-          ),
+          )
+        }),
+      ),
     ],
   )
 }
@@ -1614,7 +1748,7 @@ const panelTabs = (model: Model, h: H): Html => {
               ? h.span(
                   [
                     h.Class('twin-tab-dot'),
-                    h.Title(`${counts[tab]} changed`),
+                    h.Title('New requirement changes'),
                     h.AriaLabel('Changed'),
                   ],
                   [],
@@ -1648,7 +1782,6 @@ const changePanel = (model: Model, h: H): Html => {
         [h.Class('twin-slots'), h.AriaLabel('Installed parts')],
         [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
       ),
-      isRevB ? checkPanel(model, h) : h.empty,
       isRevB ? h.empty : proposalPanel(model, isUpgraded, isRevB, h),
     ],
   )

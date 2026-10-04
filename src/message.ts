@@ -214,6 +214,7 @@ export const Message = defineMessageUnion({
   ClickedLoadTwinScenario: {},
   SelectedTwinFocus: { focus: TwinFocus },
   SelectedTwinPanelTab: { tab: TwinPanelTab },
+  ToggledRequirementSet: { id: Schema.String, newest: Schema.String },
   ClickedTwinPart: { part: Schema.String },
   ClickedSwapTwinAvionics: {},
   OpenedTwinPartPicker: { slot: TwinSlot },

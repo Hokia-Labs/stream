@@ -188,6 +188,8 @@ export const Model = Schema.Struct({
   twinFocus: TwinFocus,
   twinPanelTab: TwinPanelTab,
   seenRequirementsLabel: Schema.String,
+  openRequirementSet: Schema.String,
+  openRequirementSetOf: Schema.String,
   twinReviewed: Schema.Array(TwinReviewItem),
   twinProposal: TwinProposal,
   twinCheck: TwinCheck,
@@ -273,6 +275,8 @@ export const initialModel: Model = {
   twinFocus: 'Airframe',
   twinPanelTab: 'Change',
   seenRequirementsLabel: '',
+  openRequirementSet: '',
+  openRequirementSetOf: '',
   twinReviewed: [],
   twinProposal: 'None',
   twinCheck: 'Not run',
@@ -2902,6 +2906,18 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             : seen,
       }),
     }),
+    ToggledRequirementSet: ({ id, newest }) => {
+      const open =
+        model.openRequirementSetOf === newest
+          ? model.openRequirementSet
+          : newest
+      return {
+        model: modifyFields(model, {
+          openRequirementSet: () => (open === id ? '' : id),
+          openRequirementSetOf: () => newest,
+        }),
+      }
+    },
     ClickedTwinPart: ({ part }) => ({
       model: modifyFields(model, {
         twinFocus: () => (part === 'Cockpit' ? 'Cockpit' : 'Aft bay'),

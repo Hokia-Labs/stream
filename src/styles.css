@@ -8789,3 +8789,49 @@ p.launch-estimate {
 .twin-package-meta {
   margin: 0 0 var(--space-3);
 }
+
+.twin-req-sets {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+}
+.twin-req-set + .twin-req-set {
+  border-top: 1px solid var(--line);
+}
+.twin-req-set-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.twin-req-set-row:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.twin-req-set-chevron {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+.twin-req-set.open .twin-req-set-chevron {
+  transform: rotate(45deg);
+}
+.twin-req-set-summary {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.twin-req-set-body {
+  padding: 0 12px 12px;
+}

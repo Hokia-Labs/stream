@@ -1234,6 +1234,8 @@ export const requirementsChangeLabel = (
 ): string =>
   !isAvionicsUpgraded(requirements)
     ? ''
-    : hasProposal || twinRevision(requirements) === 'B'
-      ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived`
-      : String(avionicsRequirementIds.length)
+    : twinRevision(requirements) === 'B'
+      ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived · Rev B`
+      : hasProposal
+        ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived`
+        : String(avionicsRequirementIds.length)
