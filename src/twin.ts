@@ -285,6 +285,78 @@ export const analysisRows: ReadonlyArray<AnalysisRow> = [
   },
 ]
 
+/** Notional change driver on a synthetic 270 VDC bus. SAMPLE values. */
+export const avionicsChange = {
+  id: 'ECP-0219',
+  title: 'Cockpit avionics upgrade',
+  summary:
+    'A new display and mission-processor module joins the 270 VDC mission-systems bus. It raises steady and transient electrical demand and adds heat.',
+  existingLoadKw: 26.4,
+  steadyKw: 7.8,
+  peakKw: 11.5,
+  peakDurationMs: 200,
+  shortTermRating: 1.25,
+  requiredMargin: 0.1,
+  efficiency: { A: 0.92, B: 0.94 },
+  heatAllocationKw: { A: 2.8, B: 3.1 },
+  loadSheet: [
+    ['Steady-state power', '7.8 kW'],
+    ['Peak power', '11.5 kW for 200 ms at mode change'],
+    ['Startup', '4× inrush for 5 ms, soft-start limited'],
+    ['Voltage tolerance', '250–280 VDC steady, 200 VDC for 50 ms'],
+    ['Criticality', 'Flight-essential displays'],
+    ['Duty cycle', 'Continuous in flight'],
+    ['Heat rejection', '7.8 kW to the cockpit PAO branch'],
+    ['Fault behavior', 'Shed non-essential channels on undervoltage'],
+  ],
+} as const
+
+export type BudgetRow = Readonly<{
+  check: string
+  traceId: string
+  unit: string
+  demand: Readonly<Record<TwinRevision, number>>
+  capacity: Readonly<Record<TwinRevision, number>>
+}>
+
+export const loadBudget = (): ReadonlyArray<BudgetRow> => {
+  const change = avionicsChange
+  const steady = change.existingLoadKw + change.steadyKw
+  const peak = change.existingLoadKw + change.peakKw
+  const rating = { A: 30, B: 45 }
+  const heat = (revision: TwinRevision) =>
+    steady * (1 / change.efficiency[revision] - 1)
+  return [
+    {
+      check: 'Continuous bus load',
+      traceId: 'REQ-PSU-01',
+      unit: 'kW',
+      demand: { A: steady, B: steady },
+      capacity: rating,
+    },
+    {
+      check: `${change.peakDurationMs} ms peak load`,
+      traceId: 'REQ-PSU-01',
+      unit: 'kW',
+      demand: { A: peak, B: peak },
+      capacity: {
+        A: rating.A * change.shortTermRating,
+        B: rating.B * change.shortTermRating,
+      },
+    },
+    {
+      check: 'PSU waste heat to PAO loop',
+      traceId: 'REQ-PSU-02',
+      unit: 'kW',
+      demand: { A: heat('A'), B: heat('B') },
+      capacity: change.heatAllocationKw,
+    },
+  ]
+}
+
+export const budgetMargin = (row: BudgetRow, revision: TwinRevision): number =>
+  (row.capacity[revision] - row.demand[revision]) / row.capacity[revision]
+
 export const withinLimit = (row: AnalysisRow, value: number): boolean =>
   row.limit.kind === 'Max' ? value <= row.limit.value : value >= row.limit.value
 

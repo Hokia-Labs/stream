@@ -12,7 +12,10 @@ import { type Model, initialModel, update } from './main'
 import { Message } from './message'
 import {
   affectedSubsystems,
+  avionicsChange,
+  budgetMargin,
   hrdDocument,
+  loadBudget,
   twinChanges,
   twinPackageFiles,
   twinRevision,
@@ -27,6 +30,18 @@ const revB = update(
 ).model
 
 describe('digital twin', () => {
+  it('shows the avionics change exceeds Rev A margins and fits Rev B', () => {
+    const rows = loadBudget()
+    expect(rows.some(row => budgetMargin(row, 'A') < 0)).toBe(true)
+    expect(
+      rows.every(
+        row => budgetMargin(row, 'B') >= avionicsChange.requiredMargin,
+      ),
+    ).toBe(true)
+    expect(rows[0]?.demand.A).toBeCloseTo(34.2)
+    expect(rows[2]?.demand.A).toBeCloseTo(2.974, 3)
+  })
+
   it('loads the power-supply scenario at Rev A without changes', () => {
     expect(twinRevision(loaded.workspace.requirements)).toBe('A')
     expect(twinChanges(loaded.workspace.requirements)).toHaveLength(0)

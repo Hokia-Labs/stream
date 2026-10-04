@@ -16,8 +16,11 @@ import { pageHeading } from './title-block'
 import {
   affectedSubsystems,
   analysisRows,
+  avionicsChange,
+  budgetMargin,
   hasTwinScenario,
   limitLabel,
+  loadBudget,
   lowMargin,
   signoffTitle,
   twinChanges,
@@ -374,6 +377,152 @@ const arrowIcon = (h: HtmlBuilder<Message>): Html =>
     ),
   ])
 
+const percent = (value: number): string =>
+  `${value >= 0 ? '+' : '−'}${Math.abs(value * 100).toFixed(1)}%`
+
+const marginCell = (margin: number, h: H): Html =>
+  h.span(
+    [
+      h.Class(
+        `mono twin-margin ${margin < 0 ? 'bad' : margin < avionicsChange.requiredMargin ? 'low' : 'ok'}`,
+      ),
+    ],
+    [percent(margin)],
+  )
+
+const kw = (value: number): string => value.toFixed(2)
+
+const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
+  const rows = loadBudget()
+  const isRevAShort = rows.some(
+    row => budgetMargin(row, 'A') < avionicsChange.requiredMargin,
+  )
+  return h.section(
+    [h.Class('panel twin-wide'), h.AriaLabel('Change driver')],
+    [
+      h.div(
+        [h.Class('twin-section-head')],
+        [
+          h.h2(
+            [h.Class('twin-heading')],
+            [`Why the PSU is changing · ${avionicsChange.id}`],
+          ),
+          h.span(
+            [
+              h.Class(
+                `small-text ${isRevB ? 'twin-margin ok' : 'twin-margin bad'}`,
+              ),
+            ],
+            [
+              isRevB
+                ? 'Rev B carries the upgraded load within margin'
+                : isRevAShort
+                  ? 'Rev A cannot carry the upgraded load'
+                  : 'Rev A has margin; no PSU change needed',
+            ],
+          ),
+        ],
+      ),
+      h.p(
+        [h.Class('twin-driver-summary')],
+        [h.strong([], [`${avionicsChange.title}. `]), avionicsChange.summary],
+      ),
+      h.div(
+        [h.Class('twin-driver')],
+        [
+          h.div(
+            [],
+            [
+              h.h3([h.Class('twin-subheading')], ['New module load sheet']),
+              h.dl(
+                [h.Class('twin-facts')],
+                avionicsChange.loadSheet.flatMap(([label, value]) => [
+                  h.dt([], [label]),
+                  h.dd([], [value]),
+                ]),
+              ),
+            ],
+          ),
+          h.div(
+            [],
+            [
+              h.h3(
+                [h.Class('twin-subheading')],
+                [
+                  `Budget (demand / limit) at ${kw(avionicsChange.existingLoadKw)} kW existing + new module`,
+                ],
+              ),
+              h.table(
+                [h.Class('twin-table')],
+                [
+                  h.thead(
+                    [],
+                    [
+                      h.tr(
+                        [],
+                        [
+                          'Check',
+                          'Req.',
+                          'Rev A',
+                          'Margin',
+                          'Rev B',
+                          'Margin',
+                        ].map(label => h.th([], [label])),
+                      ),
+                    ],
+                  ),
+                  h.tbody(
+                    [],
+                    rows.map(row =>
+                      h.keyed('tr')(
+                        row.check,
+                        [],
+                        [
+                          h.td([], [row.check]),
+                          h.td(
+                            [],
+                            [idLink(model, row.traceId, h, 'mono small-text')],
+                          ),
+                          h.td(
+                            [h.Class('mono nowrap')],
+                            [
+                              `${kw(row.demand.A)} / ${kw(row.capacity.A)} ${row.unit}`,
+                            ],
+                          ),
+                          h.td([], [marginCell(budgetMargin(row, 'A'), h)]),
+                          h.td(
+                            [h.Class('mono nowrap')],
+                            [
+                              `${kw(row.demand.B)} / ${kw(row.capacity.B)} ${row.unit}`,
+                            ],
+                          ),
+                          h.td([], [marginCell(budgetMargin(row, 'B'), h)]),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              h.p(
+                [h.Class('muted small-text twin-driver-note')],
+                [
+                  `Margin = (limit − demand) / limit; design rule ≥ ${avionicsChange.requiredMargin * 100}%. Peak limit = ${avionicsChange.shortTermRating}× continuous rating. PSU heat = P × (1/η − 1), with η = ${avionicsChange.efficiency.A} (Rev A) and ${avionicsChange.efficiency.B} (Rev B).`,
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      h.p(
+        [h.Class('muted small-text')],
+        [
+          'SAMPLE values on a synthetic 270 VDC architecture. The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
+        ],
+      ),
+    ],
+  )
+}
+
 export const twinPage = (model: Model, h: H): Html => {
   const twin = twinSpec.withMessage(h)
   const requirements = model.workspace.requirements
@@ -387,6 +536,7 @@ export const twinPage = (model: Model, h: H): Html => {
   const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
   const steps: ReadonlyArray<Readonly<{ label: string; done: boolean }>> = [
+    { label: 'Check the avionics load change', done: true },
     {
       label: 'Inspect the aft bay',
       done: model.twinFocus === 'Aft bay' || isRevB,
@@ -597,6 +747,7 @@ export const twinPage = (model: Model, h: H): Html => {
                       ),
                 ],
               ),
+              changeDriver(model, isRevB, h),
               h.section(
                 [h.Class('panel twin-wide')],
                 [

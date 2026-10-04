@@ -6922,3 +6922,43 @@ button:disabled,
 .graph-scroll [data-node-id] {
   scroll-margin: 96px 24px 48px;
 }
+
+.twin-driver-summary {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+.twin-driver {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 2fr;
+  gap: var(--space-5, 24px);
+  margin-bottom: var(--space-3);
+}
+@media (max-width: 960px) {
+  .twin-driver {
+    grid-template-columns: 1fr;
+  }
+}
+.twin-subheading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.twin-driver-note {
+  margin: var(--space-2) 0 0;
+}
+.twin-margin.bad {
+  color: var(--error);
+  font-weight: 550;
+}
+.twin-margin.low {
+  color: var(--warning);
+}
+.twin-margin.ok {
+  color: var(--success);
+}
+.twin-driver .nowrap {
+  white-space: nowrap;
+}
+.twin-driver .twin-margin {
+  padding-left: var(--space-3);
+}
