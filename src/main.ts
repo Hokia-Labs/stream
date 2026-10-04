@@ -1388,6 +1388,11 @@ export const FocusPalette = Command.define('FocusPalette', {
   ),
 })
 
+const defaultReportTab = (files: ReadonlyArray<TwinReport>): string =>
+  (
+    files.find(file => file.name.startsWith('CIA-')) ??
+    files.find(file => file.name.endsWith('.md'))
+  )?.name ?? ''
 const persist = (
   model: Model,
   workspace: Workspace,
@@ -3541,8 +3546,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         model: modifyFields(model, {
           isGeneratingTwinPackage: () => false,
           twinReports: () => files,
-          twinReportTab: () =>
-            files.find(file => file.name.endsWith('.md'))?.name ?? '',
+          twinReportTab: () => defaultReportTab(files),
           twinReportSync: () => 'Saving',
           twinReportSaveToken: () => token,
         }),
@@ -3557,8 +3561,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : {
             model: modifyFields(model, {
               twinReports: () => files,
-              twinReportTab: () =>
-                files.find(file => file.name.endsWith('.md'))?.name ?? '',
+              twinReportTab: () => defaultReportTab(files),
               twinReportSync: () => 'Saved',
             }),
           },

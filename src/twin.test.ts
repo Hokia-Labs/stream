@@ -215,11 +215,12 @@ describe('digital twin', () => {
       Message.DraftedTwinReports({
         files: [
           { name: 'HRD-PSU-001-RevB.md', content: '# HRD', isEdited: false },
+          { name: 'CIA-PSU-001-RevB.md', content: '# CIA', isEdited: false },
           { name: 'traceability.csv', content: 'ID', isEdited: false },
         ],
       }),
     ).model
-    expect(drafted.twinReportTab).toBe('HRD-PSU-001-RevB.md')
+    expect(drafted.twinReportTab).toBe('CIA-PSU-001-RevB.md')
     const edited = update(
       drafted,
       Message.EditedTwinReport({
