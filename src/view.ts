@@ -16,7 +16,6 @@ import {
   AgentWave,
   ArtifactField,
   ExecutionMode,
-  GraphPreviewTab,
   GraphScope,
   GraphView,
   GroupBy,
@@ -2417,124 +2416,6 @@ const graphLegend = (h: H): Html =>
       ),
     ),
   )
-const graphPreview = (model: Model, h: H): Html => {
-  const id = Option.getOrElse(model.maybeSelectedNode, () => '')
-  const item = model.workspace.requirements.find(entry => entry.id === id)
-  if (!item) {
-    return h.empty
-  }
-  const latest = model.workspace.runs.find(run =>
-    run.requirements.some(entry => entry.id === id),
-  )
-  const outputs = latest
-    ? latest.tasks.filter(
-        task =>
-          task.output && (task.output.includes(id) || latest.targetId === id),
-      )
-    : []
-  const inputs = model.workspace.requirements.filter(entry =>
-    entry.links.includes(id),
-  )
-  const tab = model.graphPreviewTab
-  return h.aside(
-    [h.Class('graph-preview'), h.AriaLabel(`Preview ${id}`)],
-    [
-      h.div(
-        [h.Class('graph-preview-head')],
-        [
-          h.span([h.Class('mono muted')], [id]),
-          portionTag(artifactPortion(item), h),
-          h.strong([], [item.title]),
-        ],
-      ),
-      h.div(
-        [h.Class('segmented run-view-toggle preview-tabs'), h.Role('tablist')],
-        GraphPreviewTab.literals.map(option =>
-          h.keyed('button')(
-            option,
-            [
-              h.Type('button'),
-              h.Role('tab'),
-              h.AriaSelected(tab === option),
-              h.Class(tab === option ? 'active' : ''),
-              h.OnClick(Message.SelectedGraphPreviewTab({ tab: option })),
-            ],
-            [option],
-          ),
-        ),
-      ),
-      tab === 'Inputs'
-        ? Array.isReadonlyArrayEmpty(inputs)
-          ? h.p([h.Class('muted small-text')], ['No upstream artifacts.'])
-          : h.ul(
-              [h.Class('preview-list')],
-              inputs.map(entry =>
-                h.keyed('li')(
-                  entry.id,
-                  [],
-                  [
-                    h.button(
-                      [
-                        h.Type('button'),
-                        h.Class('text-button'),
-                        h.OnClick(Message.SelectedNode({ id: entry.id })),
-                      ],
-                      [h.span([h.Class('mono')], [entry.id]), ' ', entry.title],
-                    ),
-                  ],
-                ),
-              ),
-            )
-        : tab === 'Output'
-          ? latest && !Array.isReadonlyArrayEmpty(outputs)
-            ? h.ul(
-                [h.Class('preview-list')],
-                outputs.map(task =>
-                  h.keyed('li')(
-                    task.agentId,
-                    [h.Class(task.status === 'Failed' ? 'is-failed' : '')],
-                    [
-                      h.span(
-                        [h.Class('mono muted small-text')],
-                        [
-                          `${latest.agents.find(agent => agent.id === task.agentId)?.name ?? task.agentId} · ${task.status}`,
-                        ],
-                      ),
-                      h.p(
-                        [h.Class('small-text')],
-                        [summarizeFinding(task.output, task.status).title],
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            : h.p(
-                [h.Class('muted small-text')],
-                [
-                  'No agent output for this artifact yet. Launch a run to analyze it.',
-                ],
-              )
-          : h.dl(
-              [h.Class('agent-detail-meta')],
-              [
-                h.dt([], ['Kind']),
-                h.dd([], [item.kind]),
-                h.dt([], ['Status']),
-                h.dd([], [item.status]),
-                h.dt([], ['Owner']),
-                h.dd([], [item.owner]),
-                h.dt([], ['Revision']),
-                h.dd([h.Class('mono')], [`r${item.revision}`]),
-                h.dt([], ['Latest run']),
-                h.dd(
-                  [h.Class('mono')],
-                  [latest ? `${latest.id} · ${latest.status}` : '—'],
-                ),
-              ],
-            ),
-    ],
-  )
-}
 const pausePoints = (model: Model, h: H): Html =>
   h.div(
     [h.Class('pause-points'), h.Role('group'), h.AriaLabel('Pause points')],
@@ -2668,7 +2549,6 @@ const graphPage = (model: Model, h: H): Html => {
                   h.div([h.Class('graph-overlay')], [graphControls(model, h)]),
                   scene.isOverview ? overviewLegend(h) : graphLegend(h),
                   graphMinimap(model, scene, h),
-                  graphPreview(model, h),
                 ],
               ),
           h.div(
