@@ -6918,3 +6918,7 @@ button:disabled,
   color: var(--ink);
   background: var(--surface);
 }
+
+.graph-scroll [data-node-id] {
+  scroll-margin: 96px 24px 48px;
+}

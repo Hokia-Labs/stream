@@ -980,17 +980,37 @@ const RevealGraphNode = Command.define('RevealGraphNode', {
           : box.left - margin < view.left
             ? box.left - margin - view.left
             : 0
-      const top =
-        box.bottom + margin > view.bottom
-          ? box.bottom + margin - view.bottom
-          : box.top - margin < view.top
-            ? box.top - margin - view.top
-            : 0
+      const legend = viewport
+        .closest('.graph-page')
+        ?.querySelector('.legend')
+        ?.getBoundingClientRect()
+      const visibleTop = Math.max(view.top, 0)
+      const visibleBottom = Math.min(
+        view.bottom,
+        legend && legend.top > view.top ? legend.top : view.bottom,
+        window.innerHeight,
+      )
+      const isVerticallyVisible =
+        box.top - margin >= visibleTop && box.bottom + margin <= visibleBottom
+      const top = isVerticallyVisible
+        ? 0
+        : (box.top + box.bottom) / 2 - (visibleTop + visibleBottom) / 2
+      const isReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
+      const revealInPage = () =>
+        node.scrollIntoView({
+          block: 'nearest',
+          inline: 'nearest',
+          behavior: isReducedMotion ? 'instant' : 'smooth',
+        })
       if (left === 0 && top === 0) {
+        revealInPage()
         return
       }
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (isReducedMotion) {
         viewport.scrollBy({ left, top })
+        revealInPage()
         return
       }
       const startLeft = viewport.scrollLeft
@@ -1010,6 +1030,7 @@ const RevealGraphNode = Command.define('RevealGraphNode', {
         }
         requestAnimationFrame(step)
       })
+      revealInPage()
     }).pipe(
       Effect.catch(() => Effect.void),
       Effect.as(Message.CompletedRevealGraphNode()),
