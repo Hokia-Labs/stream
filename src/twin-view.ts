@@ -26,14 +26,21 @@ import {
   type TwinSlot,
 } from './domain'
 import { idLink, linkifyIds } from './id-link'
-import { jiraChip } from './integration-view'
-import { jiraHandoffs } from './integrations'
+import {
+  ansysLogo,
+  jiraChip,
+  ltspiceLogo,
+  toolHead,
+  xpeditionLogo,
+} from './integration-view'
+import { jiraHandoffs, ltspiceResults } from './integrations'
 import type { Model } from './main'
 import { Message } from './message'
 import { pageHeading } from './title-block'
 import {
   affectedSubsystems,
   analysisRows,
+  assemblyRevB,
   avionicsChange,
   avionicsRequirementIds,
   busDemandKw,
@@ -1650,10 +1657,22 @@ const schematicSheet = (
 const diffBadge = (state: DiffState, h: H): Html =>
   h.span([h.Class(`badge ${diffClass(state)}`)], [state])
 
+const revBStem = `${assemblyRevB.id}_${assemblyRevB.revision}`
+
 const schematicTab = (model: Model, h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
+      toolHead(
+        xpeditionLogo(h),
+        [
+          `${revBStem}_ECAD.zip`,
+          'Xpedition Designer · schematic delta vs Rev A',
+          'DRC 0 errors',
+          'Checked in to Teamcenter',
+        ],
+        h,
+      ),
       h.div(
         [h.Class('board-review-pair')],
         [
@@ -1766,10 +1785,104 @@ const heatMap = (revision: 'A' | 'B', h: H): Html =>
     ],
   )
 
+const electricalTab = (model: Model, h: H): Html => {
+  const results = ltspiceResults()
+  return h.div(
+    [h.Class('board-review-body')],
+    [
+      toolHead(
+        ltspiceLogo(h),
+        [
+          `${revBStem}_bus.asc`,
+          'Batch run · transient, N−1',
+          `${results.length} .meas results from ${revBStem}_bus.log`,
+        ],
+        h,
+      ),
+      h.table(
+        [h.Class('table board-review-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                [
+                  'Measurement',
+                  '.meas',
+                  'Rev A',
+                  'Rev B',
+                  'Limit',
+                  'Trace',
+                  '',
+                ].map(label => h.th([], [label])),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            results.map(row =>
+              h.keyed('tr')(
+                row.meas,
+                [],
+                [
+                  h.td([], [row.measure]),
+                  h.td([h.Class('mono muted')], [row.meas]),
+                  h.td(
+                    [h.Class(`mono ${row.A > row.limit ? 'spice-over' : ''}`)],
+                    [`${row.A.toFixed(2)} ${row.unit}`],
+                  ),
+                  h.td(
+                    [h.Class(`mono ${row.B > row.limit ? 'spice-over' : ''}`)],
+                    [`${row.B.toFixed(2)} ${row.unit}`],
+                  ),
+                  h.td(
+                    [h.Class('mono')],
+                    [`≤ ${row.limit.toFixed(2)} ${row.unit}`],
+                  ),
+                  h.td([], [idLink(model, row.traceId, h, 'mono')]),
+                  h.td(
+                    [],
+                    [
+                      row.B > row.limit
+                        ? h.span([h.Class('badge danger')], ['Over'])
+                        : h.span([h.Class('badge positive')], ['Within']),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.pre(
+        [h.Class('spice-log'), h.AriaLabel('LTspice log excerpt')],
+        [
+          results
+            .map(
+              row => `${row.meas}: MAX(...)=${row.B.toFixed(4)} FROM 0 TO 0.5`,
+            )
+            .join('\n'),
+        ],
+      ),
+    ],
+  )
+}
+
 const thermalTab = (h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
+      toolHead(
+        ansysLogo(h),
+        [
+          `${revBStem}_thermal.wbpz`,
+          'Mechanical · steady-state thermal',
+          'Mesh 1.84 M elements',
+          'Solved',
+        ],
+        h,
+      ),
       h.div([h.Class('board-review-pair')], [heatMap('A', h), heatMap('B', h)]),
       h.div(
         [h.Class('heat-legend')],
@@ -2204,9 +2317,11 @@ export const boardReview = (model: Model, tab: BoardReviewTab, h: H): Html =>
         ? pdrTab(model, h)
         : tab === 'Schematic'
           ? schematicTab(model, h)
-          : tab === '3D model'
-            ? modelTab(h)
-            : thermalTab(h),
+          : tab === 'Electrical'
+            ? electricalTab(model, h)
+            : tab === '3D model'
+              ? modelTab(h)
+              : thermalTab(h),
       h.div(
         [h.Class('board-review-foot')],
         [

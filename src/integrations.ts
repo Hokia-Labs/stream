@@ -1,5 +1,10 @@
 import type { Requirement, TwinProposal } from './domain'
-import { proposalReviewer, twinArtifacts, twinRevision } from './twin'
+import {
+  loadBudget,
+  proposalReviewer,
+  twinArtifacts,
+  twinRevision,
+} from './twin'
 
 export const doorsModule = {
   id: 'EPS-SRS',
@@ -101,4 +106,53 @@ export const jiraHandoffs = (
           status,
         },
       ]
+}
+
+export type SpiceResult = Readonly<{
+  measure: string
+  meas: string
+  traceId: string
+  unit: string
+  A: number
+  B: number
+  limit: number
+}>
+
+export const ltspiceResults = (): ReadonlyArray<SpiceResult> => {
+  const feeder = loadBudget().find(
+    row => row.check === 'Cockpit feeder voltage drop',
+  )
+  return [
+    ...(feeder === undefined
+      ? []
+      : [
+          {
+            measure: 'Feeder drop, steady load',
+            meas: 'vdrop_feeder',
+            traceId: feeder.traceId,
+            unit: 'V',
+            A: feeder.demand.A,
+            B: feeder.demand.B,
+            limit: feeder.capacity.B,
+          },
+        ]),
+    {
+      measure: 'Bus droop, 200 ms peak, N−1',
+      meas: 'vdroop_peak',
+      traceId: 'REQ-AVN-01',
+      unit: 'V',
+      A: 7.4,
+      B: 3.1,
+      limit: 6,
+    },
+    {
+      measure: 'Bus ripple, peak to peak',
+      meas: 'vripple_pp',
+      traceId: 'REQ-PSU-01',
+      unit: 'V',
+      A: 0.62,
+      B: 0.48,
+      limit: 1,
+    },
+  ]
 }

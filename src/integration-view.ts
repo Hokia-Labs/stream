@@ -19,6 +19,38 @@ export const doorsLogo = (h: H): Html =>
     ],
   )
 
+const brandLockup = (
+  src: string,
+  product: string,
+  h: H,
+  markClass = 'brand-mark',
+): Html =>
+  h.span(
+    [h.Class('doors-logo'), h.AriaLabel(product)],
+    [h.img([h.Src(src), h.Alt(''), h.Class(markClass)]), h.span([], [product])],
+  )
+
+export const xpeditionLogo = (h: H): Html =>
+  brandLockup('/siemens-logo.svg', 'Xpedition', h)
+
+export const ltspiceLogo = (h: H): Html =>
+  brandLockup('/adi-logo.svg', 'LTspice', h, 'adi-logo')
+
+export const ansysLogo = (h: H): Html =>
+  h.img([h.Src('/ansys-logo.svg'), h.Alt('Ansys'), h.Class('ansys-logo')])
+
+export const toolHead = (logo: Html, meta: ReadonlyArray<string>, h: H): Html =>
+  h.div(
+    [h.Class('tool-head')],
+    [
+      syncedWith([logo], h),
+      h.ul(
+        [h.Class('tool-meta')],
+        meta.map(item => h.keyed('li')(item, [], [item])),
+      ),
+    ],
+  )
+
 export const jiraLogo = (h: H): Html =>
   h.img([h.Src('/jira-logo.svg'), h.Alt('Jira'), h.Class('jira-logo')])
 

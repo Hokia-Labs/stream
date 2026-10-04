@@ -100,6 +100,7 @@ export const TwinCheck = Schema.Literals(['Not run', 'Running', 'Done'])
 export const BoardReviewTab = Schema.Literals([
   'PDR',
   'Schematic',
+  'Electrical',
   '3D model',
   'Thermal',
 ])

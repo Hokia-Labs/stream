@@ -913,7 +913,7 @@ const assemblyRevA: CatalogItem = {
   specs: ['4 × 3.0 kW', '12.0 kW', '9.0 kW', '0.50 kW', '25 A SSPC · 10 AWG'],
 }
 
-const assemblyRevB: CatalogItem = {
+export const assemblyRevB: CatalogItem = {
   id: 'MW-MPA-48-5',
   revision: 'B',
   slot: 'Power',
@@ -1046,6 +1046,7 @@ const partFiles = (
       ? [
           { key: 'ecad', type: 'Xpedition Design', name: `${stem}_ECAD.zip` },
           { key: 'sch', type: 'PDF', name: `${stem}_schematic.pdf` },
+          { key: 'spice', type: 'LTspice Schematic', name: `${stem}_bus.asc` },
           { key: 'cae', type: 'CAE Analysis', name: `${stem}_thermal.wbpz` },
         ]
       : [{ key: 'icd', type: 'PDF', name: `${stem}_ICD.pdf` }]),
