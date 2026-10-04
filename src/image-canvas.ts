@@ -16,8 +16,11 @@ output{min-width:40px;text-align:center;font-variant-numeric:tabular-nums}
 .hint{position:absolute;left:8px;bottom:8px;margin:0;font:400 11px/1.4 "IBM Plex Sans",system-ui,sans-serif;color:#6b7280;pointer-events:none}
 `
 
+const syncGroups = new Map<string, Set<StreamImageCanvas>>()
+
 export class StreamImageCanvas extends HTMLElement {
   #src = ''
+  #syncGroup = ''
   #alt = ''
   #fit = 1
   #panzoom: PanzoomObject | undefined
@@ -38,6 +41,22 @@ export class StreamImageCanvas extends HTMLElement {
 
   get src(): string {
     return this.#src
+  }
+
+  set syncGroup(value: unknown) {
+    const next = typeof value === 'string' ? value : ''
+    if (next === this.#syncGroup) {
+      return
+    }
+    this.#leaveGroup()
+    this.#syncGroup = next
+    if (this.isConnected) {
+      this.#joinGroup()
+    }
+  }
+
+  get syncGroup(): string {
+    return this.#syncGroup
   }
 
   set alt(value: unknown) {
@@ -75,7 +94,8 @@ export class StreamImageCanvas extends HTMLElement {
       animate: false,
       exclude: [...root.querySelectorAll('.controls, .controls *')],
     })
-    image.addEventListener('panzoomchange', this.#updateLabel)
+    image.addEventListener('panzoomchange', this.#changed)
+    this.#joinGroup()
     this.addEventListener('wheel', this.#wheel, { passive: false })
     this.addEventListener('keydown', this.#key)
     root.querySelector('.controls')?.addEventListener('click', this.#click)
@@ -84,6 +104,7 @@ export class StreamImageCanvas extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    this.#leaveGroup()
     this.#observer?.disconnect()
     this.#panzoom?.destroy()
     this.removeEventListener('wheel', this.#wheel)
@@ -105,6 +126,48 @@ export class StreamImageCanvas extends HTMLElement {
     image.style.width = `${Math.round(image.naturalWidth * this.#fit)}px`
     image.style.height = `${Math.round(image.naturalHeight * this.#fit)}px`
     this.#panzoom?.reset({ animate: false })
+    this.#updateLabel()
+  }
+
+  #joinGroup(): void {
+    if (this.#syncGroup === '') {
+      return
+    }
+    const peers = syncGroups.get(this.#syncGroup) ?? new Set()
+    peers.add(this)
+    syncGroups.set(this.#syncGroup, peers)
+  }
+
+  #leaveGroup(): void {
+    const peers = syncGroups.get(this.#syncGroup)
+    peers?.delete(this)
+    if (peers?.size === 0) {
+      syncGroups.delete(this.#syncGroup)
+    }
+  }
+
+  #changed = (): void => {
+    this.#updateLabel()
+    const panzoom = this.#panzoom
+    if (!panzoom || this.#syncGroup === '') {
+      return
+    }
+    const scale = panzoom.getScale()
+    const { x, y } = panzoom.getPan()
+    for (const peer of syncGroups.get(this.#syncGroup) ?? []) {
+      if (peer !== this) {
+        peer.#follow(scale, x, y)
+      }
+    }
+  }
+
+  #follow(scale: number, x: number, y: number): void {
+    const panzoom = this.#panzoom
+    if (!panzoom) {
+      return
+    }
+    panzoom.zoom(scale, { animate: false, silent: true })
+    panzoom.pan(x, y, { animate: false, silent: true })
     this.#updateLabel()
   }
 

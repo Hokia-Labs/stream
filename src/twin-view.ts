@@ -89,6 +89,7 @@ const imageCanvasSpec = CustomElement.define({
   properties: {
     src: Schema.String,
     alt: Schema.String,
+    syncGroup: Schema.String,
   },
   events: {},
 })
@@ -97,6 +98,7 @@ const imageCanvas = (
   className: string,
   src: string,
   alt: string,
+  syncGroup: string,
   h: H,
 ): Html => {
   const canvas = imageCanvasSpec.withMessage(h)
@@ -104,6 +106,7 @@ const imageCanvas = (
     h.Class(`image-canvas ${className}`),
     canvas.Src(src),
     canvas.Alt(alt),
+    canvas.SyncGroup(syncGroup),
     h.AriaLabel(alt),
   ])
 }
@@ -1980,10 +1983,10 @@ const schematicNote = (board: number, sheet: string, h: H): Html => {
 }
 
 const schematicViewer = (model: Model, h: H): Html => {
-  const board = schematicBoards[model.schematicBoard] ?? schematicBoards[0]
-  const page = Math.min(model.schematicPage, board.sheets.length - 1)
-  const sheet = board.sheets[page] ?? ''
-  return h.figure(
+  const sheets = schematicBoards[0].sheets
+  const page = Math.min(model.schematicPage, sheets.length - 1)
+  const sheet = sheets[page] ?? ''
+  return h.div(
     [h.Class('schematic-viewer')],
     [
       h.div(
@@ -1991,41 +1994,11 @@ const schematicViewer = (model: Model, h: H): Html => {
         [
           h.div(
             [
-              h.Class('schematic-boards'),
-              h.Role('group'),
-              h.AriaLabel('Revision'),
-            ],
-            schematicBoards.map((item, index) =>
-              h.keyed('button')(
-                item.name,
-                [
-                  h.Type('button'),
-                  h.Class(
-                    index === model.schematicBoard
-                      ? 'schematic-page active'
-                      : 'schematic-page',
-                  ),
-                  h.AriaPressed(
-                    index === model.schematicBoard ? 'true' : 'false',
-                  ),
-                  h.OnClick(
-                    Message.SelectedSchematicSheet({
-                      board: index,
-                      page: model.schematicPage,
-                    }),
-                  ),
-                ],
-                [item.name],
-              ),
-            ),
-          ),
-          h.div(
-            [
               h.Class('schematic-pages'),
               h.Role('group'),
               h.AriaLabel('Schematic sheet'),
             ],
-            board.sheets.map((name, index) =>
+            sheets.map((name, index) =>
               h.keyed('button')(
                 name,
                 [
@@ -2043,14 +2016,29 @@ const schematicViewer = (model: Model, h: H): Html => {
               ),
             ),
           ),
-          schematicNote(model.schematicBoard, sheet, h),
         ],
       ),
-      imageCanvas(
-        'schematic-image',
-        `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
-        `Altium schematic, ${board.name}, ${sheet}`,
-        h,
+      h.div(
+        [h.Class('board-review-pair')],
+        schematicBoards.map((board, index) =>
+          h.keyed('figure')(
+            board.dir,
+            [],
+            [
+              h.figcaption(
+                [h.Class('schematic-caption')],
+                [board.name, schematicNote(index, sheet, h)],
+              ),
+              imageCanvas(
+                'schematic-image',
+                `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
+                `Altium schematic, ${board.name}, ${sheet}`,
+                'schematic',
+                h,
+              ),
+            ],
+          ),
+        ),
       ),
     ],
   )
@@ -2133,6 +2121,7 @@ const heatMap = (revision: 'A' | 'B', h: H): Html =>
         revision === 'A'
           ? 'Ansys steady-state thermal result, Rev A'
           : 'Ansys steady-state thermal result, Rev B',
+        'thermal',
         h,
       ),
     ],
