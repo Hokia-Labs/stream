@@ -232,7 +232,7 @@ export const initialModel: Model = {
   pauseAfter: [],
   graphPreviewTab: 'Output',
   graphView: 'Graph',
-  graphScope: '2 hops',
+  graphScope: 'All',
   graphQuery: '',
   hiddenGraphKinds: [],
   isMatrixGapsOnly: false,
