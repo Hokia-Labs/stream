@@ -224,6 +224,7 @@ export const Message = defineMessageUnion({
   ClickedOpenTwinMatrix: {},
   ClickedResetTwin: {},
   OpenedBoardReview: {},
+  OpenedBoardReviewAt: { tab: BoardReviewTab },
   SelectedBoardReviewTab: { tab: BoardReviewTab },
   SelectedTwinPdrFile: { files: Schema.Array(File) },
   LoadedTwinPdr: { upload: TwinPdrUpload },

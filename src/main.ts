@@ -3010,6 +3010,14 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modal: () => Modal.BoardReview({ tab: 'PDR' }),
             }),
           },
+    OpenedBoardReviewAt: ({ tab }) =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              modal: () => Modal.BoardReview({ tab }),
+            }),
+          },
     SelectedBoardReviewTab: ({ tab }) =>
       model.modal._tag !== 'BoardReview'
         ? { model }

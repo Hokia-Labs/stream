@@ -662,6 +662,50 @@ export const twinPartPicker = (
   )
 }
 
+const analysisSummary = (): ReadonlyArray<
+  Readonly<{ label: string; tab: BoardReviewTab }>
+> => {
+  const spice = ltspiceResults()
+  const spicePass = spice.filter(result => result.B <= result.limit).length
+  const ansysPass = analysisRows.filter(row =>
+    withinLimit(row, row.revB),
+  ).length
+  return [
+    { label: `LTspice ${spicePass}/${spice.length}`, tab: 'Electrical' },
+    {
+      label: `Ansys ${ansysPass}/${analysisRows.length}`,
+      tab: 'Thermal',
+    },
+    { label: 'Xpedition DRC 0', tab: 'Schematic' },
+  ]
+}
+
+const requirementCountLabel = (hasProposal: boolean): string =>
+  hasProposal
+    ? `${avionicsRequirementIds.length} + ${derivedArtifacts.length} derived`
+    : String(avionicsRequirementIds.length)
+
+const analysisLine = (isReviewable: boolean, h: H): Html =>
+  h.p(
+    [
+      h.Class('twin-analysis-line muted small-text'),
+      h.AriaLabel('Analysis checks'),
+    ],
+    analysisSummary().flatMap((item, index) => [
+      index > 0 ? ' · ' : '',
+      isReviewable
+        ? h.button(
+            [
+              h.Type('button'),
+              h.Class('link-button'),
+              h.OnClick(Message.OpenedBoardReviewAt({ tab: item.tab })),
+            ],
+            [item.label],
+          )
+        : h.span([], [item.label]),
+    ]),
+  )
+
 const proposalPanel = (
   model: Model,
   isUpgraded: boolean,
@@ -736,6 +780,7 @@ const proposalPanel = (
                 `. N−1 capacity ${kw(capacityKw('A', 1))} kW against ${kw(busDemandKw)} kW bus demand.`,
               ],
             ),
+            analysisLine(proposal === 'Pending', h),
             h.table(
               [h.Class('twin-table twin-proposal-table')],
               [
@@ -1110,6 +1155,9 @@ const requirementChangesPanel = (model: Model, h: H): Html => {
             [h.Class('twin-heading')],
             [`Requirement changes · ${changes.length}`],
           ),
+          changes.length > 0 && !(isRevB && model.twinCheck === 'Done')
+            ? h.span([h.Class('badge warning')], ['DOORS change set pending'])
+            : h.empty,
         ],
       ),
       changes.length === 0
@@ -1538,8 +1586,15 @@ const lifecycle = (model: Model, h: H): Html => {
   const proposal = model.twinProposal
   const checks = requirementChecks('B')
   const passed = checks.filter(check => check.isPass).length
+  const hasProposal =
+    isRevB || proposal === 'Pending' || proposal === 'Rejected'
   const stages: ReadonlyArray<
-    Readonly<{ label: string; meta: string; isDone: boolean }>
+    Readonly<{
+      label: string
+      meta: string
+      hint?: string | undefined
+      isDone: boolean
+    }>
   > = [
     {
       label: 'Impact',
@@ -1551,6 +1606,11 @@ const lifecycle = (model: Model, h: H): Html => {
     {
       label: 'Proposed',
       meta: proposal === 'Drafting' ? 'Power agent drafting…' : 'Power agent',
+      hint: hasProposal
+        ? `Power agent · ${analysisSummary()
+            .map(item => item.label)
+            .join(' · ')}`
+        : undefined,
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
     },
     {
@@ -1559,6 +1619,9 @@ const lifecycle = (model: Model, h: H): Html => {
         isRevB || proposal === 'Pending' || proposal === 'Rejected'
           ? `${derivedArtifacts.length} from Rev B design`
           : 'From the design',
+      hint: hasProposal
+        ? `${avionicsRequirementIds.length} revised · ${derivedArtifacts.length} derived`
+        : undefined,
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
     },
     {
@@ -1602,7 +1665,7 @@ const lifecycle = (model: Model, h: H): Html => {
         [
           h.span([h.Class('twin-life-mark'), h.AriaHidden(true)], []),
           h.span(
-            [h.Class('twin-life-label'), h.Title(stage.meta)],
+            [h.Class('twin-life-label'), h.Title(stage.hint ?? stage.meta)],
             [stage.label],
           ),
           index === current
@@ -1611,110 +1674,6 @@ const lifecycle = (model: Model, h: H): Html => {
         ],
       ),
     ),
-  )
-}
-
-type StatusTone = 'ok' | 'warn' | 'active' | 'bad' | 'idle'
-
-const statusCard = (
-  tone: StatusTone,
-  title: string,
-  detail: string,
-  h: H,
-): Html =>
-  h.div(
-    [h.Class(`twin-status ${tone}`)],
-    [
-      h.span([h.Class('twin-status-mark'), h.AriaHidden(true)], []),
-      h.div(
-        [],
-        [
-          h.p([h.Class('twin-status-title')], [title]),
-          h.p([h.Class('twin-status-detail')], [detail]),
-        ],
-      ),
-    ],
-  )
-
-const statusCards = (model: Model, h: H): Html => {
-  const requirements = model.workspace.requirements
-  const isUpgraded = isAvionicsUpgraded(requirements)
-  const isRevB = twinRevision(requirements) === 'B'
-  const proposal = model.twinProposal
-  const hasProposal =
-    isRevB || proposal === 'Pending' || proposal === 'Rejected'
-  const spice = ltspiceResults()
-  const spicePass = spice.filter(result => result.B <= result.limit).length
-  const ansysPass = analysisRows.filter(row =>
-    withinLimit(row, row.revB),
-  ).length
-  const checks = requirementChecks('B')
-  const passed = checks.filter(check => check.isPass).length
-  const signed = model.twinReviewed.length
-  const revised = hasProposal
-    ? `${avionicsRequirementIds.length} revised · ${derivedArtifacts.length} derived`
-    : `${avionicsRequirementIds.length} requirements revised`
-  return h.div(
-    [h.Class('twin-status-list'), h.AriaLabel('Change status')],
-    [
-      hasProposal
-        ? statusCard(
-            spicePass === spice.length && ansysPass === analysisRows.length
-              ? 'ok'
-              : 'warn',
-            'Analysis checks passed',
-            `LTspice ${spicePass}/${spice.length} · Ansys ${ansysPass}/${analysisRows.length} · Xpedition DRC 0`,
-            h,
-          )
-        : statusCard(
-            proposal === 'Drafting' ? 'active' : 'idle',
-            'Analysis checks',
-            proposal === 'Drafting'
-              ? 'Running with the agent proposal…'
-              : 'Run with the agent proposal',
-            h,
-          ),
-      !isUpgraded
-        ? statusCard('idle', 'Requirements', 'No changes from baseline', h)
-        : isRevB && model.twinCheck === 'Done'
-          ? statusCard(
-              passed === checks.length ? 'ok' : 'bad',
-              revised,
-              `${passed} of ${checks.length} checks pass on Rev B`,
-              h,
-            )
-          : statusCard('warn', revised, 'DOORS change set pending', h),
-      isRevB
-        ? statusCard(
-            'ok',
-            'EE approved',
-            `${proposalReviewer.name} · via Jira`,
-            h,
-          )
-        : proposal === 'Pending'
-          ? statusCard(
-              'active',
-              'Approval required',
-              `${proposalReviewer.name} · ${proposalReviewer.role}`,
-              h,
-            )
-          : proposal === 'Rejected'
-            ? statusCard('bad', 'Rejected', `By ${proposalReviewer.name}`, h)
-            : statusCard('idle', 'EE approval', 'Not requested yet', h),
-      !isRevB || model.twinReports.length === 0
-        ? statusCard(
-            'idle',
-            'Sign-off',
-            'Opens once the DO-254 reports are drafted',
-            h,
-          )
-        : statusCard(
-            signed === twinSignoffs.length ? 'ok' : 'active',
-            'Sign-off',
-            `${signed} of ${twinSignoffs.length} disciplines signed`,
-            h,
-          ),
-    ],
   )
 }
 
@@ -1755,7 +1714,13 @@ const panelTabs = (model: Model, h: H): Html => {
   const requirements = model.workspace.requirements
   const counts: Readonly<Record<TwinPanelTab, string>> = {
     Change: '',
-    Requirements: String(twinChanges(requirements).length),
+    Requirements: isAvionicsUpgraded(requirements)
+      ? requirementCountLabel(
+          twinRevision(requirements) === 'B' ||
+            model.twinProposal === 'Pending' ||
+            model.twinProposal === 'Rejected',
+        )
+      : '',
     'Sign-off': `${model.twinReviewed.length}/${twinSignoffs.length}`,
     'DO-254': '',
     Activity: String(twinActivity(model).length),
@@ -1923,11 +1888,7 @@ export const twinPage = (model: Model, h: H): Html => {
           ),
           h.aside(
             [h.Class('twin-side')],
-            [
-              slotCard(model, 'Cockpit', h),
-              slotCard(model, 'Power', h),
-              statusCards(model, h),
-            ],
+            [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
           ),
         ],
       ),

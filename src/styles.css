@@ -8463,8 +8463,7 @@ p.launch-estimate {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.twin-life-mark,
-.twin-status-mark {
+.twin-life-mark {
   flex: none;
   display: grid;
   place-items: center;
@@ -8479,22 +8478,19 @@ p.launch-estimate {
 .twin-life-stage.done {
   color: var(--ink);
 }
-.twin-life-stage.done .twin-life-mark,
-.twin-status.ok .twin-status-mark {
+.twin-life-stage.done .twin-life-mark {
   border-color: var(--success);
   background: var(--success);
   color: #fff;
 }
-.twin-life-stage.done .twin-life-mark::after,
-.twin-status.ok .twin-status-mark::after {
+.twin-life-stage.done .twin-life-mark::after {
   content: '✓';
 }
 .twin-life-stage.current {
   color: var(--ink);
   box-shadow: inset 0 -2px 0 var(--accent);
 }
-.twin-life-stage.current .twin-life-mark,
-.twin-status.active .twin-status-mark {
+.twin-life-stage.current .twin-life-mark {
   border-color: var(--accent);
   background: radial-gradient(circle, var(--accent) 0 3px, transparent 3.5px);
 }
@@ -8512,52 +8508,19 @@ p.launch-estimate {
 .twin-page .twin-slot {
   margin: 0;
 }
-.twin-status-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.twin-analysis-line {
+  margin: 0 0 var(--space-3);
 }
-.twin-status {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  background: var(--sheet);
+.twin-analysis-line button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
 }
-.twin-status .twin-status-mark {
-  margin-top: 2px;
-  color: var(--muted);
-}
-.twin-status p {
-  margin: 0;
-}
-.twin-status-title {
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-.twin-status-detail {
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.twin-status.idle .twin-status-title {
-  color: var(--muted);
-}
-.twin-status.warn .twin-status-mark {
-  border-color: var(--warning);
-  background: var(--warning);
-  color: #fff;
-}
-.twin-status.warn .twin-status-mark::after {
-  content: '!';
-}
-.twin-status.bad .twin-status-mark {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: #fff;
-}
-.twin-status.bad .twin-status-mark::after {
-  content: '✕';
+.twin-analysis-line button:hover {
+  text-decoration: underline;
 }
 .twin-tabs {
   display: flex;
