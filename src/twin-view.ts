@@ -476,13 +476,10 @@ const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
 }
 
 const changeDriver = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
-  return h.section(
-    [h.Class('panel twin-wide'), h.AriaLabel('Power budget')],
+  return h.div(
+    [h.Class('twin-budget'), h.AriaLabel('Power budget')],
     [
-      h.div(
-        [h.Class('twin-section-head')],
-        [h.h2([h.Class('twin-heading')], ['Power budget'])],
-      ),
+      h.span([h.Class('twin-budget-title')], ['Power budget']),
       capacityBar(isRevB, isUpgraded, h),
     ],
   )
@@ -1167,11 +1164,17 @@ export const twinPage = (model: Model, h: H): Html => {
                     ),
                   ]),
                   h.div(
-                    [h.Class('twin-legend')],
+                    [h.Class('twin-overlay')],
                     [
-                      h.span([], ['40 °C']),
-                      h.span([h.Class('twin-ramp')], []),
-                      h.span([], ['95 °C']),
+                      changeDriver(isRevB, isUpgraded, h),
+                      h.div(
+                        [h.Class('twin-legend')],
+                        [
+                          h.span([], ['40 °C']),
+                          h.span([h.Class('twin-ramp')], []),
+                          h.span([], ['95 °C']),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -1201,7 +1204,6 @@ export const twinPage = (model: Model, h: H): Html => {
                 [h.Class('twin-wide')],
                 [workflowSteps(stage, isUpgraded, h)],
               ),
-              changeDriver(isRevB, isUpgraded, h),
               proposalPanel(model, isUpgraded, isRevB, h),
               isRevB ? checkPanel(model, h) : h.empty,
               h.section(

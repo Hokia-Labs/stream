@@ -57,12 +57,7 @@ import {
   runSummary,
   taskAnchor,
 } from './insights'
-import {
-  sidebarMaxWidth,
-  sidebarMinWidth,
-  treeMaxHeight,
-  treeMinHeight,
-} from './layout'
+import { sidebarMaxWidth, sidebarMinWidth } from './layout'
 import type { Model } from './main'
 import {
   type Severity,
@@ -304,27 +299,83 @@ const setupChecklist = (model: Model, h: H): Html => {
         ],
       )
 }
-const sidebarTreeResizer = (model: Model, h: H): Html =>
-  h.div([
-    h.Class(
-      `sidebar-tree-resizer ${Option.isSome(model.maybeTreeDrag) ? 'active' : ''}`,
-    ),
-    h.Role('separator'),
-    h.AriaOrientation('horizontal'),
-    h.AriaLabel('Resize artifact tree'),
-    h.AriaValuemin(treeMinHeight),
-    h.AriaValuemax(treeMaxHeight),
-    h.AriaValuenow(model.sidebarTreeHeight),
-    h.Tabindex(0),
-    h.Title('Drag to resize · double-click to reset'),
-    h.OnPointerDown((_pointerType, mouseButton) =>
-      mouseButton === 0
-        ? Option.some(Message.PressedTreeHandle())
-        : Option.none(),
-    ),
-    h.OnDoubleClick(Message.ResetTreeHeight()),
-    h.OnKeyDown(key => Message.PressedTreeHandleKey({ key })),
-  ])
+const tocLineWidths = [24, 18, 13, 9]
+const tocMaxLines = 40
+const artifactToc = (model: Model, h: H): Html => {
+  if (model.page !== 'Requirements' && model.page !== 'Systems graph') {
+    return h.empty
+  }
+  const rows = artifactTree(model.workspace.requirements)
+  const step = Math.max(1, Math.ceil(rows.length / tocMaxLines))
+  const selected = Option.getOrUndefined(model.maybeSelectedNode)
+  const lines = rows.filter((_, index) => index % step === 0)
+  return h.nav(
+    [h.Class('artifact-toc'), h.AriaLabel('Artifact outline'), h.Tabindex(0)],
+    [
+      h.div(
+        [h.Class('toc-rail'), h.AriaHidden(true)],
+        lines.map((row, index) =>
+          h.keyed('span')(
+            row.item.id,
+            [
+              h.Class(
+                `toc-line ${rows.slice(index * step, index * step + step).some(candidate => candidate.item.id === selected) ? 'active' : ''}`,
+              ),
+              h.Style({
+                width: `${tocLineWidths[Math.min(row.ancestors.length, tocLineWidths.length - 1)]}px`,
+              }),
+            ],
+            [],
+          ),
+        ),
+      ),
+      h.div(
+        [h.Class('toc-panel')],
+        [
+          h.select(
+            [
+              h.AriaLabel('Discipline view'),
+              h.Class('discipline-selector'),
+              h.Value(
+                Requirement.fields.kind.literals.some(
+                  kind => kind === model.filter,
+                )
+                  ? model.filter
+                  : 'All artifacts',
+              ),
+              h.OnChange(value => Message.SelectedDisciplineView({ value })),
+            ],
+            [
+              h.option([h.Value('All artifacts')], ['All artifacts']),
+              ...Requirement.fields.kind.literals.map(kind =>
+                h.keyed('option')(
+                  kind,
+                  [h.Value(kind)],
+                  [
+                    kind === 'System'
+                      ? 'Systems'
+                      : kind === 'Requirement'
+                        ? 'Requirements'
+                        : kind === 'Function'
+                          ? 'Functions'
+                          : kind === 'Interface'
+                            ? 'Interfaces'
+                            : kind === 'Test'
+                              ? 'Tests'
+                              : kind === 'Design'
+                                ? 'Design Capability'
+                                : 'Safety & Risks',
+                  ],
+                ),
+              ),
+            ],
+          ),
+          artifactTreeView(model, model.workspace.requirements, h),
+        ],
+      ),
+    ],
+  )
+}
 const sidebarResizer = (model: Model, h: H): Html =>
   model.isSidebarCollapsed
     ? h.empty
@@ -504,70 +555,6 @@ const sidebar = (model: Model, h: H): Html =>
       h.div(
         [h.Class('sidebar-bottom')],
         [
-          model.page === 'Requirements' || model.page === 'Systems graph'
-            ? h.div(
-                [
-                  h.Class('sidebar-projects'),
-                  h.Attribute(
-                    'style',
-                    `--tree-h: ${model.sidebarTreeHeight}px`,
-                  ),
-                ],
-                [
-                  sidebarTreeResizer(model, h),
-                  model.page === 'Requirements' ||
-                  model.page === 'Systems graph'
-                    ? h.select(
-                        [
-                          h.AriaLabel('Discipline view'),
-                          h.Class('discipline-selector'),
-                          h.Value(
-                            Requirement.fields.kind.literals.some(
-                              kind => kind === model.filter,
-                            )
-                              ? model.filter
-                              : 'All artifacts',
-                          ),
-                          h.OnChange(value =>
-                            Message.SelectedDisciplineView({ value }),
-                          ),
-                        ],
-                        [
-                          h.option(
-                            [h.Value('All artifacts')],
-                            ['All artifacts'],
-                          ),
-                          ...Requirement.fields.kind.literals.map(kind =>
-                            h.keyed('option')(
-                              kind,
-                              [h.Value(kind)],
-                              [
-                                kind === 'System'
-                                  ? 'Systems'
-                                  : kind === 'Requirement'
-                                    ? 'Requirements'
-                                    : kind === 'Function'
-                                      ? 'Functions'
-                                      : kind === 'Interface'
-                                        ? 'Interfaces'
-                                        : kind === 'Test'
-                                          ? 'Tests'
-                                          : kind === 'Design'
-                                            ? 'Design Capability'
-                                            : 'Safety & Risks',
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : h.empty,
-                  model.page === 'Requirements' ||
-                  model.page === 'Systems graph'
-                    ? artifactTreeView(model, model.workspace.requirements, h)
-                    : h.empty,
-                ],
-              )
-            : h.empty,
           h.div(
             [h.Class('profile-menu-root')],
             [
@@ -5230,6 +5217,7 @@ export const view = (sourceModel: Model, h: H): Document => {
                 ),
             })
           : inspector(model, h),
+        artifactToc(model, h),
         findingDrawer(model, h),
         model.modal._tag === 'Closed'
           ? Option.match(model.maybeClosingModal, {
