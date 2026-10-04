@@ -425,6 +425,63 @@ const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
   )
 }
 
+const revBMargin = (): number =>
+  (capacityKw('B', 1) - busDemandKw) / capacityKw('B', 1)
+
+const revisionBars = (h: H): Html => {
+  const scale = capacityKw('B', 0)
+  const at = (value: number): string =>
+    `${(Math.min(value, scale) / scale) * 100}%`
+  return h.div(
+    [
+      h.Class('twin-rev-bars'),
+      h.AriaLabel(`N−1 capacity against ${kw(busDemandKw)} kW bus demand`),
+    ],
+    [
+      h.p(
+        [h.Class('twin-rev-caption mono')],
+        [`N−1 capacity vs ${kw(busDemandKw)} kW bus demand`],
+      ),
+      ...(['A', 'B'] as const).map(revision => {
+        const capacity = capacityKw(revision, 1)
+        const isShort = busDemandKw > capacity
+        return h.keyed('div')(
+          revision,
+          [h.Class(`twin-rev-row ${isShort ? 'bad' : 'ok'}`)],
+          [
+            h.span([h.Class('twin-rev-name mono')], [`Rev ${revision}`]),
+            h.div(
+              [h.Class('twin-rev-track')],
+              [
+                h.div(
+                  [h.Class('twin-rev-fill'), h.Style({ width: at(capacity) })],
+                  [],
+                ),
+                h.div(
+                  [
+                    h.Class('twin-rev-demand'),
+                    h.Style({ left: at(busDemandKw) }),
+                  ],
+                  [],
+                ),
+              ],
+            ),
+            h.span(
+              [h.Class('twin-rev-value')],
+              [
+                `${kw(capacity)} kW · `,
+                isShort
+                  ? `short ${kw(busDemandKw - capacity)} kW`
+                  : `${percent((capacity - busDemandKw) / capacity)} margin`,
+              ],
+            ),
+          ],
+        )
+      }),
+    ],
+  )
+}
+
 const changeDriver = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
   return h.div(
     [h.Class('twin-budget'), h.AriaLabel('Power budget')],
@@ -442,6 +499,10 @@ const slotCard = (model: Model, slot: TwinSlot, h: H): Html => {
   const requirements = model.workspace.requirements
   const part = installedPart(requirements, slot)
   const health = slotHealth(requirements, slot)
+  const isFixPending =
+    slot === 'Power' &&
+    model.twinProposal === 'Pending' &&
+    twinRevision(requirements) === 'A'
   return h.div(
     [h.Class(`twin-slot ${health.tone}`)],
     [
@@ -465,6 +526,12 @@ const slotCard = (model: Model, slot: TwinSlot, h: H): Html => {
           slot === 'Cockpit'
             ? (part.specs[0] ?? health.text)
             : (health.text.split(' · ').at(-1) ?? health.text),
+          isFixPending
+            ? h.span(
+                [h.Class('twin-slot-after')],
+                [` → ${percent(revBMargin())} with Rev B (pending)`],
+              )
+            : h.empty,
         ],
       ),
     ],
@@ -641,23 +708,24 @@ const requirementCountLabel = (hasProposal: boolean): string =>
 
 const analysisLine = (isReviewable: boolean, h: H): Html =>
   h.p(
-    [
-      h.Class('twin-analysis-line muted small-text'),
-      h.AriaLabel('Analysis checks'),
-    ],
-    analysisSummary().flatMap((item, index) => [
-      index > 0 ? ' · ' : '',
-      isReviewable
+    [h.Class('twin-analysis-line'), h.AriaLabel('Analysis checks')],
+    analysisSummary().map(item => {
+      const content = [
+        svgIcon('<path d="m5 12.5 4.5 4.5L19 7.5"/>', h),
+        item.label,
+      ]
+      return isReviewable
         ? h.button(
             [
               h.Type('button'),
-              h.Class('link-button'),
+              h.Class('twin-pass'),
+              h.Title(`Open ${item.tab}`),
               h.OnClick(Message.OpenedBoardReviewAt({ tab: item.tab })),
             ],
-            [item.label],
+            content,
           )
-        : h.span([], [item.label]),
-    ]),
+        : h.span([h.Class('twin-pass')], content)
+    }),
   )
 
 const proposalPanel = (
@@ -674,11 +742,9 @@ const proposalPanel = (
       h.h2([h.Class('twin-heading')], ['Power board redesign · MPA Rev B']),
       isRevB
         ? h.span([h.Class('badge positive')], ['Approved · installed'])
-        : proposal === 'Pending'
-          ? h.span([h.Class('badge warning')], ['Awaiting EE approval'])
-          : proposal === 'Rejected'
-            ? h.span([h.Class('badge danger')], ['Rejected'])
-            : h.empty,
+        : proposal === 'Rejected'
+          ? h.span([h.Class('badge danger')], ['Rejected'])
+          : h.empty,
       ...jiraHandoffs(model.workspace.requirements, proposal).map(ticket =>
         jiraChip(ticket, h),
       ),
@@ -730,9 +796,10 @@ const proposalPanel = (
                     ? [', ', idLink(model, id, h, 'mono')]
                     : [idLink(model, id, h, 'mono')],
                 ),
-                `. N−1 capacity ${kw(capacityKw('A', 1))} kW against ${kw(busDemandKw)} kW bus demand.`,
+                '.',
               ],
             ),
+            revisionBars(h),
             analysisLine(proposal === 'Pending', h),
             h.div(
               [h.Class(`twin-approver ${isRevB ? 'ok' : ''}`)],
@@ -762,10 +829,14 @@ const proposalPanel = (
                     ]
                   : [
                       h.p(
-                        [],
+                        [h.Class('twin-waiting')],
                         [
-                          h.strong([], ['Electrical engineer review · ']),
-                          `${reviewer}. Nothing changes in the twin until this is approved.`,
+                          svgIcon(
+                            '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+                            h,
+                          ),
+                          h.strong([], [`Waiting on ${proposalReviewer.name}`]),
+                          ` · ${proposalReviewer.role}`,
                         ],
                       ),
                       h.div(
