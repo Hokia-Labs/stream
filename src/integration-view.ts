@@ -254,7 +254,7 @@ export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
             [
               h.tr(
                 [],
-                ['Requirement', 'Type', 'DOORS', 'Stream', 'Status'].map(
+                ['Type', 'Requirement', 'DOORS', 'Stream', 'Status'].map(
                   label => h.th([], [label]),
                 ),
               ),
@@ -303,14 +303,16 @@ export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
                   [],
                   [
                     h.td(
-                      [h.Class('sync-file')],
+                      [h.Class('sync-file muted')],
+                      [fileIcon(row.type, h), row.type],
+                    ),
+                    h.td(
+                      [],
                       [
-                        fileIcon(row.type, h),
                         h.span([h.Class('mono muted')], [`${row.id} `]),
                         row.title,
                       ],
                     ),
-                    h.td([h.Class('muted')], [row.type]),
                     h.td([h.Class('mono')], [`${row.doorsId} · ${row.doors}`]),
                     h.td([h.Class('mono')], [`${row.id}/${row.stream}`]),
                     h.td(

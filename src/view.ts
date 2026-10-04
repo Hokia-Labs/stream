@@ -1693,7 +1693,7 @@ const overview = (model: Model, h: H): Html => {
                 [
                   h.tr(
                     [],
-                    ['Dataset', 'Type', 'Teamcenter', 'Stream', 'Status'].map(
+                    ['Type', 'Dataset', 'Teamcenter', 'Stream', 'Status'].map(
                       label => h.th([], [label]),
                     ),
                   ),
@@ -1742,10 +1742,10 @@ const overview = (model: Model, h: H): Html => {
                         [],
                         [
                           h.td(
-                            [h.Class('sync-file')],
-                            [fileIcon(file.type, h), file.name],
+                            [h.Class('sync-file muted')],
+                            [fileIcon(file.type, h), file.type],
                           ),
-                          h.td([h.Class('muted')], [file.type]),
+                          h.td([], [file.name]),
                           h.td([h.Class('mono')], [file.teamcenter]),
                           h.td([h.Class('mono')], [file.stream]),
                           h.td(
