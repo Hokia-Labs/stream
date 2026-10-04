@@ -6923,6 +6923,73 @@ button:disabled,
   scroll-margin: 96px 24px 48px;
 }
 
+.twin-capacity {
+  display: grid;
+  gap: 6px;
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+.twin-capacity-labels,
+.twin-capacity-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.twin-capacity-scale {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.twin-capacity-track {
+  position: relative;
+  height: 20px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+}
+.twin-capacity-fill,
+.twin-capacity-over {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transition:
+    width 400ms ease,
+    left 400ms ease;
+}
+.twin-capacity-fill {
+  background: color-mix(in srgb, var(--success) 35%, transparent);
+}
+.twin-capacity.bad .twin-capacity-fill {
+  background: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+.twin-capacity-over {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--error) 0 4px,
+    color-mix(in srgb, var(--error) 55%, transparent) 4px 8px
+  );
+}
+.twin-capacity-demand {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink, #111);
+  transition: left 400ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .twin-capacity-fill,
+  .twin-capacity-over,
+  .twin-capacity-demand {
+    transition: none;
+  }
+}
+.twin-details > summary {
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 .twin-driver-summary {
   margin: 0 0 var(--space-3);
   font-size: var(--text-sm);
