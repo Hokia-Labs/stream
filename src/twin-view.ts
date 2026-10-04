@@ -743,7 +743,7 @@ const proposalPanel = (
     : !isRevB && (proposal === 'None' || proposal === 'Approved')
       ? [
           h.p(
-            [h.Class('muted small-text twin-proposal-lead')],
+            [h.Class('muted small-text')],
             [
               `${avionicsRequirementIds.length} requirements were revised. Ask the power agent to redesign the board against them.`,
             ],

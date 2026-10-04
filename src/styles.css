@@ -49,6 +49,9 @@ h3,
 p {
   margin: 0;
 }
+p + .button {
+  margin-top: var(--space-3);
+}
 h1 {
   font-size: var(--text-3xl);
   font-weight: 560;
@@ -8611,10 +8614,6 @@ p.launch-estimate {
 }
 .twin-derived li > :last-child {
   grid-column: 2;
-}
-
-.twin-proposal-lead {
-  margin: 0 0 12px;
 }
 
 .twin-tab .twin-tab-icon {
