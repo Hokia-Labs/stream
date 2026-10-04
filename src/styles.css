@@ -8494,11 +8494,31 @@ p.launch-estimate {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 6px 10px;
   border-left: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
+}
+.twin-life-button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.twin-life-button:hover {
+  background: var(--surface);
+}
+.twin-life-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .twin-life-stage:first-child {
   border-left: 0;

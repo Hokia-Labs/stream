@@ -1598,6 +1598,7 @@ const lifecycle = (model: Model, h: H): Html => {
       meta: string
       hint?: string | undefined
       isDone: boolean
+      message: Message
     }>
   > = [
     {
@@ -1606,6 +1607,7 @@ const lifecycle = (model: Model, h: H): Html => {
         ? `${avionicsRequirementIds.length} requirements`
         : 'No change yet',
       isDone: isUpgraded,
+      message: Message.SelectedTwinPanelTab({ tab: 'Change' }),
     },
     {
       label: 'Proposed',
@@ -1616,6 +1618,7 @@ const lifecycle = (model: Model, h: H): Html => {
             .join(' · ')}`
         : undefined,
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
+      message: Message.SelectedTwinPanelTab({ tab: 'Change' }),
     },
     {
       label: 'Derived reqs',
@@ -1627,12 +1630,17 @@ const lifecycle = (model: Model, h: H): Html => {
         ? `${avionicsRequirementIds.length} revised · ${derivedArtifacts.length} derived`
         : undefined,
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
+      message: Message.SelectedTwinPanelTab({ tab: 'Requirements' }),
     },
     {
       label: 'EE approval',
       meta:
         proposal === 'Rejected' && !isRevB ? 'Rejected' : proposalReviewer.name,
       isDone: isRevB,
+      message:
+        proposal === 'Pending' && !isRevB
+          ? Message.OpenedBoardReview()
+          : Message.SelectedTwinPanelTab({ tab: 'Change' }),
     },
     {
       label: 'Verified',
@@ -1641,11 +1649,13 @@ const lifecycle = (model: Model, h: H): Html => {
           ? `${passed}/${checks.length} checks`
           : 'Requirement check',
       isDone: isRevB && model.twinCheck === 'Done',
+      message: Message.SelectedTwinPanelTab({ tab: 'Requirements' }),
     },
     {
       label: 'DO-254',
       meta: model.twinReports.length > 0 ? 'Reports drafted' : 'Data package',
       isDone: isRevB && model.twinReports.length > 0,
+      message: Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
     },
     {
       label: 'Sign-off',
@@ -1653,6 +1663,7 @@ const lifecycle = (model: Model, h: H): Html => {
         ? 'Sent to customer'
         : `${model.twinReviewed.length}/${twinSignoffs.length} disciplines`,
       isDone: Option.exists(model.maybeTwinPackage, item => item.isSent),
+      message: Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
     },
   ]
   const current = stages.findIndex(stage => !stage.isDone)
@@ -1667,10 +1678,17 @@ const lifecycle = (model: Model, h: H): Html => {
           ),
         ],
         [
-          h.span([h.Class('twin-life-mark'), h.AriaHidden(true)], []),
-          h.span(
-            [h.Class('twin-life-label'), h.Title(stage.hint ?? stage.meta)],
-            [stage.label],
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('twin-life-button'),
+              h.Title(stage.hint ?? stage.meta),
+              h.OnClick(stage.message),
+            ],
+            [
+              h.span([h.Class('twin-life-mark'), h.AriaHidden(true)], []),
+              h.span([h.Class('twin-life-label')], [stage.label]),
+            ],
           ),
         ],
       ),
