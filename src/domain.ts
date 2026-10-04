@@ -339,7 +339,7 @@ export const seedWorkspace: Workspace = {
         'The Atlas platform shall operate autonomously for a minimum of 8 hours within the defined operating envelope.',
       kind: 'Requirement',
       status: 'Verified',
-      owner: 'Ben Juntilla',
+      owner: 'Dakota Edwards',
       links: ['REQ-002', 'REQ-003', 'REQ-004'],
       revision: 3,
     },

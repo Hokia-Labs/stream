@@ -240,7 +240,7 @@ const signoffButton = (
 }
 
 const signatory = (h: H): Html =>
-  h.span([h.Class('twin-signed')], [svgIcon(checkPath, h), 'Ben Juntilla'])
+  h.span([h.Class('twin-signed')], [svgIcon(checkPath, h), 'Dakota Edwards'])
 
 const signoffFooter = (
   model: Model,

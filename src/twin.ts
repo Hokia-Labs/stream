@@ -25,7 +25,7 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     id: 'SYS-EPS',
     title: 'Aft electrical power system',
     kind: 'System',
-    owner: 'Ben Juntilla',
+    owner: 'Dakota Edwards',
     subsystem: 'Electrical power',
     verification: 'Analysis',
     links: ['REQ-PSU-01', 'REQ-PSU-02', 'REQ-PSU-03', 'REQ-AVN-01'],
@@ -816,7 +816,7 @@ export const twinPackageFiles = (
         {
           document: name,
           date,
-          reviewedBy: 'Ben Juntilla',
+          reviewedBy: 'Dakota Edwards',
           reviewed,
           changes: twinChanges(requirements).map(change => ({
             id: change.artifact.id,

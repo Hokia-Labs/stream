@@ -1577,7 +1577,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             title: '',
             description: '',
             kind: 'Requirement',
-            owner: 'Ben Juntilla',
+            owner: 'Dakota Edwards',
             links: [],
           }),
       }),
@@ -2523,7 +2523,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       const summary = `${ids.length} ${ids.length === 1 ? 'artifact' : 'artifacts'} marked ${status.toLowerCase()}`
       return persist(
         modifyFields(model, { selectedArtifactIds: () => [] }),
-        record(writeRequirements(model, updated), `${summary} · Ben Juntilla`),
+        record(
+          writeRequirements(model, updated),
+          `${summary} · Dakota Edwards`,
+        ),
         `${summary}.`,
       )
     },
@@ -2565,7 +2568,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       const summary = `${ids.size} ${ids.size === 1 ? 'artifact' : 'artifacts'} assigned to ${owner}`
       return persist(
         modifyFields(model, { selectedArtifactIds: () => [] }),
-        record(writeRequirements(model, updated), `${summary} · Ben Juntilla`),
+        record(
+          writeRequirements(model, updated),
+          `${summary} · Dakota Edwards`,
+        ),
         `${summary}.`,
       )
     },
@@ -2752,7 +2758,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         model,
         record(
           writeRequirements(model, requirements.concat(seedTwinArtifacts())),
-          'F-35 modular power assembly scenario added · Ben Juntilla',
+          'F-35 modular power assembly scenario added · Dakota Edwards',
         ),
         'Power assembly scenario added to the systems model.',
       )
@@ -2782,7 +2788,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         }),
         record(
           writeRequirements(model, swapTwinAvionics(requirements)),
-          `ECP-0219 cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Ben Juntilla`,
+          `ECP-0219 cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
         ),
         `New avionics swapped in. ${avionicsRequirementIds.length} requirements revised; the power agent is drafting a redesign.`,
       )
@@ -2836,7 +2842,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                   model,
                   installTwinRevision(requirements, 'A'),
                 ),
-                `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Ben Juntilla`,
+                `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Dakota Edwards`,
               ),
               `${item.id} reinstalled. Requirements restored.`,
             )
@@ -2866,7 +2872,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               ? swapTwinAvionics(restored)
               : restored,
           ),
-          `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Ben Juntilla`,
+          `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Dakota Edwards`,
         ),
         `Power assembly ${item.id} reinstalled.`,
       )
@@ -2903,7 +2909,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           maybeTwinPackage: () => Option.none(),
           twinReports: () => [],
         }),
-        record(writeRequirements(model, updated), `${summary} · Ben Juntilla`),
+        record(
+          writeRequirements(model, updated),
+          `${summary} · Dakota Edwards`,
+        ),
         `${summary}.`,
       )
     },
@@ -3096,7 +3105,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         }),
         record(
           writeRequirements(model, installTwinRevision(requirements, 'A')),
-          'Digital twin reset to the baseline configuration · Ben Juntilla',
+          'Digital twin reset to the baseline configuration · Dakota Edwards',
         ),
         'Digital twin reset to the baseline.',
       )
@@ -3118,7 +3127,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               ? reviewed.filter(value => value !== item)
               : reviewed.concat([item]),
         }),
-        record(model.workspace, `${summary} · Ben Juntilla`),
+        record(model.workspace, `${summary} · Dakota Edwards`),
         `${summary}.`,
       )
     },
@@ -3237,7 +3246,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         }),
         record(
           model.workspace,
-          `DO-254 package ${name} generated · Ben Juntilla`,
+          `DO-254 package ${name} generated · Dakota Edwards`,
         ),
         `${name} downloaded.`,
       ),
@@ -3259,7 +3268,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                 }),
                 record(
                   model.workspace,
-                  `DO-254 package ${item.name} marked as sent to the customer · Ben Juntilla`,
+                  `DO-254 package ${item.name} marked as sent to the customer · Dakota Edwards`,
                 ),
                 'Package marked as sent to the customer.',
               ),
@@ -3874,7 +3883,7 @@ const applyDecision = (
             : item,
         ),
     }),
-    `${approval.title} · ${decision.toLowerCase()} by Ben Juntilla${reason ? ` · ${reason}` : ''}`,
+    `${approval.title} · ${decision.toLowerCase()} by Dakota Edwards${reason ? ` · ${reason}` : ''}`,
   )
 }
 

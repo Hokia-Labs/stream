@@ -504,8 +504,8 @@ const sidebar = (model: Model, h: H): Html =>
                   h.OnClick(Message.ToggledUserMenu()),
                 ],
                 [
-                  h.span([h.Class('avatar dark')], ['BJ']),
-                  h.div([], [h.strong([], ['Ben Juntilla'])]),
+                  h.span([h.Class('avatar dark')], ['DE']),
+                  h.div([], [h.strong([], ['Dakota Edwards'])]),
                   h.span([h.Class('profile-indicator')]),
                 ],
               ),
@@ -703,7 +703,7 @@ const topbar = (model: Model, h: H): Html =>
             [
               h.span([h.Class('avatar')], ['SC']),
               h.span([h.Class('avatar lavender')], ['AR']),
-              h.span([h.Class('avatar dark')], ['BJ']),
+              h.span([h.Class('avatar dark')], ['DE']),
             ],
           ),
         ],
