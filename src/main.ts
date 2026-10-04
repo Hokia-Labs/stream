@@ -30,7 +30,6 @@ import {
   SortDirection,
   SortKey,
   TaskSession,
-  TwinCondition,
   TwinFocus,
   TwinPackage,
   TwinReport,
@@ -150,7 +149,6 @@ export const Model = Schema.Struct({
   sidebarWidth: Schema.Number,
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
-  twinCondition: TwinCondition,
   twinReviewed: Schema.Array(TwinReviewItem),
   maybeTwinPackage: Schema.Option(TwinPackage),
   twinReports: Schema.Array(TwinReport),
@@ -218,7 +216,6 @@ export const initialModel: Model = {
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
-  twinCondition: 'Normal',
   twinReviewed: [],
   maybeTwinPackage: Option.none(),
   twinReports: [],
@@ -2659,9 +2656,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     },
     SelectedTwinFocus: ({ focus }) => ({
       model: modifyFields(model, { twinFocus: () => focus }),
-    }),
-    SelectedTwinCondition: ({ condition }) => ({
-      model: modifyFields(model, { twinCondition: () => condition }),
     }),
     ClickedTwinPart: ({ part }) => ({
       model: modifyFields(model, {

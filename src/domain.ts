@@ -83,8 +83,6 @@ export type ReviewDecision = typeof ReviewDecision.Type
 
 export const TwinFocus = Schema.Literals(['Airframe', 'Aft bay', 'Cockpit'])
 export type TwinFocus = typeof TwinFocus.Type
-export const TwinCondition = Schema.Literals(['Normal', 'Module failed'])
-export type TwinCondition = typeof TwinCondition.Type
 
 export const TwinSlot = Schema.Literals(['Cockpit', 'Power'])
 export type TwinSlot = typeof TwinSlot.Type

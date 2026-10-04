@@ -173,7 +173,7 @@ export class StreamTwin extends HTMLElement {
   #controls: OrbitControls | undefined
   #airframe: Group | undefined
   #psu = new Group()
-  #condition: Condition = 'Normal'
+  #condition: Condition = 'Module failed'
   #upgraded = false
   #dropPending = false
   #dropStart: number | undefined
@@ -231,18 +231,6 @@ export class StreamTwin extends HTMLElement {
   get twinRevision(): Revision {
     return this.#revision
   }
-  set twinCondition(value: unknown) {
-    if (
-      (value === 'Normal' || value === 'Module failed') &&
-      value !== this.#condition
-    ) {
-      this.#condition = value
-      this.#paint()
-    }
-  }
-  get twinCondition(): Condition {
-    return this.#condition
-  }
   set twinAvionicsUpgraded(value: unknown) {
     if (typeof value === 'boolean' && value !== this.#upgraded) {
       this.#upgraded = value
@@ -263,7 +251,6 @@ export class StreamTwin extends HTMLElement {
     for (const key of [
       'twinFocus',
       'twinRevision',
-      'twinCondition',
       'twinAvionicsUpgraded',
     ] as const) {
       if (Object.hasOwn(this, key)) {

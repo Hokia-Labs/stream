@@ -4,7 +4,6 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import {
   type Requirement,
-  TwinCondition,
   TwinFocus,
   type TwinReviewItem,
   TwinRevision,
@@ -46,7 +45,6 @@ const twinSpec = CustomElement.define({
   properties: {
     twinFocus: TwinFocus,
     twinRevision: TwinRevision,
-    twinCondition: TwinCondition,
     twinAvionicsUpgraded: Schema.Boolean,
   },
   events: {
@@ -884,14 +882,6 @@ export const twinPage = (model: Model, h: H): Html => {
                         focus => Message.SelectedTwinFocus({ focus }),
                         h,
                       ),
-                      segmented(
-                        'Condition',
-                        ['Normal', 'Module failed'] as const,
-                        model.twinCondition,
-                        condition =>
-                          Message.SelectedTwinCondition({ condition }),
-                        h,
-                      ),
                     ],
                   ),
                   twin([
@@ -901,7 +891,6 @@ export const twinPage = (model: Model, h: H): Html => {
                     ),
                     twin.TwinFocus(model.twinFocus),
                     twin.TwinRevision(revision),
-                    twin.TwinCondition(model.twinCondition),
                     twin.TwinAvionicsUpgraded(isUpgraded),
                     twin.OnTwinPick(detail =>
                       Message.ClickedTwinPart({ part: detail.part }),
