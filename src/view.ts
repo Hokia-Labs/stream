@@ -61,11 +61,11 @@ import {
   doorsLogo,
   fileIcon,
   jiraLogo,
-  jiraPanel,
   syncStatus,
   syncedWith,
+  teamcenterLogo,
 } from './integration-view'
-import { doorsIdFor, jiraHandoffs } from './integrations'
+import { doorsIdFor } from './integrations'
 import { sidebarMaxWidth, sidebarMinWidth } from './layout'
 import type { Model } from './main'
 import {
@@ -1682,16 +1682,7 @@ const overview = (model: Model, h: H): Html => {
         '',
         h.empty,
         h,
-        syncedWith(
-          [
-            h.img([
-              h.Src('/teamcenter-logo.png'),
-              h.Alt('Teamcenter'),
-              h.Class('tc-logo'),
-            ]),
-          ],
-          h,
-        ),
+        syncedWith([teamcenterLogo(h)], h),
       ),
       h.section(
         [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
@@ -1780,7 +1771,6 @@ const inboxPage = (model: Model, h: H): Html => {
   const pending = model.workspace.approvals.filter(
     item => item.status === 'Pending',
   )
-  const tickets = jiraHandoffs(model.workspace.requirements, model.twinProposal)
   return h.div(
     [],
     [
@@ -1806,7 +1796,6 @@ const inboxPage = (model: Model, h: H): Html => {
           approvals(model, pending, h),
         ],
       ),
-      tickets.length > 0 ? jiraPanel(tickets, h) : h.empty,
     ],
   )
 }

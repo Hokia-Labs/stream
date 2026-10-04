@@ -1172,7 +1172,7 @@ const partFiles = (
     },
     ...(item.slot === 'Power'
       ? [
-          { key: 'ecad', type: 'Xpedition Design', name: `${stem}_ECAD.zip` },
+          { key: 'ecad', type: 'KiCad Project', name: `${stem}.kicad_pro` },
           { key: 'sch', type: 'PDF', name: `${stem}_schematic.pdf` },
           { key: 'spice', type: 'LTspice Schematic', name: `${stem}_bus.asc` },
           { key: 'cae', type: 'CAE Analysis', name: `${stem}_thermal.wbpz` },

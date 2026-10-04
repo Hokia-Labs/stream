@@ -630,7 +630,7 @@ const analysisSummary = (): ReadonlyArray<
       label: `Ansys ${ansysPass}/${analysisRows.length}`,
       tab: 'Thermal',
     },
-    { label: 'Xpedition DRC 0', tab: 'Schematic' },
+    { label: 'KiCad schematic', tab: 'Schematic' },
   ]
 }
 

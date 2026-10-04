@@ -18,7 +18,7 @@ const filePaths: Readonly<Record<string, string>> = {
     '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>',
   'BOMView Revision':
     '<rect x="9" y="3" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 7v5M6 17v-5h12v5"/>',
-  'Xpedition Design':
+  'KiCad Project':
     '<rect x="7" y="7" width="10" height="10" rx="1"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
   PDF: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 17v-4h1.5a1.5 1.5 0 0 1 0 3H9"/>',
   'LTspice Schematic': '<path d="M2 12h4l2-4 3 8 3-8 3 8 2-4h3"/>',
@@ -108,8 +108,14 @@ const brandLockup = (
     [h.img([h.Src(src), h.Alt(''), h.Class(markClass)]), h.span([], [product])],
   )
 
-export const xpeditionLogo = (h: H): Html =>
-  brandLockup('/siemens-logo.svg', 'Xpedition', h)
+export const teamcenterLogo = (h: H): Html =>
+  h.span(
+    [h.Class('tc-logo'), h.AriaLabel('Teamcenter')],
+    [
+      h.img([h.Src('/teamcenter-mark.png'), h.Alt(''), h.Class('tc-mark')]),
+      h.img([h.Src('/teamcenter-wordmark.png'), h.Alt(''), h.Class('tc-word')]),
+    ],
+  )
 
 export const kicadLogo = (h: H): Html =>
   brandLockup('/kicad-logo.png', 'KiCad', h)
@@ -183,67 +189,5 @@ export const jiraChip = (
           ]
         : []),
       h.span([h.Class('muted')], [ticket.assignee]),
-    ],
-  )
-
-export const jiraPanel = (tickets: ReadonlyArray<JiraTicket>, h: H): Html =>
-  h.section(
-    [h.Class('panel sync-panel'), h.AriaLabel('Jira hand-offs')],
-    [
-      h.table(
-        [h.Class('sync-table')],
-        [
-          h.thead(
-            [],
-            [
-              h.tr(
-                [],
-                ['Key', 'Summary', 'Assignee', 'Reporter', 'Status'].map(
-                  label => h.th([], [label]),
-                ),
-              ),
-            ],
-          ),
-          h.tbody(
-            [],
-            tickets.map(ticket =>
-              h.keyed('tr')(
-                ticket.key,
-                [],
-                [
-                  h.td(
-                    [],
-                    [
-                      h.span(
-                        [h.Class('jira-key')],
-                        [
-                          h.img([
-                            h.Src('/jira-icon.svg'),
-                            h.Alt(''),
-                            h.Class('jira-icon'),
-                          ]),
-                          h.span([h.Class('mono')], [ticket.key]),
-                        ],
-                      ),
-                    ],
-                  ),
-                  h.td([], [ticket.summary]),
-                  h.td([], [ticket.assignee]),
-                  h.td([h.Class('muted')], [ticket.reporter]),
-                  h.td(
-                    [],
-                    [
-                      h.span(
-                        [h.Class(`jira-status ${jiraTone(ticket.status)}`)],
-                        [ticket.status],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     ],
   )

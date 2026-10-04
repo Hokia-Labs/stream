@@ -7944,10 +7944,19 @@ button.graph-cluster-head:hover {
   font-size: var(--text-sm);
 }
 .tc-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tc-mark {
   display: block;
-  height: 30px;
+  height: 22px;
   width: auto;
-  translate: 0 -10px;
+}
+.tc-word {
+  display: block;
+  height: 12px;
+  width: auto;
 }
 .files-subheading {
   display: flex;
@@ -7969,10 +7978,6 @@ button.graph-cluster-head:hover {
   gap: 8px;
   color: var(--muted);
   font-size: var(--text-sm);
-}
-.files-subheading .tc-logo {
-  height: 26px;
-  translate: 0 -8px;
 }
 .launch-row {
   display: grid;
