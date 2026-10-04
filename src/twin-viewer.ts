@@ -165,7 +165,7 @@ const easeInOut = (t: number): number =>
 
 export class StreamTwin extends HTMLElement {
   #focus: Focus = 'Airframe'
-  #overlay: Overlay = 'Shaded'
+  #overlay: Overlay = 'Thermal'
   #revision: Revision = 'A'
   #renderer: WebGLRenderer | undefined
   #scene = new Scene()
@@ -219,18 +219,6 @@ export class StreamTwin extends HTMLElement {
   get twinFocus(): Focus {
     return this.#focus
   }
-  set twinOverlay(value: unknown) {
-    if (
-      (value === 'Shaded' || value === 'Thermal') &&
-      value !== this.#overlay
-    ) {
-      this.#overlay = value
-      this.#paint()
-    }
-  }
-  get twinOverlay(): Overlay {
-    return this.#overlay
-  }
   set twinRevision(value: unknown) {
     if ((value === 'A' || value === 'B') && value !== this.#revision) {
       this.#slidePending = value === 'B'
@@ -274,7 +262,6 @@ export class StreamTwin extends HTMLElement {
   connectedCallback(): void {
     for (const key of [
       'twinFocus',
-      'twinOverlay',
       'twinRevision',
       'twinCondition',
       'twinAvionicsUpgraded',

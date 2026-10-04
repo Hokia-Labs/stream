@@ -6,7 +6,6 @@ import {
   type Requirement,
   TwinCondition,
   TwinFocus,
-  TwinOverlay,
   type TwinReviewItem,
   TwinRevision,
   type TwinSlot,
@@ -46,7 +45,6 @@ const twinSpec = CustomElement.define({
   tag: 'stream-twin',
   properties: {
     twinFocus: TwinFocus,
-    twinOverlay: TwinOverlay,
     twinRevision: TwinRevision,
     twinCondition: TwinCondition,
     twinAvionicsUpgraded: Schema.Boolean,
@@ -887,13 +885,6 @@ export const twinPage = (model: Model, h: H): Html => {
                         h,
                       ),
                       segmented(
-                        'Overlay',
-                        ['Shaded', 'Thermal'] as const,
-                        model.twinOverlay,
-                        overlay => Message.SelectedTwinOverlay({ overlay }),
-                        h,
-                      ),
-                      segmented(
                         'Condition',
                         ['Normal', 'Module failed'] as const,
                         model.twinCondition,
@@ -910,7 +901,6 @@ export const twinPage = (model: Model, h: H): Html => {
                       '3D model of the F-35 with the aft modular power assembly and the new cockpit avionics module',
                     ),
                     twin.TwinFocus(model.twinFocus),
-                    twin.TwinOverlay(model.twinOverlay),
                     twin.TwinRevision(revision),
                     twin.TwinCondition(model.twinCondition),
                     twin.TwinAvionicsUpgraded(isUpgraded),
@@ -918,16 +908,14 @@ export const twinPage = (model: Model, h: H): Html => {
                       Message.ClickedTwinPart({ part: detail.part }),
                     ),
                   ]),
-                  model.twinOverlay === 'Thermal'
-                    ? h.div(
-                        [h.Class('twin-legend')],
-                        [
-                          h.span([], ['40 °C']),
-                          h.span([h.Class('twin-ramp')], []),
-                          h.span([], ['95 °C · SAMPLE']),
-                        ],
-                      )
-                    : h.empty,
+                  h.div(
+                    [h.Class('twin-legend')],
+                    [
+                      h.span([], ['40 °C']),
+                      h.span([h.Class('twin-ramp')], []),
+                      h.span([], ['95 °C · SAMPLE']),
+                    ],
+                  ),
                   h.p(
                     [h.Class('muted small-text twin-note')],
                     [

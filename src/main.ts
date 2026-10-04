@@ -32,7 +32,6 @@ import {
   TaskSession,
   TwinCondition,
   TwinFocus,
-  TwinOverlay,
   TwinPackage,
   TwinReport,
   TwinReportSync,
@@ -151,7 +150,6 @@ export const Model = Schema.Struct({
   sidebarWidth: Schema.Number,
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
-  twinOverlay: TwinOverlay,
   twinCondition: TwinCondition,
   twinReviewed: Schema.Array(TwinReviewItem),
   maybeTwinPackage: Schema.Option(TwinPackage),
@@ -220,7 +218,6 @@ export const initialModel: Model = {
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
-  twinOverlay: 'Shaded',
   twinCondition: 'Normal',
   twinReviewed: [],
   maybeTwinPackage: Option.none(),
@@ -2662,9 +2659,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     },
     SelectedTwinFocus: ({ focus }) => ({
       model: modifyFields(model, { twinFocus: () => focus }),
-    }),
-    SelectedTwinOverlay: ({ overlay }) => ({
-      model: modifyFields(model, { twinOverlay: () => overlay }),
     }),
     SelectedTwinCondition: ({ condition }) => ({
       model: modifyFields(model, { twinCondition: () => condition }),
