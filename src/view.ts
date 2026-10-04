@@ -594,20 +594,6 @@ const sidebar = (model: Model, h: H): Html =>
               h.span([h.Class('profile-indicator')]),
             ],
           ),
-          currentOrg.tenant === 'Gov'
-            ? h.dl(
-                [h.Class('system-notice mono')],
-                [
-                  ['System high', systemHigh],
-                  ['Enclave', enclaveName],
-                  ['Last login', '10-02 14:03Z'],
-                  ['Workstation', 'WS-0412'],
-                ].flatMap(([term, value]) => [
-                  h.dt([], [term ?? '']),
-                  h.dd([], [value ?? '']),
-                ]),
-              )
-            : h.empty,
         ],
       ),
       sidebarResizer(model, h),
@@ -5107,6 +5093,33 @@ const markingBanner = (h: H, edge: 'top' | 'bottom'): Html =>
     [h.strong([h.Class('marking-level')], [systemHigh])],
   )
 
+const systemStatus = (h: H): Html =>
+  h.div(
+    [h.Class('system-status mono'), h.Attribute('role', 'status')],
+    [
+      h.span(
+        [],
+        [
+          h.span([h.Class('system-status-label')], ['System high']),
+          systemHigh,
+          h.span([h.Class('system-status-sep')], ['·']),
+          h.span([h.Class('system-status-label')], ['Enclave']),
+          enclaveName,
+        ],
+      ),
+      h.span(
+        [h.Class('system-status-session')],
+        [
+          h.span([h.Class('system-status-label')], ['Last login']),
+          '2026-10-02 14:03Z',
+          h.span([h.Class('system-status-sep')], ['·']),
+          h.span([h.Class('system-status-label')], ['Workstation']),
+          'WS-0412',
+        ],
+      ),
+    ],
+  )
+
 export const view = (sourceModel: Model, h: H): Document => {
   const model = modifyFields(sourceModel, {
     workspace: workspace =>
@@ -5125,7 +5138,11 @@ export const view = (sourceModel: Model, h: H): Document => {
       ],
       [
         ...(currentOrg.tenant === 'Gov'
-          ? [markingBanner(h, 'top'), markingBanner(h, 'bottom')]
+          ? [
+              markingBanner(h, 'top'),
+              systemStatus(h),
+              markingBanner(h, 'bottom'),
+            ]
           : []),
         ...(currentOrg.tenant === 'Gov' && !model.hasAcknowledgedConsent
           ? [consentDialog(h)]
