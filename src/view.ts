@@ -213,92 +213,6 @@ const sidebarInbox = (model: Model, h: H): Html => {
     ],
   )
 }
-export const setupSteps = (
-  model: Model,
-): ReadonlyArray<
-  Readonly<{ label: string; done: boolean; message: Message }>
-> => [
-  {
-    label: 'Import requirements',
-    done: model.workspace.requirements.length > 0,
-    message: Message.ClickedImport(),
-  },
-  {
-    label: 'Enable agents',
-    done: model.workspace.agents.some(agent => agent.enabled),
-    message: Message.SelectedPage({ page: 'Agent fleet' }),
-  },
-  {
-    label: 'Launch first run',
-    done: model.workspace.runs.length > 0,
-    message: Message.ClickedLaunch(),
-  },
-  {
-    label: 'Review a finding',
-    done: model.workspace.approvals.some(item => item.status !== 'Pending'),
-    message: Message.SelectedInbox(),
-  },
-]
-const setupChecklist = (model: Model, h: H): Html => {
-  const steps = setupSteps(model)
-  const done = steps.filter(step => step.done).length
-  const percent = Math.round((done / steps.length) * 100)
-  return percent === 100 || model.isSetupDismissed
-    ? h.empty
-    : h.div(
-        [h.Class('setup-checklist'), h.AriaLabel('Setup checklist')],
-        [
-          h.div(
-            [h.Class('setup-head')],
-            [
-              h.span([h.Class('nav-label')], ['SETUP']),
-              h.span(
-                [h.Class('setup-head-end')],
-                [
-                  h.span([h.Class('mono small-text')], [`${percent}%`]),
-                  h.button(
-                    [
-                      h.Type('button'),
-                      h.Class('setup-dismiss'),
-                      h.AriaLabel('Dismiss setup checklist'),
-                      h.Title('Dismiss'),
-                      h.OnClick(Message.DismissedSetup()),
-                    ],
-                    ['×'],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          h.div(
-            [h.Class('setup-track')],
-            [h.div([h.Style({ width: `${percent}%` })])],
-          ),
-          h.ul(
-            [],
-            steps.map(step =>
-              h.keyed('li')(
-                step.label,
-                [],
-                [
-                  h.button(
-                    [
-                      h.Type('button'),
-                      h.Class(`setup-step ${step.done ? 'done' : ''}`),
-                      h.OnClick(step.message),
-                    ],
-                    [
-                      h.span([h.Class('setup-box')], [step.done ? '✓' : '']),
-                      step.label,
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      )
-}
 const tocLineWidths = [24, 18, 13, 9]
 const tocMaxLines = 40
 const artifactToc = (model: Model, h: H): Html => {
@@ -549,7 +463,6 @@ const sidebar = (model: Model, h: H): Html =>
               ),
             ],
           ),
-          setupChecklist(model, h),
         ],
       ),
       h.div(
