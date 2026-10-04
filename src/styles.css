@@ -2682,6 +2682,9 @@ a:focus-visible {
 .main-content {
   padding: var(--space-8) var(--space-8) var(--space-6);
 }
+.app-shell:has(.artifact-toc) .main-content {
+  padding-left: calc(var(--space-8) + 20px);
+}
 
 /* Signature: every page heading is a drawing title block. */
 .page-heading {
