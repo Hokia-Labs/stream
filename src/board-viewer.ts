@@ -14,12 +14,11 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 export const boardModels = [
-  { name: 'Board 1', url: '/models/board1.glb' },
-  { name: 'Board 2', url: '/models/board2.glb' },
-  { name: 'Board 3', url: '/models/board3.glb' },
+  { name: 'Rev A', url: '/models/board1-rev-a.glb' },
+  { name: 'Rev B', url: '/models/board1-rev-b.glb' },
 ] as const
 
-const spacing = 150
+const spacing = 210
 
 export class StreamBoard extends HTMLElement {
   #renderer: WebGLRenderer | undefined
@@ -83,13 +82,13 @@ export class StreamBoard extends HTMLElement {
   async #load(): Promise<void> {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
     const boards = new Group()
-    boards.rotation.x = -Math.PI / 2
     this.#scene.add(boards)
     try {
       const scenes = await Promise.all(
         boardModels.map(board => loader.loadAsync(board.url)),
       )
       scenes.forEach((gltf, index) => {
+        gltf.scene.scale.setScalar(1000)
         gltf.scene.position.x = index * spacing
         boards.add(gltf.scene)
       })

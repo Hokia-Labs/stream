@@ -1864,7 +1864,7 @@ const schematicViewer = (model: Model, h: H): Html => {
             [
               h.Class('schematic-boards'),
               h.Role('group'),
-              h.AriaLabel('Board'),
+              h.AriaLabel('Revision'),
             ],
             schematicBoards.map((item, index) =>
               h.keyed('button')(
@@ -1880,7 +1880,10 @@ const schematicViewer = (model: Model, h: H): Html => {
                     index === model.schematicBoard ? 'true' : 'false',
                   ),
                   h.OnClick(
-                    Message.SelectedSchematicSheet({ board: index, page: 0 }),
+                    Message.SelectedSchematicSheet({
+                      board: index,
+                      page: model.schematicPage,
+                    }),
                   ),
                 ],
                 [item.name],
@@ -1920,7 +1923,7 @@ const schematicViewer = (model: Model, h: H): Html => {
         ),
         h.Alt(`KiCad schematic, ${board.name}, ${sheet}`),
       ]),
-      h.figcaption([], [`KiCad Rev F · ${board.name} · ${sheet}`]),
+      h.figcaption([], [`KiCad power board · ${board.name} · ${sheet}`]),
     ],
   )
 }
@@ -1990,11 +1993,11 @@ const modelTab = (h: H): Html => {
         [
           h.figcaption(
             [],
-            ['KiCad assemblies, Rev F · Board 1, Board 2, Board 3 from left'],
+            ['KiCad power board · Rev A (left) and Rev B (right)'],
           ),
           board([
             h.Class('board-review-canvas board-review-assembly'),
-            h.AriaLabel('3D model of the three KiCad board assemblies'),
+            h.AriaLabel('3D model of the KiCad power board, Rev A and Rev B'),
           ]),
         ],
       ),

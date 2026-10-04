@@ -530,6 +530,12 @@ export const proposalPartChanges: ReadonlyArray<
     trace: 'REQ-PSU-02',
   },
   {
+    part: 'Buck MOSFETs Q401–Q404',
+    before: 'CSD19532Q5B, 5 × 6 mm SON',
+    after: 'CSD19536KTT, D2PAK',
+    trace: 'REQ-PSU-02',
+  },
+  {
     part: 'Cockpit feeder SSPC',
     before: '25 A',
     after: '75 A',

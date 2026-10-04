@@ -146,25 +146,8 @@ export const schematicSheets = [
 ] as const
 
 export const schematicBoards = [
-  { name: 'Board 1', dir: 'board1', sheets: schematicSheets },
-  { name: 'Board 2', dir: 'board2', sheets: schematicSheets },
-  {
-    name: 'Board 3',
-    dir: 'board3',
-    sheets: [
-      'Overview',
-      'VITA input',
-      'Input protection',
-      'BMS (Board 1)',
-      'Buck power (Board 1)',
-      'FPGA (Board 2)',
-      'FPGA power (Board 2)',
-      'Interface adapter',
-      'Sensors',
-      'VITA output',
-      'Debug',
-    ],
-  },
+  { name: 'Rev A', dir: 'rev-a', sheets: schematicSheets },
+  { name: 'Rev B', dir: 'rev-b', sheets: schematicSheets },
 ] as const
 
 const fmt = (value: number, digits = 1): string => value.toFixed(digits)
@@ -187,11 +170,11 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'Components',
-          'Q1–Q4 power MOSFETs at the board centre; the cluster is the hottest location',
+          'Q401–Q404 power MOSFETs at the board centre; the cluster is the hottest location',
         ],
         [
           'Heated bodies',
-          `Q1–Q4 package bodies only, simplified to ${fetBodyMm.x} × ${fetBodyMm.y} × ${fetBodyMm.z} mm blocks`,
+          `Q401–Q404 package bodies only, simplified to ${fetBodyMm.x} × ${fetBodyMm.y} × ${fetBodyMm.z} mm blocks`,
         ],
         [
           'Load case',
@@ -387,6 +370,14 @@ export const pdr = {
         'Rejects 0.54 kW within the 0.65 kW allocation; FET cluster peak 43.8 °C vs 115 °C limit',
       risk: 'Medium',
       mitigation: 'Correlate the thermal model in TST-PSU thermal soak',
+      trace: 'REQ-PSU-02',
+    },
+    {
+      part: 'Buck MOSFETs Q401–Q404',
+      rationale:
+        'Lower-loss FET in a larger package on a poured drain copper area; cluster peak 52.0 → 43.8 °C',
+      risk: 'Low',
+      mitigation: 'Re-check gate drive and switching loss on the EDU',
       trace: 'REQ-PSU-02',
     },
     {
