@@ -2987,7 +2987,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 type: 'pointerdown',
                 filterMapEvent: event =>
                   event.target instanceof Element &&
-                  !event.target.closest('.workspace-menu-root')
+                  !event.target.closest('.workspace-menu-root, .crumb-org')
                     ? Option.some(Message.ClosedWorkspaceMenu())
                     : Option.none(),
               }),

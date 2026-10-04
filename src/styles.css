@@ -365,9 +365,32 @@ h3 {
   font-size: var(--text-sm);
   color: var(--muted);
 }
-.breadcrumb strong {
+.breadcrumb strong,
+.breadcrumb .crumb-program,
+.breadcrumb .crumb-current {
   color: var(--ink);
   font-weight: 500;
+}
+.crumb-link {
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.crumb-link:hover,
+.crumb-link:focus-visible {
+  color: var(--ink);
+  background: var(--surface);
+}
+.breadcrumb .crumb-link.crumb-program {
+  font-weight: 500;
+}
+.crumb-detail {
+  font-size: 0.92em;
 }
 .breadcrumb .icon {
   width: 10px;
@@ -2317,7 +2340,7 @@ tbody tr:hover {
   .breadcrumb {
     gap: 8px;
   }
-  .breadcrumb > span:first-child,
+  .breadcrumb > .crumb-org,
   .breadcrumb > .icon:first-of-type {
     display: none;
   }
@@ -6214,10 +6237,10 @@ button:disabled,
     overflow: hidden;
     white-space: nowrap;
   }
-  .breadcrumb > :not(:last-child):not(strong):not(.icon-button) {
+  .breadcrumb > :not(:last-child):not(.crumb-program):not(.icon-button) {
     display: none;
   }
-  .breadcrumb strong {
+  .breadcrumb .crumb-program {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 14ch;

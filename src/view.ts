@@ -574,12 +574,116 @@ const sidebar = (model: Model, h: H): Html =>
     ],
   )
 
+const breadcrumbDetail = (model: Model): Option.Option<string> =>
+  Option.isSome(model.maybeSelectedNode)
+    ? model.maybeSelectedNode
+    : model.page === 'Runs'
+      ? Option.fromNullishOr(
+          Option.getOrElse(
+            model.maybeSelectedRun,
+            () => model.workspace.runs[0]?.id ?? '',
+          ) || undefined,
+        )
+      : model.page === 'Agent fleet'
+        ? Option.flatMap(model.maybeSelectedAgent, id =>
+            Option.fromNullishOr(
+              model.workspace.agents.find(agent => agent.id === id)?.name,
+            ),
+          )
+        : Option.none()
+
+const breadcrumbPageMessage = (model: Model): Option.Option<Message> =>
+  Option.isSome(model.maybeOpenFinding)
+    ? Option.some(Message.ClosedFinding())
+    : Option.isSome(model.maybeSelectedNode)
+      ? Option.some(Message.ClosedInspector())
+      : Option.none()
+
+const breadcrumbItems = (model: Model, h: H): ReadonlyArray<Html> => {
+  const crumb = (
+    label: string,
+    className: string,
+    maybeMessage: Option.Option<Message>,
+    title: string,
+  ): Html =>
+    Option.match(maybeMessage, {
+      onNone: () =>
+        h.span(
+          [
+            h.Class(`crumb-current ${className}`),
+            h.Attribute('aria-current', 'page'),
+          ],
+          [label],
+        ),
+      onSome: message =>
+        h.button(
+          [
+            h.Type('button'),
+            h.Class(`crumb-link ${className}`),
+            h.Title(title),
+            h.OnClick(message),
+          ],
+          [label],
+        ),
+    })
+  const detail = breadcrumbDetail(model)
+  const pageMessage = Option.isSome(detail)
+    ? breadcrumbPageMessage(model)
+    : Option.none()
+  return [
+    h.button(
+      [
+        h.Type('button'),
+        h.Class('crumb-link crumb-org'),
+        h.Title('Switch organization'),
+        h.AriaHasPopup('menu'),
+        h.AriaExpanded(model.isWorkspaceMenuOpen),
+        h.OnClick(Message.ToggledWorkspaceMenu()),
+      ],
+      ['Moneywell'],
+    ),
+    icon('chevron', h),
+    crumb(
+      'Atlas launch program',
+      'crumb-program',
+      model.page === 'Overview' && Option.isNone(detail)
+        ? Option.none()
+        : Option.some(Message.SelectedPage({ page: 'Overview' })),
+      'Program overview',
+    ),
+    ...(model.page === 'Overview'
+      ? []
+      : [
+          icon('chevron', h),
+          Option.isSome(detail) && Option.isNone(pageMessage)
+            ? h.span([h.Class('crumb-page')], [model.page])
+            : crumb(
+                model.page,
+                'crumb-page',
+                pageMessage,
+                `Back to ${model.page}`,
+              ),
+        ]),
+    ...Option.match(detail, {
+      onNone: () => [],
+      onSome: label => [
+        icon('chevron', h),
+        crumb(label, 'crumb-detail mono', Option.none(), label),
+      ],
+    }),
+  ]
+}
+
 const topbar = (model: Model, h: H): Html =>
   h.header(
     [h.Class('topbar')],
     [
       h.div(
-        [h.Class('breadcrumb')],
+        [
+          h.Class('breadcrumb'),
+          h.Role('navigation'),
+          h.AriaLabel('Breadcrumb'),
+        ],
         [
           iconButton(
             'sidebar',
@@ -587,11 +691,7 @@ const topbar = (model: Model, h: H): Html =>
             Message.ToggledSidebar(),
             h,
           ),
-          h.span([], ['Moneywell']),
-          icon('chevron', h),
-          h.strong([], ['Atlas launch program']),
-          icon('chevron', h),
-          h.span([], [model.page]),
+          ...breadcrumbItems(model, h),
         ],
       ),
       h.div(
