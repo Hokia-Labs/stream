@@ -742,12 +742,7 @@ const analysisLine = (isReviewable: boolean, h: H): Html =>
     }),
   )
 
-const proposalPanel = (
-  model: Model,
-  isUpgraded: boolean,
-  isRevB: boolean,
-  h: H,
-): Html => {
+const proposalPanel = (model: Model, isRevB: boolean, h: H): Html => {
   const proposal = model.twinProposal
   const reviewer = `${proposalReviewer.name} · ${proposalReviewer.role}`
   const head = h.div(
@@ -764,16 +759,8 @@ const proposalPanel = (
       ),
     ],
   )
-  const body = !isUpgraded
-    ? [
-        h.p(
-          [h.Class('muted small-text')],
-          [
-            'Swap in the new cockpit avionics first. Its revised requirements drive the power board redesign.',
-          ],
-        ),
-      ]
-    : !isRevB && (proposal === 'None' || proposal === 'Approved')
+  const body =
+    !isRevB && (proposal === 'None' || proposal === 'Approved')
       ? [
           h.p(
             [h.Class('muted small-text')],
@@ -1798,7 +1785,7 @@ const changePanel = (model: Model, h: H): Html => {
         [h.Class('twin-slots'), h.AriaLabel('Installed parts')],
         [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
       ),
-      isRevB ? h.empty : proposalPanel(model, isUpgraded, isRevB, h),
+      isRevB || !isUpgraded ? h.empty : proposalPanel(model, isRevB, h),
     ],
   )
 }
