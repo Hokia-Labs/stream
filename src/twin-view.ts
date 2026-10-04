@@ -758,7 +758,7 @@ const proposalPanel = (
               [h.Class('twin-drafting')],
               [
                 h.span([h.Class('twin-pulse')], []),
-                `Power agent is checking ${avionicsRequirementIds.length} revised requirements against MW-MPA-48-4 Rev A and drafting part changes…`,
+                `Power agent is checking ${avionicsRequirementIds.length} revised requirements against the installed power assembly and drafting part changes…`,
               ],
             ),
           ]
@@ -772,7 +772,7 @@ const proposalPanel = (
                     ? [', ', idLink(model, id, h, 'mono')]
                     : [idLink(model, id, h, 'mono')],
                 ),
-                '. Rev A gives 9.0 kW with one module failed; the revised load is 10.2 kW.',
+                `. N−1 capacity ${kw(capacityKw('A', 1))} kW against ${kw(busDemandKw)} kW bus demand.`,
               ],
             ),
             h.table(
