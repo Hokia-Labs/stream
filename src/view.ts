@@ -230,7 +230,7 @@ const sidebarInbox = (model: Model, h: H): Html => {
     ],
   )
 }
-const tocLineWidths = [24, 18, 13, 9]
+const tocLineWidths = [14, 11, 8, 5]
 const tocMaxLines = 40
 const artifactToc = (model: Model, h: H): Html => {
   if (model.page !== 'Requirements' && model.page !== 'Systems graph') {
