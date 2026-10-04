@@ -204,15 +204,19 @@ const signoffFooter = (
   h: H,
 ): Html =>
   h.div(
-    [h.Class('twin-signoff-footer')],
+    [
+      h.Class(
+        `twin-signoff-footer ${model.twinReviewed.includes(item) ? 'signed' : isEnabled ? 'pending' : ''}`,
+      ),
+    ],
     [
       model.twinReviewed.includes(item)
         ? h.span(
-            [],
-            [signatory(h), h.span([h.Class('muted')], [' signed off'])],
+            [h.Class('twin-signoff-status')],
+            [signatory(h), h.span([], ['signed off'])],
           )
         : h.span(
-            [h.Class('muted')],
+            [h.Class('twin-signoff-status')],
             [isEnabled ? prompt : 'Place Rev B before signing off.'],
           ),
       signoffButton(model, item, isEnabled, h),
@@ -310,7 +314,10 @@ const signoffGate = (
                     [
                       model.twinReviewed.includes(signoff.item)
                         ? signatory(h)
-                        : h.span([h.Class('muted')], ['Pending']),
+                        : h.span(
+                            [h.Class(isRevB ? 'amber-text' : 'muted')],
+                            ['Pending'],
+                          ),
                     ],
                   ),
                   h.td(
