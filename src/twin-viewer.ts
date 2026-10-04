@@ -195,8 +195,8 @@ export class StreamTwin extends HTMLElement {
   #observer: ResizeObserver | undefined
   #flight:
     | Readonly<{
-        from: Vector3
-        to: Vector3
+        fromOffset: Vector3
+        toOffset: Vector3
         fromTarget: Vector3
         toTarget: Vector3
         start: number | undefined
@@ -467,10 +467,13 @@ export class StreamTwin extends HTMLElement {
 
   #fly(): void {
     const preset = this.#preset()
+    const fromTarget = this.#controls?.target.clone() ?? preset.target.clone()
+    const fromOffset = this.#camera.position.clone().sub(fromTarget)
+    const distance = preset.position.distanceTo(preset.target)
     this.#flight = {
-      from: this.#camera.position.clone(),
-      to: preset.position.clone(),
-      fromTarget: this.#controls?.target.clone() ?? preset.target.clone(),
+      fromOffset,
+      toOffset: fromOffset.clone().setLength(distance),
+      fromTarget,
       toTarget: preset.target.clone(),
       start: undefined,
     }
@@ -653,16 +656,14 @@ export class StreamTwin extends HTMLElement {
     if (this.#flight && this.#controls) {
       const t = Math.min(1, (time - (this.#flight.start ?? time)) / 1300)
       const eased = easeInOut(t)
-      this.#camera.position.lerpVectors(
-        this.#flight.from,
-        this.#flight.to,
-        eased,
-      )
       this.#controls.target.lerpVectors(
         this.#flight.fromTarget,
         this.#flight.toTarget,
         eased,
       )
+      this.#camera.position
+        .lerpVectors(this.#flight.fromOffset, this.#flight.toOffset, eased)
+        .add(this.#controls.target)
       if (t >= 1) {
         this.#flight = undefined
       }
