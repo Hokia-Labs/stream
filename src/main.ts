@@ -163,6 +163,7 @@ export const Model = Schema.Struct({
     }),
   ),
   isWorkspaceMenuOpen: Schema.Boolean,
+  isUserMenuOpen: Schema.Boolean,
   hasAcknowledgedConsent: Schema.Boolean,
   hasLoadedNavigation: Schema.Boolean,
   sidebarWidth: Schema.Number,
@@ -239,6 +240,7 @@ export const initialModel: Model = {
   sidebarTreeHeight: treeDefaultHeight,
   maybeTreeDrag: Option.none(),
   isWorkspaceMenuOpen: false,
+  isUserMenuOpen: false,
   hasAcknowledgedConsent: false,
   hasLoadedNavigation: false,
   sidebarWidth: 232,
@@ -563,7 +565,7 @@ export const ProbeExecutor = Command.define('ProbeExecutor', {
       Effect.succeed(
         Message.FailedProbeExecutor({
           error:
-            'Cloudflare backend not reachable. Switch to Simulation or set it up in Integrations.',
+            'Cloudflare backend not reachable. Switch to Simulation or set it up in Settings.',
         }),
       ),
     ),
@@ -1611,7 +1613,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modifyFields(editor, { title: () => value }),
             AgentEditor: editor => modifyFields(editor, { name: () => value }),
             RunLauncher: editor => modifyFields(editor, { title: () => value }),
-            IntegrationDetails: () => modal,
+            Settings: () => modal,
             BranchEditor: editor =>
               modifyFields(editor, { title: () => value }),
             CommandPalette: () => modal,
@@ -2334,10 +2336,17 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     },
     ClickedApprove: ({ id }) => decide(model, id, 'Approved'),
     ClickedReject: ({ id }) => decide(model, id, 'Rejected'),
-    ClickedIntegration: ({ name }) => ({
+    ClickedSettings: () => ({
       model: modifyFields(model, {
-        modal: () => Modal.IntegrationDetails({ name }),
+        isUserMenuOpen: () => false,
+        modal: () => Modal.Settings(),
       }),
+    }),
+    ToggledUserMenu: () => ({
+      model: modifyFields(model, { isUserMenuOpen: value => !value }),
+    }),
+    ClosedUserMenu: () => ({
+      model: modifyFields(model, { isUserMenuOpen: () => false }),
     }),
     ClosedModal: () => ({
       model: modifyFields(model, { modal: () => Modal.Closed() }),
@@ -3692,6 +3701,34 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         token < 0
           ? Stream.empty
           : Stream.fromEffect(settleExit('Finding', token)),
+    },
+  ),
+  userMenu: entry(
+    { isOpen: Schema.Boolean },
+    {
+      modelToDependencies: model => ({ isOpen: model.isUserMenuOpen }),
+      dependenciesToStream: ({ isOpen }) =>
+        isOpen
+          ? Stream.merge(
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'pointerdown',
+                filterMapEvent: event =>
+                  event.target instanceof Element &&
+                  !event.target.closest('.profile-menu-root')
+                    ? Option.some(Message.ClosedUserMenu())
+                    : Option.none(),
+              }),
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'keydown',
+                filterMapEvent: event =>
+                  event.key === 'Escape'
+                    ? Option.some(Message.ClosedUserMenu())
+                    : Option.none(),
+              }),
+            )
+          : Stream.empty,
     },
   ),
   workspaceMenu: entry(

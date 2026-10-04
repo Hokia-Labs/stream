@@ -209,15 +209,14 @@ describe('workspace UI wiring', () => {
     )
   })
 
-  it('never launches OAuth from an integration placeholder', () => {
+  it('opens Cloudflare settings from the account menu', () => {
     scene(
       { update, view },
       given(ready),
-      click(role('button', { name: 'Integrations' })),
-      Command.resolve(ScrollActiveNav, Message.CompletedScrollActiveNav()),
-      click(role('button', { name: 'GitHub connection details' })),
-      expect(role('dialog')).toContainText('No OAuth request is made'),
-      click(role('button', { name: 'Got it' })),
+      click(role('button', { name: 'Account menu' })),
+      click(role('menuitem', { name: 'Settings' })),
+      expect(role('dialog')).toContainText('Cloudflare credentials'),
+      click(role('button', { name: 'Done' })),
       expect(role('dialog')).not.toExist(),
     )
   })

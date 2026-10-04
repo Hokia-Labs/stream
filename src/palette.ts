@@ -23,7 +23,6 @@ export const pageShortcuts: ReadonlyArray<{ page: Page; key: string }> = [
   { page: 'Branches', key: 'B' },
   { page: 'Agent fleet', key: 'A' },
   { page: 'Runs', key: 'N' },
-  { page: 'Integrations', key: 'I' },
 ]
 
 export const paletteLimit = 40

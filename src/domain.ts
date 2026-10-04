@@ -9,7 +9,6 @@ export const Page = Schema.Literals([
   'Requirements',
   'Agent fleet',
   'Runs',
-  'Integrations',
   'Branches',
 ])
 export type Page = typeof Page.Type
@@ -297,7 +296,7 @@ export const Modal = defineTaggedUnion({
     launchAnother: Schema.Boolean,
   },
   BranchEditor: { title: Schema.String },
-  IntegrationDetails: { name: Schema.String },
+  Settings: {},
   ArtifactFields: {},
   WorkspaceImporter: { jsonText: Schema.String },
   CommandPalette: { query: Schema.String, index: Schema.Number },

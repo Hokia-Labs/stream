@@ -7897,3 +7897,36 @@ button.graph-cluster-head:hover {
 .sync-table .sync-file {
   padding-left: 28px;
 }
+.profile-menu-root {
+  position: relative;
+}
+.profile-menu-root > .profile {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.profile-menu-root > .profile:hover,
+.profile-menu-root > .profile[aria-expanded='true'] {
+  background: var(--surface);
+}
+.profile-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 12px;
+  right: 12px;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--sheet);
+  border: 1px solid var(--ink);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.12);
+}
+.settings-dialog .credentials-panel {
+  margin: 16px 0;
+}

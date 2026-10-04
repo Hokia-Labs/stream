@@ -199,7 +199,6 @@ const pages: ReadonlyArray<{ page: Page; icon: string }> = [
   { page: 'Branches', icon: 'layers' },
   { page: 'Agent fleet', icon: 'agent' },
   { page: 'Runs', icon: 'play' },
-  { page: 'Integrations', icon: 'plug' },
 ]
 const sidebarInbox = (model: Model, h: H): Html => {
   const pending = model.workspace.approvals.filter(
@@ -575,11 +574,39 @@ const sidebar = (model: Model, h: H): Html =>
               )
             : h.empty,
           h.div(
-            [h.Class('profile')],
+            [h.Class('profile-menu-root')],
             [
-              h.span([h.Class('avatar dark')], ['BJ']),
-              h.div([], [h.strong([], ['Ben Juntilla'])]),
-              h.span([h.Class('profile-indicator')]),
+              model.isUserMenuOpen
+                ? h.div(
+                    [h.Class('profile-menu'), h.Role('menu')],
+                    [
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('workspace-menu-item'),
+                          h.Role('menuitem'),
+                          h.OnClick(Message.ClickedSettings()),
+                        ],
+                        [icon('plug', h), h.strong([], ['Settings'])],
+                      ),
+                    ],
+                  )
+                : h.empty,
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('profile'),
+                  h.AriaHasPopup('menu'),
+                  h.AriaExpanded(model.isUserMenuOpen),
+                  h.AriaLabel('Account menu'),
+                  h.OnClick(Message.ToggledUserMenu()),
+                ],
+                [
+                  h.span([h.Class('avatar dark')], ['BJ']),
+                  h.div([], [h.strong([], ['Ben Juntilla'])]),
+                  h.span([h.Class('profile-indicator')]),
+                ],
+              ),
             ],
           ),
         ],
@@ -2686,7 +2713,6 @@ const shortcutRows: ReadonlyArray<readonly [ReadonlyArray<string>, string]> = [
   [['G', 'B'], 'Go to Branches'],
   [['G', 'A'], 'Go to Agent fleet'],
   [['G', 'N'], 'Go to Runs'],
-  [['G', 'I'], 'Go to Integrations'],
   [['J', 'K'], 'Move between artifact rows'],
   [['X'], 'Select the current row'],
   [['E'], 'Edit the current row'],
@@ -4206,171 +4232,6 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
     ],
   )
 }
-const integrationsPage = (model: Model, h: H): Html => {
-  const integrations = [
-    {
-      name: 'GitHub',
-      icon: 'github',
-      color: 'neutral',
-      description:
-        'Connect code changes, pull requests, and engineering issues.',
-      type: 'Code & collaboration',
-    },
-    {
-      name: 'Linear',
-      icon: 'layers',
-      color: 'violet',
-      description:
-        'Turn issues and project updates into agent workflow triggers.',
-      type: 'Planning & delivery',
-    },
-    {
-      name: 'CAD & simulation',
-      icon: 'box',
-      color: 'blue',
-      description:
-        'Keep design revisions, models, and simulation evidence in context.',
-      type: 'Engineering tools',
-    },
-    {
-      name: 'SharePoint',
-      icon: 'file',
-      color: 'teal',
-      description:
-        'Link specifications, reviews, and documents to the systems graph.',
-      type: 'Documents & knowledge',
-    },
-    {
-      name: 'Cloudflare Workers AI',
-      icon: 'agent',
-      color: 'mint',
-      description:
-        'Workers AI models through AI Gateway, with experimental durable Pi sessions in SQLite Durable Objects.',
-      type: 'Agent execution',
-    },
-    {
-      name: 'Custom executor',
-      icon: 'plug',
-      color: 'orange',
-      description:
-        'Bring your own harness, model provider, or internal orchestration service.',
-      type: 'Agent execution',
-    },
-  ]
-  return h.div(
-    [],
-    [
-      pageHeading(
-        'Integrations',
-        'Execution backends and tool connectors. Only the Cloudflare executor is implemented.',
-        h.empty,
-        h,
-      ),
-      h.div(
-        [h.Class('integration-banner')],
-        [
-          icon('shield', h),
-          h.div(
-            [],
-            [
-              h.strong(
-                [],
-                [
-                  'Cloudflare execution works today. GitHub, Linear and other write connectors are previews.',
-                ],
-              ),
-              h.p(
-                [],
-                [
-                  'Live inference requires a configured, authenticated Worker and an existing AI Gateway. For the local demo backend, a Cloudflare token can be saved in this browser below. Agent tools only read the run snapshot.',
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-      cloudflareCredentialsPanel(model, h),
-      h.div(
-        [h.Class('agent-grid integrations-grid')],
-        integrations.map(item =>
-          h.keyed('article')(
-            item.name,
-            [h.Class('integration-card')],
-            [
-              h.div(
-                [h.Class('agent-card-top')],
-                [
-                  h.span(
-                    [h.Class(`agent-icon large ${item.color}`)],
-                    [icon(item.icon, h)],
-                  ),
-                  h.span(
-                    [h.Class('badge neutral')],
-                    [
-                      item.name === 'Cloudflare Workers AI'
-                        ? Option.match(model.maybeExecutorStatus, {
-                            onNone: () => 'Setup required',
-                            onSome: status =>
-                              status.state === 'Ready'
-                                ? 'Worker ready'
-                                : 'Setup required',
-                          })
-                        : 'Not connected',
-                    ],
-                  ),
-                ],
-              ),
-              h.p([h.Class('eyebrow')], [item.type]),
-              h.h2([], [item.name]),
-              h.p([], linkifyIds(model, item.description, h)),
-              h.button(
-                [
-                  h.Type('button'),
-                  h.Class('button outline small'),
-                  h.AriaLabel(`${item.name} connection details`),
-                  h.OnClick(Message.ClickedIntegration({ name: item.name })),
-                ],
-                ['Details', icon('arrow', h)],
-              ),
-            ],
-          ),
-        ),
-      ),
-      h.section(
-        [h.Class('panel adapter-panel')],
-        [
-          h.h2([], ['A clean boundary for real execution.']),
-          h.p(
-            [],
-            [
-              'The Foldkit model owns orchestration state. A server-side executor should own credentials, tool permissions, live agent dispatch, retries, and durable run events. Human approvals stay explicit.',
-            ],
-          ),
-          h.div(
-            [h.Class('adapter-flow')],
-            [
-              h.span([], ['Tool event']),
-              icon('arrow', h),
-              h.span([], ['Systems graph']),
-              icon('arrow', h),
-              h.span([], ['Agent fleet']),
-              icon('arrow', h),
-              h.span([], ['Human review']),
-            ],
-          ),
-          button(
-            'Export the current workspace',
-            Message.ClickedExport(),
-            'text-button',
-            h,
-            'download',
-          ),
-        ],
-      ),
-    ],
-  )
-}
-
 const inspector = (model: Model, h: H, isClosing = false): Html =>
   Option.match(model.maybeSelectedNode, {
     onNone: () => h.empty,
@@ -5256,61 +5117,22 @@ const modalContent = (model: Model, h: H): Html =>
           ),
         ],
       ),
-    IntegrationDetails: ({ name }) =>
+    Settings: () =>
       h.div(
-        [],
+        [h.Class('settings-dialog')],
         [
-          h.p([h.Class('eyebrow')], ['CONNECTION DETAILS']),
-          h.h2([h.Id('dialog-title')], [name]),
+          h.p([h.Class('eyebrow')], ['SETTINGS']),
+          h.h2([h.Id('dialog-title')], ['Agent execution']),
           h.p(
             [h.Class('subtitle')],
             [
-              name === 'Cloudflare Workers AI'
-                ? 'The server adapter is implemented using AI Gateway and the experimental durable Pi harness.'
-                : 'This external write connector is not implemented.',
+              'Workers AI through AI Gateway. Credentials are saved in this browser only.',
             ],
           ),
-          h.div(
-            [h.Class('connection-requirements')],
-            [
-              h.h3([], ['What a live connection needs']),
-              h.p(
-                [],
-                [
-                  name === 'Cloudflare Workers AI'
-                    ? '1. Configure AI_GATEWAY_ID with an existing Cloudflare gateway.'
-                    : '1. A server-side adapter with scoped authentication.',
-                ],
-              ),
-              h.p(
-                [],
-                [
-                  name === 'Cloudflare Workers AI'
-                    ? '2. Set STREAM_ACCESS_TOKEN as a Worker secret; unlock as username stream.'
-                    : '2. Artifact mappings and change-event ingestion.',
-                ],
-              ),
-              h.p(
-                [],
-                [
-                  name === 'Cloudflare Workers AI'
-                    ? '3. Deploy through your official release pipeline, or run the Worker locally with Workers AI authorization.'
-                    : '3. A durable executor for dispatch, cancellation, and run events.',
-                ],
-              ),
-              h.p([], ['4. Explicit approval before any external write.']),
-            ],
-          ),
-          h.div(
-            [h.Class('simulation-notice')],
-            [
-              icon('shield', h),
-              'No OAuth request is made and no credentials are stored by this preview.',
-            ],
-          ),
+          cloudflareCredentialsPanel(model, h),
           h.div(
             [h.Class('modal-footer')],
-            [button('Got it', Message.ClosedModal(), 'primary', h)],
+            [button('Done', Message.ClosedModal(), 'primary', h)],
           ),
         ],
       ),
@@ -5508,9 +5330,7 @@ export const view = (sourceModel: Model, h: H): Document => {
                             ? requirementsPage(model, h)
                             : model.page === 'Agent fleet'
                               ? fleetPage(model, h)
-                              : model.page === 'Runs'
-                                ? runsPage(model, h)
-                                : integrationsPage(model, h),
+                              : runsPage(model, h),
               ],
             ),
           ],
