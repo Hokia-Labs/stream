@@ -111,6 +111,14 @@ export const Model = Schema.Struct({
   modal: Modal,
   maybeToast: Schema.Option(Schema.String),
   isToastError: Schema.Boolean,
+  stackedToasts: Schema.Array(
+    Schema.Struct({
+      id: Schema.Number,
+      text: Schema.String,
+      isError: Schema.Boolean,
+    }),
+  ),
+  toastSeq: Schema.Number,
   hasInvalidSubmit: Schema.Boolean,
   maybeLeavingToast: Schema.Option(
     Schema.Struct({ text: Schema.String, token: Schema.Number }),
@@ -208,6 +216,8 @@ export const initialModel: Model = {
   modal: Modal.Closed(),
   maybeToast: Option.none(),
   isToastError: false,
+  stackedToasts: [],
+  toastSeq: 0,
   hasInvalidSubmit: false,
   maybeLeavingToast: Option.none(),
   maybeClosingNode: Option.none(),
@@ -903,6 +913,34 @@ const settleExit = (surface: ExitSurface, token: number) =>
 const exitToken = (maybe: Option.Option<{ readonly token: number }>): number =>
   Option.match(maybe, { onNone: () => -1, onSome: exit => exit.token })
 
+const maxStackedToasts = 3
+
+// A toast replaced by a newer one moves into the stack above it.
+const withToastStack = (previous: Model, result: UpdateReturn): UpdateReturn =>
+  Option.match(
+    Option.filter(previous.maybeToast, text =>
+      Option.exists(result.model.maybeToast, current => current !== text),
+    ),
+    {
+      onNone: () => result,
+      onSome: text => ({
+        ...result,
+        model: modifyFields(result.model, {
+          toastSeq: seq => seq + 1,
+          stackedToasts: stacked =>
+            [
+              ...stacked,
+              {
+                id: result.model.toastSeq + 1,
+                text,
+                isError: previous.isToastError,
+              },
+            ].slice(-maxStackedToasts),
+        }),
+      }),
+    },
+  )
+
 // Overlays that close on the same page keep rendering in a closing state until
 // their exit animation settles (see the exit subscriptions). Page changes are covered by the page view transition.
 const withExitMotion = (
@@ -980,7 +1018,10 @@ const withExitMotion = (
 }
 
 export const update = (model: Model, message: Message): UpdateReturn => {
-  const result = withExitMotion(model, updateMessage(model, message))
+  const result = withToastStack(
+    model,
+    withExitMotion(model, updateMessage(model, message)),
+  )
   return result.model.hasInvalidSubmit &&
     result.model.modal._tag !== model.modal._tag
     ? {
@@ -2421,6 +2462,11 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     DismissedToast: () => ({
       model: modifyFields(model, { maybeToast: () => Option.none() }),
+    }),
+    DismissedStackedToast: ({ id }) => ({
+      model: modifyFields(model, {
+        stackedToasts: stacked => stacked.filter(item => item.id !== id),
+      }),
     }),
     CompletedLoadWorkspace: ({ workspace, restored }) => ({
       model: modifyFields(model, {

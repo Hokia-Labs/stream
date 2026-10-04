@@ -351,6 +351,29 @@ describe('display, views, and reruns', () => {
     expect(assigned.selectedArtifactIds).toEqual([])
   })
 
+  it('stacks a replaced toast above the newer one', () => {
+    const shown = modifyFields(ready, {
+      maybeToast: () => Option.some('First'),
+    })
+    const next = update(shown, Message.ClickedProbeExecutor())
+    expect(next.model.stackedToasts).toEqual([])
+    const replaced = update(
+      shown,
+      Message.FailedSaveWorkspace({ error: 'Second' }),
+    )
+    expect(Option.getOrThrow(replaced.model.maybeToast)).toBe('Second')
+    expect(replaced.model.stackedToasts.map(item => item.text)).toEqual([
+      'First',
+    ])
+    const id = replaced.model.stackedToasts[0]?.id ?? -1
+    const dismissed = update(
+      replaced.model,
+      Message.DismissedStackedToast({ id }),
+    )
+    expect(dismissed.model.stackedToasts).toEqual([])
+    expect(Option.getOrThrow(dismissed.model.maybeToast)).toBe('Second')
+  })
+
   it('keeps a dismissed toast mounted until its exit settles', () => {
     const shown = modifyFields(ready, {
       maybeToast: () => Option.some('Saved'),

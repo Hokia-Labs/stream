@@ -8658,3 +8658,44 @@ p.launch-estimate {
   width: 15px;
   height: 15px;
 }
+
+/* Stacked toasts, bottom right */
+.toast-region {
+  position: fixed;
+  right: 24px;
+  bottom: 25px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.has-marking .toast-region {
+  bottom: calc(25px + var(--marking-h));
+}
+.app-shell:has(.bulk-bar.floating) .toast-region {
+  bottom: calc(88px + var(--marking-h, 0px));
+}
+.toast-region .toast {
+  position: static;
+  translate: none;
+  max-width: min(440px, calc(100vw - 48px));
+  pointer-events: auto;
+}
+@starting-style {
+  .toast-region .toast {
+    translate: 0 var(--motion-shift-md);
+  }
+}
+.toast-region .toast[data-state='leaving'] {
+  translate: 0 var(--motion-shift-sm);
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .toast-region {
+    left: 16px;
+    right: 16px;
+    align-items: stretch;
+  }
+}

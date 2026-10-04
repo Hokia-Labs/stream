@@ -4999,12 +4999,47 @@ export const view = (sourceModel: Model, h: H): Document => {
         h.div(
           [h.Class('toast-region'), h.Role('status'), h.AriaLive('polite')],
           [
+            ...model.stackedToasts.map(item =>
+              toast(
+                model,
+                {
+                  key: `stack-${item.id}`,
+                  text: item.text,
+                  isError: item.isError,
+                  isLeaving: false,
+                  dismiss: Message.DismissedStackedToast({ id: item.id }),
+                },
+                h,
+              ),
+            ),
             Option.match(model.maybeToast, {
-              onSome: text => toast(model, text, false, h),
+              onSome: text =>
+                toast(
+                  model,
+                  {
+                    key: text,
+                    text,
+                    isError: model.isToastError,
+                    isLeaving: false,
+                    dismiss: Message.DismissedToast(),
+                  },
+                  h,
+                ),
               onNone: () =>
                 Option.match(model.maybeLeavingToast, {
                   onNone: () => h.empty,
-                  onSome: ({ text }) => toast(model, text, true, h),
+                  onSome: ({ text }) =>
+                    toast(
+                      model,
+                      {
+                        key: text,
+                        text,
+                        isError: model.isToastError,
+                        isLeaving: true,
+                        dismiss: Message.DismissedToast(),
+                      },
+                      h,
+                    ),
                 }),
             }),
           ],
@@ -5014,20 +5049,36 @@ export const view = (sourceModel: Model, h: H): Document => {
   }
 }
 
-const toast = (model: Model, text: string, isLeaving: boolean, h: H): Html =>
-  h.keyed('div')(
+const toast = (
+  model: Model,
+  {
+    key,
     text,
+    isError,
+    isLeaving,
+    dismiss,
+  }: {
+    readonly key: string
+    readonly text: string
+    readonly isError: boolean
+    readonly isLeaving: boolean
+    readonly dismiss: Message
+  },
+  h: H,
+): Html =>
+  h.keyed('div')(
+    key,
     [
-      h.Class(`toast ${model.isToastError ? 'error' : ''}`),
-      h.Role(model.isToastError ? 'alert' : 'status'),
+      h.Class(`toast ${isError ? 'error' : ''}`),
+      h.Role(isError ? 'alert' : 'status'),
       ...(isLeaving
         ? [h.DataAttribute('state', 'leaving'), h.Inert(true)]
         : []),
     ],
     [
-      icon(model.isToastError ? 'alert' : 'check', h),
+      icon(isError ? 'alert' : 'check', h),
       h.p([], [text]),
-      model.isToastError &&
+      isError &&
       model.executionMode === 'Cloudflare' &&
       Option.isSome(model.maybeExecutorError)
         ? button(
@@ -5037,6 +5088,6 @@ const toast = (model: Model, text: string, isLeaving: boolean, h: H): Html =>
             h,
           )
         : h.empty,
-      iconButton('close', 'Dismiss notification', Message.DismissedToast(), h),
+      iconButton('close', 'Dismiss notification', dismiss, h),
     ],
   )
