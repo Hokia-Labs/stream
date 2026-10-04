@@ -175,6 +175,7 @@ export const Model = Schema.Struct({
     }),
   ),
   isWorkspaceMenuOpen: Schema.Boolean,
+  isTwinMenuOpen: Schema.Boolean,
   isUserMenuOpen: Schema.Boolean,
   hasAcknowledgedConsent: Schema.Boolean,
   hasLoadedNavigation: Schema.Boolean,
@@ -257,6 +258,7 @@ export const initialModel: Model = {
   sidebarTreeHeight: treeDefaultHeight,
   maybeTreeDrag: Option.none(),
   isWorkspaceMenuOpen: false,
+  isTwinMenuOpen: false,
   isUserMenuOpen: false,
   hasAcknowledgedConsent: false,
   hasLoadedNavigation: false,
@@ -2717,6 +2719,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     ToggledWorkspaceMenu: () => ({
       model: modifyFields(model, { isWorkspaceMenuOpen: value => !value }),
     }),
+    ToggledTwinMenu: () => ({
+      model: modifyFields(model, { isTwinMenuOpen: value => !value }),
+    }),
+    ClosedTwinMenu: () => ({
+      model: modifyFields(model, { isTwinMenuOpen: () => false }),
+    }),
     ClosedWorkspaceMenu: () => ({
       model: modifyFields(model, { isWorkspaceMenuOpen: () => false }),
     }),
@@ -3907,6 +3915,34 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 filterMapEvent: event =>
                   event.key === 'Escape'
                     ? Option.some(Message.ClosedWorkspaceMenu())
+                    : Option.none(),
+              }),
+            )
+          : Stream.empty,
+    },
+  ),
+  twinMenu: entry(
+    { isOpen: Schema.Boolean },
+    {
+      modelToDependencies: model => ({ isOpen: model.isTwinMenuOpen }),
+      dependenciesToStream: ({ isOpen }) =>
+        isOpen
+          ? Stream.merge(
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'click',
+                filterMapEvent: event =>
+                  event.target instanceof Element &&
+                  event.target.closest('.twin-more-toggle')
+                    ? Option.none()
+                    : Option.some(Message.ClosedTwinMenu()),
+              }),
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'keydown',
+                filterMapEvent: event =>
+                  event.key === 'Escape'
+                    ? Option.some(Message.ClosedTwinMenu())
                     : Option.none(),
               }),
             )

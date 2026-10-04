@@ -1532,41 +1532,49 @@ const changeHeader = (model: Model, h: H): Html => {
             ],
             [action.label],
           ),
-          h.details(
+          h.div(
             [h.Class('twin-more')],
             [
-              h.summary(
-                [h.Class('button outline'), h.AriaLabel('More actions')],
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button outline twin-more-toggle'),
+                  h.AriaLabel('More actions'),
+                  h.AriaExpanded(model.isTwinMenuOpen),
+                  h.OnClick(Message.ToggledTwinMenu()),
+                ],
                 ['⋯'],
               ),
-              h.div(
-                [h.Class('twin-more-menu')],
-                [
-                  h.button(
+              model.isTwinMenuOpen
+                ? h.div(
+                    [h.Class('twin-more-menu')],
                     [
-                      h.Type('button'),
-                      h.Disabled(!isUpgraded),
-                      h.OnClick(
-                        Message.ClickedTraceTwinArtifact({
-                          id: avionicsRequirementIds[0] ?? 'REQ-AVN-01',
-                        }),
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Disabled(!isUpgraded),
+                          h.OnClick(
+                            Message.ClickedTraceTwinArtifact({
+                              id: avionicsRequirementIds[0] ?? 'REQ-AVN-01',
+                            }),
+                          ),
+                        ],
+                        ['Trace in graph'],
+                      ),
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Disabled(!isUpgraded && !isRevB),
+                          h.Title(
+                            'Put back the original avionics and power assembly Rev A',
+                          ),
+                          h.OnClick(Message.ClickedResetTwin()),
+                        ],
+                        ['Reset to baseline'],
                       ),
                     ],
-                    ['Trace in graph'],
-                  ),
-                  h.button(
-                    [
-                      h.Type('button'),
-                      h.Disabled(!isUpgraded && !isRevB),
-                      h.Title(
-                        'Put back the original avionics and power assembly Rev A',
-                      ),
-                      h.OnClick(Message.ClickedResetTwin()),
-                    ],
-                    ['Reset to baseline'],
-                  ),
-                ],
-              ),
+                  )
+                : h.empty,
             ],
           ),
         ],

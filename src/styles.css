@@ -8379,14 +8379,9 @@ p.launch-estimate {
 .twin-more {
   position: relative;
 }
-.twin-more > summary {
-  list-style: none;
+.twin-more-toggle {
   min-width: 32px;
   justify-content: center;
-  cursor: pointer;
-}
-.twin-more > summary::-webkit-details-marker {
-  display: none;
 }
 .twin-more-menu {
   position: absolute;

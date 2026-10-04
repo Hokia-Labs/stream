@@ -195,6 +195,8 @@ export const Message = defineMessageUnion({
   ToggledSidebar: {},
   ToggledWorkspaceMenu: {},
   ClosedWorkspaceMenu: {},
+  ToggledTwinMenu: {},
+  ClosedTwinMenu: {},
   PressedCommandPalette: {},
   UpdatedPaletteQuery: { value: Schema.String },
   MovedPaletteHighlight: { delta: Schema.Number },
