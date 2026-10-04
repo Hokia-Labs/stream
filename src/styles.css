@@ -7613,8 +7613,6 @@ button.graph-cluster-head:hover {
 }
 .board-review-pair figure {
   margin: 0;
-  border: 1px solid var(--rule);
-  padding: var(--space-2);
 }
 .board-review-pair figcaption {
   font-size: var(--text-xs);
@@ -7624,23 +7622,11 @@ button.graph-cluster-head:hover {
 .board-review-canvas {
   height: 300px;
 }
-.board-review-3d {
-  margin: 0;
-  border: 1px solid var(--rule);
-  padding: var(--space-2);
-}
-.board-review-3d figcaption {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  margin-bottom: 6px;
-}
 .board-review-assembly {
   height: 440px;
 }
 .schematic-viewer {
   margin: 0;
-  border: 1px solid var(--rule);
-  padding: var(--space-2);
   display: grid;
   gap: var(--space-2);
 }
@@ -7683,10 +7669,6 @@ button.graph-cluster-head:hover {
   display: block;
   width: 100%;
   height: auto;
-}
-.schematic-viewer figcaption {
-  font-size: var(--text-xs);
-  color: var(--muted);
 }
 .diff-added {
   color: #15803d;
@@ -8314,8 +8296,6 @@ p.launch-estimate {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--line);
 }
 .tool-head .tc-lockup {
   padding: 0;
@@ -8336,15 +8316,6 @@ p.launch-estimate {
 }
 .spice-over {
   color: var(--danger, #c0362c);
-}
-.spice-log {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  background: var(--paper);
-  font-size: var(--text-xs);
-  line-height: 1.6;
-  white-space: pre-wrap;
 }
 .adi-logo {
   display: block;

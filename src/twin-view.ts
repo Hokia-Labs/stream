@@ -1797,7 +1797,6 @@ const schematicViewer = (model: Model, h: H): Html => {
         ),
         h.Alt(`KiCad schematic, ${board.name}, ${sheet}`),
       ]),
-      h.figcaption([], [`KiCad power board · ${board.name} · ${sheet}`]),
     ],
   )
 }
@@ -1811,16 +1810,7 @@ const schematicTab = (model: Model, h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
-      toolHead(
-        xpeditionLogo(h),
-        [
-          `${revBStem}_ECAD.zip`,
-          'Xpedition Designer · schematic delta vs Rev A',
-          'DRC 0 errors',
-          'Checked in to Teamcenter',
-        ],
-        h,
-      ),
+      toolHead(xpeditionLogo(h), [`${revBStem}_ECAD.zip`, 'DRC 0 errors'], h),
       schematicViewer(model, h),
       h.table(
         [h.Class('table board-review-table')],
@@ -1862,20 +1852,14 @@ const modelTab = (h: H): Html => {
   return h.div(
     [h.Class('board-review-body')],
     [
-      h.figure(
-        [h.Class('board-review-3d')],
-        [
-          h.figcaption(
-            [],
-            ['KiCad power board · Rev A (left) and Rev B (right)'],
-          ),
-          board([
-            h.Class('board-review-canvas board-review-assembly'),
-            h.AriaLabel('3D model of the KiCad power board, Rev A and Rev B'),
-          ]),
-        ],
+      board([
+        h.Class('board-review-canvas board-review-assembly'),
+        h.AriaLabel('3D model of the KiCad power board, Rev A and Rev B'),
+      ]),
+      h.p(
+        [h.Class('muted small')],
+        ['Rev A left, Rev B right. Drag to orbit, scroll to zoom.'],
       ),
-      h.p([h.Class('muted small')], ['Drag to orbit, scroll to zoom.']),
     ],
   )
 }
@@ -1884,7 +1868,7 @@ const heatMap = (revision: 'A' | 'B', h: H): Html =>
   h.figure(
     [h.Class('heat-map')],
     [
-      h.figcaption([], [revision === 'A' ? 'Rev A · before' : 'Rev B · after']),
+      h.figcaption([], [revision === 'A' ? 'Rev A' : 'Rev B']),
       h.img([
         h.Src(
           revision === 'A'
@@ -1905,15 +1889,7 @@ const electricalTab = (model: Model, h: H): Html => {
   return h.div(
     [h.Class('board-review-body')],
     [
-      toolHead(
-        ltspiceLogo(h),
-        [
-          `${revBStem}_bus.asc`,
-          'Batch run · transient, N−1',
-          `${results.length} .meas results from ${revBStem}_bus.log`,
-        ],
-        h,
-      ),
+      toolHead(ltspiceLogo(h), [`${revBStem}_bus.asc`, 'Transient, N−1'], h),
       h.table(
         [h.Class('table board-review-table')],
         [
@@ -1970,16 +1946,6 @@ const electricalTab = (model: Model, h: H): Html => {
           ),
         ],
       ),
-      h.pre(
-        [h.Class('spice-log'), h.AriaLabel('LTspice log excerpt')],
-        [
-          results
-            .map(
-              row => `${row.meas}: MAX(...)=${row.B.toFixed(4)} FROM 0 TO 0.5`,
-            )
-            .join('\n'),
-        ],
-      ),
     ],
   )
 }
@@ -1990,12 +1956,7 @@ const thermalTab = (h: H): Html =>
     [
       toolHead(
         ansysLogo(h),
-        [
-          `${revBStem}_thermal.wbpz`,
-          'Mechanical · steady-state thermal',
-          'Mesh 1.84 M elements',
-          'Solved',
-        ],
+        [`${revBStem}_thermal.wbpz`, 'Steady state · solved'],
         h,
       ),
       h.div([h.Class('board-review-pair')], [heatMap('A', h), heatMap('B', h)]),
