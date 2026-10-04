@@ -404,15 +404,6 @@ const plusIcon = (h: HtmlBuilder<Message>): Html =>
     ),
   ])
 
-const arrowIcon = (h: HtmlBuilder<Message>): Html =>
-  h.span([
-    h.Class('icon'),
-    h.AriaHidden(true),
-    h.InnerHTML(
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>',
-    ),
-  ])
-
 const percent = (value: number): string =>
   `${value >= 0 ? '+' : '−'}${Math.abs(value * 100).toFixed(1)}%`
 
@@ -1309,7 +1300,6 @@ export const twinPage = (model: Model, h: H): Html => {
   const isUpgraded = isAvionicsUpgraded(requirements)
   const isReviewed = model.twinReviewed.length === 3
   const pkg = model.maybeTwinPackage
-  const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
   const proposal = model.twinProposal
   const stage = !isUpgraded
@@ -1321,143 +1311,22 @@ export const twinPage = (model: Model, h: H): Html => {
       : model.twinCheck === 'Done'
         ? 5
         : 4
-  const next: Readonly<{
-    text: string
-    tone: string
-    message: Message | undefined
-    label: string
-  }> = !isUpgraded
-    ? {
-        text: 'ECP-0219 replaces the 0.9 kW cockpit unit with a 2.7 kW module. Pick it from Teamcenter.',
-        tone: '',
-        message: Message.OpenedTwinPartPicker({ slot: 'Cockpit' }),
-        label: 'Choose avionics module',
-      }
-    : !isRevB && proposal === 'Drafting'
-      ? {
-          text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. The power agent is drafting Rev B.`,
-          tone: 'bad',
-          message: undefined,
-          label: '',
-        }
-      : !isRevB && proposal === 'Pending'
-        ? {
-            text: `Rev B proposal is waiting for ${proposalReviewer.name} (${proposalReviewer.role.toLowerCase()}) to approve.`,
-            tone: '',
-            message: undefined,
-            label: '',
-          }
-        : !isRevB
-          ? {
-              text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. Ask the power agent for a redesign.`,
-              tone: 'bad',
-              message: Message.ClickedDraftTwinProposal(),
-              label:
-                proposal === 'Rejected'
-                  ? 'Ask agent to revise'
-                  : 'Ask agent for a redesign',
-            }
-          : model.twinCheck !== 'Done'
-            ? {
-                text: 'Rev B is approved and installed. Check the requirements against it.',
-                tone: 'ok',
-                message:
-                  model.twinCheck === 'Running'
-                    ? undefined
-                    : Message.ClickedRunTwinCheck(),
-                label: 'Check requirements',
-              }
-            : !isReviewed
-              ? {
-                  text: 'Sign off the requirement, thermal and mechanical reviews below.',
-                  tone: '',
-                  message: undefined,
-                  label: '',
-                }
-              : !hasReports
-                ? {
-                    text: 'All three reviews are signed. Draft the DO-254 reports.',
-                    tone: 'ok',
-                    message: undefined,
-                    label: '',
-                  }
-                : {
-                    text: isSent
-                      ? 'Package sent to the customer.'
-                      : 'Download the DO-254 package and send it to the customer.',
-                    tone: 'ok',
-                    message: undefined,
-                    label: '',
-                  }
-  const action = !isLoaded
-    ? h.button(
-        [
-          h.Type('button'),
-          h.Class('button primary'),
-          h.OnClick(Message.ClickedLoadTwinScenario()),
-        ],
-        [plusIcon(h), 'Load F-35 power scenario'],
-      )
-    : !isUpgraded
-      ? h.button(
-          [
-            h.Type('button'),
-            h.Class('button primary'),
-            h.OnClick(Message.OpenedTwinPartPicker({ slot: 'Cockpit' })),
-          ],
-          [arrowIcon(h), 'Swap in new avionics…'],
-        )
-      : !isRevB || model.twinCheck !== 'Done'
-        ? next.message
-          ? h.button(
-              [
-                h.Type('button'),
-                h.Class('button primary'),
-                h.OnClick(next.message),
-              ],
-              [arrowIcon(h), next.label],
-            )
-          : h.button(
-              [h.Type('button'), h.Class('button outline'), h.Disabled(true)],
-              [
-                proposal === 'Pending'
-                  ? 'Awaiting EE approval'
-                  : model.twinCheck === 'Running'
-                    ? 'Checking…'
-                    : 'Agent drafting…',
-              ],
-            )
-        : h.button(
-            [
-              h.Type('button'),
-              h.Class('button primary'),
-              h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
-              h.Title(
-                isReviewed
-                  ? 'Draft DO-254 reports'
-                  : 'Sign off all three reviews to draft',
-              ),
-              h.OnClick(
-                hasReports
-                  ? Message.ClickedDownloadTwinPackage()
-                  : Message.ClickedGenerateTwinPackage(),
-              ),
-            ],
-            [
-              model.isGeneratingTwinPackage
-                ? 'Packaging…'
-                : hasReports
-                  ? 'Download DO-254 package'
-                  : 'Draft DO-254 reports',
-            ],
-          )
   return h.div(
     [h.Class('twin-page')],
     [
       pageHeading(
         'Digital twin',
         'Inspect the hardware, place a change in the systems model, review its impact, and package the updated DO-254 data.',
-        action,
+        isLoaded
+          ? h.empty
+          : h.button(
+              [
+                h.Type('button'),
+                h.Class('button primary'),
+                h.OnClick(Message.ClickedLoadTwinScenario()),
+              ],
+              [plusIcon(h), 'Load F-35 power scenario'],
+            ),
         h,
       ),
       !isLoaded
@@ -1511,23 +1380,6 @@ export const twinPage = (model: Model, h: H): Html => {
               h.aside(
                 [h.Class('panel twin-side')],
                 [
-                  h.div(
-                    [h.Class(`twin-next ${next.tone}`)],
-                    [
-                      h.p([h.Class('twin-next-label')], ['Next step']),
-                      h.p([h.Class('twin-next-text')], [next.text]),
-                      next.message
-                        ? h.button(
-                            [
-                              h.Type('button'),
-                              h.Class('button primary small'),
-                              h.OnClick(next.message),
-                            ],
-                            [next.label],
-                          )
-                        : h.empty,
-                    ],
-                  ),
                   h.h2([h.Class('twin-heading')], ['Installed hardware']),
                   slotCard(model, 'Cockpit', h),
                   slotCard(model, 'Power', h),
