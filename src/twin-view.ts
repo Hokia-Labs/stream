@@ -1570,6 +1570,10 @@ const changePanel = (model: Model, h: H): Html => {
   return h.div(
     [h.Class('twin-panel-stack')],
     [
+      h.div(
+        [h.Class('twin-slots'), h.AriaLabel('Installed parts')],
+        [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
+      ),
       isRevB ? checkPanel(model, h) : h.empty,
       proposalPanel(model, isUpgraded, isRevB, h),
     ],
@@ -1684,10 +1688,6 @@ export const twinPage = (model: Model, h: H): Html => {
                 ),
               ),
             ],
-          ),
-          h.aside(
-            [h.Class('twin-side')],
-            [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
           ),
         ],
       ),

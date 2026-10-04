@@ -8515,15 +8515,16 @@ p.launch-estimate {
   background: radial-gradient(circle, var(--accent) 0 3px, transparent 3.5px);
 }
 .twin-page .twin-layout {
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 0;
+}
+.twin-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 .twin-page .twin-canvas {
   height: 440px;
-}
-.twin-page .twin-side {
-  gap: 8px;
-  padding: 0;
 }
 .twin-page .twin-slot {
   margin: 0;
