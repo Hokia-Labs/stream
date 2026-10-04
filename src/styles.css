@@ -7792,29 +7792,10 @@ button.graph-cluster-head:hover {
 .board-review-table .badge {
   margin-left: 6px;
 }
-.heat-grid {
-  display: grid;
-  grid-template-columns: repeat(24, 1fr);
-  aspect-ratio: 2 / 1;
-}
-.heat-legend {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-}
-.heat-legend-bar {
-  flex: 1;
-  max-width: 320px;
-  height: 10px;
-  background: linear-gradient(
-    90deg,
-    hsl(222 85% 50%),
-    hsl(166 85% 50%),
-    hsl(111 85% 50%),
-    hsl(55 85% 50%),
-    hsl(0 85% 50%)
-  );
+.heat-map img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .board-review-facts {
   display: grid;

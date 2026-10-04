@@ -5,9 +5,6 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import {
   type DiffState,
   type SchematicBlock,
-  heatColor,
-  heatField,
-  heatScale,
   isEngineerDesign,
   pdr,
   pdrItems,
@@ -2097,28 +2094,23 @@ const modelTab = (h: H): Html => {
   )
 }
 
-const heatColumns = 24
-const heatRows = 12
-
 const heatMap = (revision: 'A' | 'B', h: H): Html =>
   h.figure(
     [h.Class('heat-map')],
     [
-      h.figcaption([], [`Rev ${revision} · module board, worst module, N−1`]),
-      h.div(
-        [
-          h.Class('heat-grid'),
-          h.Role('img'),
-          h.AriaLabel(`Temperature contour, Rev ${revision}`),
-        ],
-        heatField(revision, heatColumns, heatRows).map((temperature, index) =>
-          h.keyed('span')(
-            String(index),
-            [h.Style({ background: heatColor(temperature) })],
-            [],
-          ),
+      h.figcaption([], [revision === 'A' ? 'Rev A · before' : 'Rev B · after']),
+      h.img([
+        h.Src(
+          revision === 'A'
+            ? '/ansys-thermal-rev-a.webp'
+            : '/ansys-thermal-rev-b.webp',
         ),
-      ),
+        h.Alt(
+          revision === 'A'
+            ? 'Ansys steady-state thermal result, Rev A'
+            : 'Ansys steady-state thermal result, Rev B',
+        ),
+      ]),
     ],
   )
 
@@ -2221,14 +2213,6 @@ const thermalTab = (h: H): Html =>
         h,
       ),
       h.div([h.Class('board-review-pair')], [heatMap('A', h), heatMap('B', h)]),
-      h.div(
-        [h.Class('heat-legend')],
-        [
-          h.span([], [`${heatScale.min} °C`]),
-          h.span([h.Class('heat-legend-bar')], []),
-          h.span([], [`${heatScale.max} °C · same scale both revisions`]),
-        ],
-      ),
       h.table(
         [h.Class('table board-review-table')],
         [
