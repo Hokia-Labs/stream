@@ -2,11 +2,11 @@ import { Array, Effect, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 export const Page = Schema.Literals([
-  'Files',
+  'Requirements',
+  'Datasets',
   'Inbox',
   'Digital twin',
   'Systems graph',
-  'Requirements',
   'Agent fleet',
   'Runs',
   'Branches',

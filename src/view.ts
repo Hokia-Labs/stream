@@ -59,14 +59,13 @@ import {
 } from './insights'
 import {
   doorsLogo,
-  doorsPanel,
   fileIcon,
   jiraLogo,
   jiraPanel,
   syncStatus,
   syncedWith,
 } from './integration-view'
-import { doorsIdFor, doorsSync, jiraHandoffs } from './integrations'
+import { doorsIdFor, jiraHandoffs } from './integrations'
 import { sidebarMaxWidth, sidebarMinWidth } from './layout'
 import type { Model } from './main'
 import {
@@ -194,10 +193,10 @@ const empty = (
     ],
   )
 const pages: ReadonlyArray<{ page: Page; icon: string }> = [
-  { page: 'Files', icon: 'file' },
+  { page: 'Requirements', icon: 'file' },
+  { page: 'Datasets', icon: 'file' },
   { page: 'Digital twin', icon: 'box' },
   { page: 'Systems graph', icon: 'graph' },
-  { page: 'Requirements', icon: 'file' },
   { page: 'Branches', icon: 'layers' },
   { page: 'Agent fleet', icon: 'agent' },
   { page: 'Runs', icon: 'play' },
@@ -598,12 +597,12 @@ const breadcrumbItems = (model: Model, h: H): ReadonlyArray<Html> => {
     crumb(
       'Atlas launch program',
       'crumb-program',
-      model.page === 'Files' && Option.isNone(detail)
+      model.page === 'Datasets' && Option.isNone(detail)
         ? Option.none()
-        : Option.some(Message.SelectedPage({ page: 'Files' })),
-      'Files',
+        : Option.some(Message.SelectedPage({ page: 'Datasets' })),
+      'Datasets',
     ),
-    ...(model.page === 'Files'
+    ...(model.page === 'Datasets'
       ? []
       : [
           icon('chevron', h),
@@ -1672,31 +1671,25 @@ const overview = (model: Model, h: H): Html => {
   return h.div(
     [],
     [
-      pageHeading('Files', '', h.empty, h),
-      h.div(
-        [h.Class('files-subheading')],
-        [
-          h.h2([], ['Requirements']),
-          h.span([h.Class('files-synced')], ['Synced with', doorsLogo(h)]),
-        ],
-      ),
-      doorsPanel(doorsSync(model.workspace.requirements), h),
-      h.div(
-        [h.Class('files-subheading')],
-        [
-          h.h2([], ['Datasets']),
-          h.span(
-            [h.Class('files-synced')],
-            [
-              'Synced with',
-              h.img([
-                h.Src('/teamcenter-logo.png'),
-                h.Alt('Teamcenter'),
-                h.Class('tc-logo'),
-              ]),
-            ],
-          ),
-        ],
+      pageHeading(
+        'Datasets',
+        '',
+        h.div(
+          [h.Class('heading-actions')],
+          [
+            syncedWith(
+              [
+                h.img([
+                  h.Src('/teamcenter-logo.png'),
+                  h.Alt('Teamcenter'),
+                  h.Class('tc-logo'),
+                ]),
+              ],
+              h,
+            ),
+          ],
+        ),
+        h,
       ),
       h.section(
         [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
@@ -4935,7 +4928,7 @@ export const view = (sourceModel: Model, h: H): Document => {
             h.main(
               [h.Class('main-content'), h.Id('main')],
               [
-                model.page === 'Files'
+                model.page === 'Datasets'
                   ? overview(model, h)
                   : model.page === 'Inbox'
                     ? inboxPage(model, h)

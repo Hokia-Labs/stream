@@ -17,10 +17,10 @@ export type PaletteItem = Readonly<{
 }>
 
 export const pageShortcuts: ReadonlyArray<{ page: Page; key: string }> = [
-  { page: 'Files', key: 'F' },
+  { page: 'Requirements', key: 'R' },
+  { page: 'Datasets', key: 'D' },
   { page: 'Digital twin', key: 'T' },
   { page: 'Systems graph', key: 'S' },
-  { page: 'Requirements', key: 'R' },
   { page: 'Branches', key: 'B' },
   { page: 'Agent fleet', key: 'A' },
   { page: 'Runs', key: 'N' },

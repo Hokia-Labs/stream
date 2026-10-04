@@ -1,11 +1,6 @@
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
-import {
-  type DoorsRow,
-  type JiraStatus,
-  type JiraTicket,
-  doorsModule,
-} from './integrations'
+import type { JiraStatus, JiraTicket } from './integrations'
 import type { Message } from './message'
 
 type H = HtmlBuilder<Message>
@@ -252,92 +247,3 @@ export const jiraPanel = (tickets: ReadonlyArray<JiraTicket>, h: H): Html =>
       ),
     ],
   )
-
-export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
-  const changed = rows.filter(row => row.state !== 'In sync').length
-  return h.section(
-    [h.Class('panel sync-panel'), h.AriaLabel('DOORS module')],
-    [
-      h.table(
-        [h.Class('sync-table')],
-        [
-          h.thead(
-            [],
-            [
-              h.tr(
-                [],
-                ['Type', 'Requirement', 'DOORS', 'Stream', 'Status'].map(
-                  label => h.th([], [label]),
-                ),
-              ),
-            ],
-          ),
-          h.tbody(
-            [],
-            [
-              h.tr(
-                [h.Class('sync-group')],
-                [
-                  h.th(
-                    [h.Colspan(4)],
-                    [
-                      h.span([h.Class('mono')], [doorsModule.id]),
-                      h.span(
-                        [h.Class('muted')],
-                        [
-                          ` · ${doorsModule.title} · baseline ${doorsModule.baseline}`,
-                        ],
-                      ),
-                    ],
-                  ),
-                  h.th(
-                    [],
-                    [
-                      h.span(
-                        [
-                          h.Class(
-                            `sync-state ${changed > 0 ? 'pending' : 'ok'}`,
-                          ),
-                        ],
-                        [
-                          changed > 0
-                            ? `${changed} of ${rows.length} changed`
-                            : `${rows.length} in sync`,
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              ...rows.map(row =>
-                h.keyed('tr')(
-                  row.id,
-                  [],
-                  [
-                    h.td(
-                      [h.Class('sync-file muted')],
-                      [fileIcon(row.type, h), row.type],
-                    ),
-                    h.td(
-                      [],
-                      [
-                        h.span([h.Class('mono muted')], [`${row.id} `]),
-                        row.title,
-                      ],
-                    ),
-                    h.td([h.Class('mono')], [`${row.doorsId} · ${row.doors}`]),
-                    h.td([h.Class('mono')], [`${row.id}/${row.stream}`]),
-                    h.td(
-                      [h.Class('sync-status-cell')],
-                      [syncStatus(row.state, h)],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
-  )
-}
