@@ -265,7 +265,7 @@ export const initialModel: Model = {
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
-  twinPanelTab: 'Requirements',
+  twinPanelTab: 'Change',
   twinReviewed: [],
   twinProposal: 'None',
   twinCheck: 'Not run',
@@ -3206,7 +3206,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, {
           twinFocus: () => 'Airframe',
-          twinPanelTab: () => 'Requirements',
+          twinPanelTab: () => 'Change',
           twinProposal: () => 'None',
           twinCheck: () => 'Not run',
           twinReviewed: () => [],
