@@ -263,7 +263,7 @@ export const changeImpactDocument = (
     '## 2. Change classification',
     '',
     changes.length > 0
-      ? '(U) Proposed: **Major**. Converter modules rise from 4 to 5 to restore N−1 capacity for the cockpit avionics upgrade (ECP-0219), and the thermal, electrical, and structural interfaces change. Certification authority concurrence is required.'
+      ? '(U) Proposed: **Major**. Converter modules rise from 4 to 5 to restore N−1 capacity for the cockpit avionics upgrade, and the thermal, electrical, and structural interfaces change. Certification authority concurrence is required.'
       : '(U) Not applicable.',
     '',
     '## 3. Changed items',

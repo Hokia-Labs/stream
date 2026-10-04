@@ -21,6 +21,7 @@ import {
   type Requirement,
   type TwinDesignField,
   TwinFocus,
+  TwinPanelTab,
   type TwinReviewItem,
   TwinRevision,
   type TwinSlot,
@@ -51,7 +52,6 @@ import {
   hasTwinScenario,
   installedPart,
   isAvionicsUpgraded,
-  limitLabel,
   loadBudget,
   lowMargin,
   proposalPartChanges,
@@ -673,43 +673,6 @@ export const twinPartPicker = (
   )
 }
 
-const workflowSteps = (stage: number, canReset: boolean, h: H): Html =>
-  h.div(
-    [h.Class('twin-steps-row')],
-    [
-      h.ol(
-        [h.Class('twin-steps')],
-        [
-          'Swap avionics',
-          'Requirements revised',
-          'Agent proposes Rev B',
-          'EE approval',
-          'Re-verify',
-        ].map((label, index) =>
-          h.keyed('li')(
-            label,
-            [
-              h.Class(
-                `twin-step ${index < stage ? 'done' : index === stage ? 'current' : ''}`,
-              ),
-            ],
-            [h.span([h.Class('twin-step-index')], [String(index + 1)]), label],
-          ),
-        ),
-      ),
-      h.button(
-        [
-          h.Type('button'),
-          h.Class('button outline small twin-reset'),
-          h.Disabled(!canReset),
-          h.Title('Put back the original avionics and power assembly Rev A'),
-          h.OnClick(Message.ClickedResetTwin()),
-        ],
-        ['Reset'],
-      ),
-    ],
-  )
-
 const proposalPanel = (
   model: Model,
   isUpgraded: boolean,
@@ -973,7 +936,7 @@ const checkPanel = (model: Model, h: H): Html => {
             ],
             [`${passed} of ${checks.length} checks pass`],
           ),
-          ` · ${queue.length} artifacts need re-verification before ECP-0219 closes`,
+          ` · ${queue.length} artifacts need re-verification before the change closes`,
         ],
       ),
       h.table(
@@ -1103,463 +1066,802 @@ const checkPanel = (model: Model, h: H): Html => {
   )
 }
 
+const requirementChangesPanel = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const changes = twinChanges(requirements)
+  const isRevB = twinRevision(requirements) === 'B'
+  return h.section(
+    [h.Class('panel twin-wide')],
+    [
+      h.div(
+        [h.Class('twin-section-head')],
+        [
+          h.h2(
+            [h.Class('twin-heading')],
+            [`Requirement changes · ${changes.length}`],
+          ),
+        ],
+      ),
+      changes.length === 0
+        ? h.p(
+            [h.Class('muted small-text')],
+            ['Swap in the new avionics to see which requirements change.'],
+          )
+        : h.table(
+            [h.Class('twin-table')],
+            [
+              h.thead(
+                [],
+                [
+                  h.tr(
+                    [],
+                    [
+                      'Artifact',
+                      'Subsystem',
+                      'Before (Rev A)',
+                      'After',
+                      'Status',
+                      '',
+                    ].map(label => h.th([], [label])),
+                  ),
+                ],
+              ),
+              h.tbody(
+                [],
+                changes.map(change =>
+                  h.keyed('tr')(
+                    change.artifact.id,
+                    [],
+                    [
+                      h.td(
+                        [],
+                        [
+                          idLink(
+                            model,
+                            change.artifact.id,
+                            h,
+                            'mono small-text',
+                          ),
+                          h.div([], [change.artifact.title]),
+                        ],
+                      ),
+                      h.td([], [change.artifact.subsystem]),
+                      h.td(
+                        [h.Class('twin-before')],
+                        linkifyIds(model, change.before, h),
+                      ),
+                      h.td(
+                        [h.Class('twin-after')],
+                        linkifyIds(model, change.after, h),
+                      ),
+                      h.td(
+                        [],
+                        [
+                          h.span(
+                            [h.Class(badgeClass(change.status))],
+                            [change.status],
+                          ),
+                          h.div(
+                            [h.Class('mono small-text muted')],
+                            [`r${change.revision}`],
+                          ),
+                        ],
+                      ),
+                      h.td(
+                        [],
+                        [
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('button outline small'),
+                              h.OnClick(
+                                Message.ClickedTraceTwinArtifact({
+                                  id: change.artifact.id,
+                                }),
+                              ),
+                            ],
+                            ['Trace in graph'],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      signoffFooter(
+        model,
+        'Requirements',
+        `Reviewed the ${changes.length} requirement changes above?`,
+        isRevB,
+        h,
+      ),
+    ],
+  )
+}
+
+const do254Panel = (model: Model, h: H): Html => {
+  const isRevB = twinRevision(model.workspace.requirements) === 'B'
+  const isReviewed = model.twinReviewed.length === twinSignoffs.length
+  const pkg = model.maybeTwinPackage
+  const hasReports = model.twinReports.length > 0
+  return h.section(
+    [h.Class('panel twin-wide')],
+    [
+      h.div(
+        [h.Class('twin-section-head')],
+        [h.h2([h.Class('twin-heading')], ['DO-254 data package'])],
+      ),
+      Option.match(pkg, {
+        onNone: () =>
+          hasReports
+            ? h.div(
+                [],
+                [
+                  reportEditor(model, h),
+                  h.div(
+                    [h.Class('twin-package-actions')],
+                    [
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button primary'),
+                          h.Disabled(model.isGeneratingTwinPackage),
+                          h.OnClick(Message.ClickedDownloadTwinPackage()),
+                        ],
+                        [
+                          model.isGeneratingTwinPackage
+                            ? 'Packaging…'
+                            : 'Download DO-254 package',
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : h.div(
+                [],
+                [
+                  h.p(
+                    [h.Class('muted small-text')],
+                    [
+                      isRevB && isReviewed
+                        ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, analysis results, and a SHA-256 manifest as one zip.'
+                        : 'Available after Rev B is placed and all three sign-offs are in.',
+                    ],
+                  ),
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button primary'),
+                      h.Disabled(
+                        !isRevB || !isReviewed || model.isGeneratingTwinPackage,
+                      ),
+                      h.OnClick(Message.ClickedGenerateTwinPackage()),
+                    ],
+                    [
+                      model.isGeneratingTwinPackage
+                        ? 'Packaging…'
+                        : 'Draft DO-254 reports',
+                    ],
+                  ),
+                ],
+              ),
+        onSome: item =>
+          h.div(
+            [h.Class('twin-package')],
+            [
+              h.dl(
+                [h.Class('twin-facts')],
+                [
+                  h.dt([], ['Package']),
+                  h.dd([h.Class('mono')], [item.name]),
+                  h.dt([], ['Size']),
+                  h.dd(
+                    [h.Class('mono')],
+                    [`${(item.bytes / 1024).toFixed(1)} KB`],
+                  ),
+                  h.dt([], ['SHA-256']),
+                  h.dd([h.Class('mono')], [item.digest.slice(0, 16) + '…']),
+                  h.dt([], ['Files']),
+                  h.dd([h.Class('mono')], [item.files.join(' · ')]),
+                ],
+              ),
+              reportEditor(model, h),
+              h.div(
+                [h.Class('twin-package-actions')],
+                [
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button outline'),
+                      h.OnClick(Message.ClickedDownloadTwinPackage()),
+                    ],
+                    ['Download again'],
+                  ),
+                  item.isSent
+                    ? h.span([h.Class('badge positive')], ['Sent to customer'])
+                    : h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button primary'),
+                          h.OnClick(Message.ClickedMarkTwinPackageSent()),
+                        ],
+                        ['Mark as sent to customer'],
+                      ),
+                ],
+              ),
+              h.p(
+                [h.Class('muted small-text')],
+                [
+                  'Stream does not email the customer. Send the zip through your usual channel, then mark it as sent.',
+                ],
+              ),
+            ],
+          ),
+      }),
+    ],
+  )
+}
+type TwinAction = Readonly<{
+  label: string
+  message: Message
+  isDisabled: boolean
+}>
+
+const twinAction = (
+  label: string,
+  message: Message,
+  isDisabled = false,
+): TwinAction => ({ label, message, isDisabled })
+
+const nextAction = (model: Model): TwinAction => {
+  const requirements = model.workspace.requirements
+  const proposal = model.twinProposal
+  if (!isAvionicsUpgraded(requirements)) {
+    return twinAction(
+      'Replace cockpit avionics…',
+      Message.OpenedTwinPartPicker({ slot: 'Cockpit' }),
+    )
+  }
+  if (twinRevision(requirements) !== 'B') {
+    return proposal === 'Drafting'
+      ? twinAction('Drafting Rev B…', Message.ClickedDraftTwinProposal(), true)
+      : proposal === 'Pending'
+        ? twinAction('Review Rev A → Rev B', Message.OpenedBoardReview())
+        : proposal === 'Rejected'
+          ? twinAction(
+              'Ask agent to revise',
+              Message.ClickedDraftTwinProposal(),
+            )
+          : twinAction(
+              'Ask agent for a redesign',
+              Message.ClickedDraftTwinProposal(),
+            )
+  }
+  if (model.twinCheck !== 'Done') {
+    return model.twinCheck === 'Running'
+      ? twinAction('Checking…', Message.ClickedRunTwinCheck(), true)
+      : twinAction('Check requirements', Message.ClickedRunTwinCheck())
+  }
+  if (model.twinReviewed.length < twinSignoffs.length) {
+    return twinAction(
+      'Open sign-off',
+      Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
+    )
+  }
+  if (Option.isNone(model.maybeTwinPackage) && model.twinReports.length === 0) {
+    return twinAction(
+      model.isGeneratingTwinPackage
+        ? 'Drafting reports…'
+        : 'Draft DO-254 reports',
+      Message.ClickedGenerateTwinPackage(),
+      model.isGeneratingTwinPackage,
+    )
+  }
+  return twinAction(
+    'Open DO-254 package',
+    Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
+  )
+}
+
+const changeStatus = (
+  model: Model,
+): Readonly<{ label: string; tone: string }> => {
+  const requirements = model.workspace.requirements
+  const proposal = model.twinProposal
+  if (!isAvionicsUpgraded(requirements)) {
+    return { label: 'Baseline', tone: 'neutral' }
+  }
+  if (twinRevision(requirements) !== 'B') {
+    return proposal === 'Pending'
+      ? { label: 'In review', tone: 'warning' }
+      : proposal === 'Rejected'
+        ? { label: 'Rejected', tone: 'danger' }
+        : proposal === 'Drafting'
+          ? { label: 'Drafting', tone: 'neutral' }
+          : { label: 'Impact', tone: 'warning' }
+  }
+  return Option.match(model.maybeTwinPackage, {
+    onSome: item =>
+      item.isSent
+        ? { label: 'Package sent', tone: 'positive' }
+        : { label: 'Package ready', tone: 'positive' },
+    onNone: () =>
+      model.twinReviewed.length === twinSignoffs.length
+        ? { label: 'Signed off', tone: 'positive' }
+        : model.twinCheck === 'Done'
+          ? { label: 'Verified', tone: 'positive' }
+          : { label: 'Approved', tone: 'positive' },
+  })
+}
+
+const changeHeader = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const isUpgraded = isAvionicsUpgraded(requirements)
+  const isRevB = twinRevision(requirements) === 'B'
+  const cockpit = installedPart(requirements, 'Cockpit')
+  const power = installedPart(requirements, 'Power')
+  const status = changeStatus(model)
+  const action = nextAction(model)
+  const title = !isUpgraded
+    ? 'Baseline configuration'
+    : isRevB
+      ? `Power assembly ${power.id} · Rev ${power.revision}`
+      : `Power assembly ${power.id} Rev ${power.revision} → ${assemblyRevB.id} Rev ${assemblyRevB.revision}`
+  const meta = !isUpgraded
+    ? `Cockpit ${cockpit.id} Rev ${cockpit.revision} · Power ${power.id} Rev ${power.revision}`
+    : `Triggered by cockpit avionics ${cockpit.id} Rev ${cockpit.revision} · ${avionicsRequirementIds.length} requirements revised`
+  return h.header(
+    [h.Class('twin-head')],
+    [
+      h.div(
+        [h.Class('twin-head-main')],
+        [
+          h.p(
+            [h.Class('eyebrow')],
+            [isUpgraded ? 'Digital twin · Change' : 'Digital twin'],
+          ),
+          h.h1([h.Class('twin-title')], [title]),
+          h.div(
+            [h.Class('twin-head-meta')],
+            [
+              h.span([h.Class(`badge ${status.tone}`)], [status.label]),
+              ...jiraHandoffs(requirements, model.twinProposal).map(ticket =>
+                jiraChip(ticket, h),
+              ),
+              h.span([h.Class('muted')], [meta]),
+            ],
+          ),
+        ],
+      ),
+      h.div(
+        [h.Class('twin-head-actions')],
+        [
+          isUpgraded
+            ? h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button outline'),
+                  h.OnClick(
+                    Message.ClickedTraceTwinArtifact({
+                      id: avionicsRequirementIds[0] ?? 'REQ-AVN-01',
+                    }),
+                  ),
+                ],
+                ['Trace in graph'],
+              )
+            : h.empty,
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.Disabled(action.isDisabled),
+              h.OnClick(action.message),
+            ],
+            [action.label],
+          ),
+          h.details(
+            [h.Class('twin-more')],
+            [
+              h.summary(
+                [h.Class('button outline'), h.AriaLabel('More actions')],
+                ['⋯'],
+              ),
+              h.div(
+                [h.Class('twin-more-menu')],
+                [
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Disabled(!isUpgraded && !isRevB),
+                      h.Title(
+                        'Put back the original avionics and power assembly Rev A',
+                      ),
+                      h.OnClick(Message.ClickedResetTwin()),
+                    ],
+                    ['Reset to baseline'],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
+const lifecycle = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const isUpgraded = isAvionicsUpgraded(requirements)
+  const isRevB = twinRevision(requirements) === 'B'
+  const proposal = model.twinProposal
+  const checks = requirementChecks('B')
+  const passed = checks.filter(check => check.isPass).length
+  const stages: ReadonlyArray<
+    Readonly<{ label: string; meta: string; isDone: boolean }>
+  > = [
+    {
+      label: 'Impact',
+      meta: isUpgraded
+        ? `${avionicsRequirementIds.length} requirements`
+        : 'No change yet',
+      isDone: isUpgraded,
+    },
+    {
+      label: 'Proposed',
+      meta: proposal === 'Drafting' ? 'Power agent drafting…' : 'Power agent',
+      isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
+    },
+    {
+      label: 'EE approval',
+      meta:
+        proposal === 'Rejected' && !isRevB ? 'Rejected' : proposalReviewer.name,
+      isDone: isRevB,
+    },
+    {
+      label: 'Verified',
+      meta:
+        isRevB && model.twinCheck === 'Done'
+          ? `${passed}/${checks.length} checks`
+          : 'Requirement check',
+      isDone: isRevB && model.twinCheck === 'Done',
+    },
+    {
+      label: 'Signed off',
+      meta: `${model.twinReviewed.length}/${twinSignoffs.length} disciplines`,
+      isDone: isRevB && model.twinReviewed.length === twinSignoffs.length,
+    },
+    {
+      label: 'DO-254',
+      meta: Option.match(model.maybeTwinPackage, {
+        onNone: () =>
+          model.twinReports.length > 0 ? 'Reports drafted' : 'Data package',
+        onSome: item => (item.isSent ? 'Sent' : 'Packaged'),
+      }),
+      isDone: Option.match(model.maybeTwinPackage, {
+        onNone: () => false,
+        onSome: item => item.isSent,
+      }),
+    },
+  ]
+  const current = stages.findIndex(stage => !stage.isDone)
+  return h.ol(
+    [h.Class('twin-life'), h.AriaLabel('Change lifecycle')],
+    stages.map((stage, index) =>
+      h.keyed('li')(
+        stage.label,
+        [
+          h.Class(
+            `twin-life-stage ${stage.isDone ? 'done' : index === current ? 'current' : ''}`,
+          ),
+        ],
+        [
+          h.span([h.Class('twin-life-mark'), h.AriaHidden(true)], []),
+          h.span(
+            [h.Class('twin-life-text')],
+            [
+              h.span([h.Class('twin-life-label')], [stage.label]),
+              h.span([h.Class('twin-life-meta')], [stage.meta]),
+            ],
+          ),
+        ],
+      ),
+    ),
+  )
+}
+
+type StatusTone = 'ok' | 'warn' | 'active' | 'bad' | 'idle'
+
+const statusCard = (
+  tone: StatusTone,
+  title: string,
+  detail: string,
+  h: H,
+): Html =>
+  h.div(
+    [h.Class(`twin-status ${tone}`)],
+    [
+      h.span([h.Class('twin-status-mark'), h.AriaHidden(true)], []),
+      h.div(
+        [],
+        [
+          h.p([h.Class('twin-status-title')], [title]),
+          h.p([h.Class('twin-status-detail')], [detail]),
+        ],
+      ),
+    ],
+  )
+
+const statusCards = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const isUpgraded = isAvionicsUpgraded(requirements)
+  const isRevB = twinRevision(requirements) === 'B'
+  const proposal = model.twinProposal
+  const hasProposal =
+    isRevB || proposal === 'Pending' || proposal === 'Rejected'
+  const spice = ltspiceResults()
+  const spicePass = spice.filter(result => result.B <= result.limit).length
+  const ansysPass = analysisRows.filter(row =>
+    withinLimit(row, row.revB),
+  ).length
+  const checks = requirementChecks('B')
+  const passed = checks.filter(check => check.isPass).length
+  const signed = model.twinReviewed.length
+  const revised = `${avionicsRequirementIds.length} requirements revised`
+  return h.div(
+    [h.Class('twin-status-list'), h.AriaLabel('Change status')],
+    [
+      hasProposal
+        ? statusCard(
+            spicePass === spice.length && ansysPass === analysisRows.length
+              ? 'ok'
+              : 'warn',
+            'Analysis checks passed',
+            `LTspice ${spicePass}/${spice.length} · Ansys ${ansysPass}/${analysisRows.length} · Xpedition DRC 0`,
+            h,
+          )
+        : statusCard(
+            proposal === 'Drafting' ? 'active' : 'idle',
+            'Analysis checks',
+            proposal === 'Drafting'
+              ? 'Running with the agent proposal…'
+              : 'Run with the agent proposal',
+            h,
+          ),
+      !isUpgraded
+        ? statusCard('idle', 'Requirements', 'No changes from baseline', h)
+        : isRevB && model.twinCheck === 'Done'
+          ? statusCard(
+              passed === checks.length ? 'ok' : 'bad',
+              revised,
+              `${passed} of ${checks.length} checks pass on Rev B`,
+              h,
+            )
+          : statusCard('warn', revised, 'DOORS change set pending', h),
+      isRevB
+        ? statusCard(
+            'ok',
+            'EE approved',
+            `${proposalReviewer.name} · via Jira`,
+            h,
+          )
+        : proposal === 'Pending'
+          ? statusCard(
+              'active',
+              'Approval required',
+              `${proposalReviewer.name} · ${proposalReviewer.role}`,
+              h,
+            )
+          : proposal === 'Rejected'
+            ? statusCard('bad', 'Rejected', `By ${proposalReviewer.name}`, h)
+            : statusCard('idle', 'EE approval', 'Not requested yet', h),
+      !isRevB
+        ? statusCard('idle', 'Sign-off', 'Opens once Rev B is approved', h)
+        : statusCard(
+            signed === twinSignoffs.length ? 'ok' : 'active',
+            'Sign-off',
+            `${signed} of ${twinSignoffs.length} disciplines signed`,
+            h,
+          ),
+    ],
+  )
+}
+
+const twinActivity = (model: Model): ReadonlyArray<string> => {
+  const events = model.workspace.events
+  const start = events.findIndex(event => event.includes('scenario added'))
+  return start < 0 ? [] : events.slice(0, start + 1)
+}
+
+const activityPanel = (model: Model, h: H): Html => {
+  const events = twinActivity(model)
+  return h.section(
+    [h.Class('panel twin-wide'), h.AriaLabel('Activity')],
+    [
+      events.length === 0
+        ? h.p([h.Class('muted small-text')], ['No activity yet.'])
+        : h.ol(
+            [h.Class('twin-activity')],
+            events.map((event, index) =>
+              h.keyed('li')(
+                String(events.length - index),
+                [],
+                [
+                  h.span(
+                    [h.Class('twin-activity-dot'), h.AriaHidden(true)],
+                    [],
+                  ),
+                  h.span([], [event]),
+                ],
+              ),
+            ),
+          ),
+    ],
+  )
+}
+
+const panelTabs = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const counts: Readonly<Record<TwinPanelTab, string>> = {
+    Change: '',
+    Requirements: String(twinChanges(requirements).length),
+    'Sign-off': `${model.twinReviewed.length}/${twinSignoffs.length}`,
+    'DO-254': '',
+    Activity: String(twinActivity(model).length),
+  }
+  return h.div(
+    [h.Class('twin-tabs'), h.Role('tablist'), h.AriaLabel('Change details')],
+    TwinPanelTab.literals.map(tab =>
+      h.keyed('button')(
+        tab,
+        [
+          h.Type('button'),
+          h.Role('tab'),
+          h.AriaSelected(tab === model.twinPanelTab),
+          h.Class(`twin-tab ${tab === model.twinPanelTab ? 'active' : ''}`),
+          h.OnClick(Message.SelectedTwinPanelTab({ tab })),
+        ],
+        [
+          tab,
+          counts[tab]
+            ? h.span([h.Class('twin-tab-count')], [counts[tab]])
+            : h.empty,
+        ],
+      ),
+    ),
+  )
+}
+
+const changePanel = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const isUpgraded = isAvionicsUpgraded(requirements)
+  const isRevB = twinRevision(requirements) === 'B'
+  return h.div(
+    [h.Class('twin-panel-stack')],
+    [
+      isRevB ? checkPanel(model, h) : h.empty,
+      proposalPanel(model, isUpgraded, isRevB, h),
+    ],
+  )
+}
+
+const signoffPanel = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const changes = twinChanges(requirements)
+  return signoffGate(
+    model,
+    twinRevision(requirements) === 'B',
+    changes.length,
+    affectedSubsystems(changes).length,
+    h,
+  )
+}
+
+const detailPanel = (model: Model, h: H): Html =>
+  model.twinPanelTab === 'Requirements'
+    ? requirementChangesPanel(model, h)
+    : model.twinPanelTab === 'Sign-off'
+      ? signoffPanel(model, h)
+      : model.twinPanelTab === 'DO-254'
+        ? do254Panel(model, h)
+        : model.twinPanelTab === 'Activity'
+          ? activityPanel(model, h)
+          : changePanel(model, h)
+
 export const twinPage = (model: Model, h: H): Html => {
   const twin = twinSpec.withMessage(h)
   const requirements = model.workspace.requirements
   const isLoaded = hasTwinScenario(requirements)
   const revision = twinRevision(requirements)
-  const changes = twinChanges(requirements)
-  const subsystems = affectedSubsystems(changes)
   const isRevB = revision === 'B'
   const isUpgraded = isAvionicsUpgraded(requirements)
-  const isReviewed = model.twinReviewed.length === 3
-  const pkg = model.maybeTwinPackage
-  const hasReports = model.twinReports.length > 0
-  const proposal = model.twinProposal
-  const stage = !isUpgraded
-    ? 0
-    : !isRevB
-      ? proposal === 'Pending' || proposal === 'Rejected'
-        ? 3
-        : 2
-      : model.twinCheck === 'Done'
-        ? 5
-        : 4
+  if (!isLoaded) {
+    return h.div(
+      [h.Class('twin-page')],
+      [
+        pageHeading(
+          'Digital twin',
+          '',
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.OnClick(Message.ClickedLoadTwinScenario()),
+            ],
+            [plusIcon(h), 'Load F-35 power scenario'],
+          ),
+          h,
+        ),
+        emptyState(h),
+      ],
+    )
+  }
   return h.div(
     [h.Class('twin-page')],
     [
-      pageHeading(
-        'Digital twin',
-        '',
-        isLoaded
-          ? h.empty
-          : h.button(
-              [
-                h.Type('button'),
-                h.Class('button primary'),
-                h.OnClick(Message.ClickedLoadTwinScenario()),
-              ],
-              [plusIcon(h), 'Load F-35 power scenario'],
-            ),
-        h,
-      ),
-      !isLoaded
-        ? emptyState(h)
-        : h.div(
-            [h.Class('twin-layout')],
+      changeHeader(model, h),
+      lifecycle(model, h),
+      h.div(
+        [h.Class('twin-layout')],
+        [
+          h.section(
+            [h.Class('panel twin-stage')],
             [
-              h.section(
-                [h.Class('panel twin-stage')],
-                [
-                  h.div(
-                    [h.Class('twin-toolbar')],
-                    [
-                      segmented(
-                        'Camera',
-                        ['Airframe', 'Aft bay', 'Cockpit'] as const,
-                        model.twinFocus,
-                        focus => Message.SelectedTwinFocus({ focus }),
-                        h,
-                      ),
-                    ],
-                  ),
-                  twin([
-                    h.Class('twin-canvas'),
-                    h.AriaLabel(
-                      '3D model of the F-35 with the aft modular power assembly and the new cockpit avionics module',
-                    ),
-                    twin.TwinFocus(model.twinFocus),
-                    twin.TwinRevision(revision),
-                    twin.TwinAvionicsUpgraded(isUpgraded),
-                    twin.OnTwinPick(detail =>
-                      Message.ClickedTwinPart({ part: detail.part }),
-                    ),
-                  ]),
-                  h.div(
-                    [h.Class('twin-overlay')],
-                    [
-                      changeDriver(isRevB, isUpgraded, h),
-                      h.div(
-                        [h.Class('twin-legend')],
-                        [
-                          h.span([], ['40 °C']),
-                          h.span([h.Class('twin-ramp')], []),
-                          h.span([], ['95 °C']),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              h.aside(
-                [h.Class('panel twin-side')],
-                [
-                  h.h2([h.Class('twin-heading')], ['Installed hardware']),
-                  slotCard(model, 'Cockpit', h),
-                  slotCard(model, 'Power', h),
-                  h.h2([h.Class('twin-heading')], ['Changed artifacts']),
-                  changes.length === 0
-                    ? h.p(
-                        [h.Class('muted small-text')],
-                        ['None. Baseline configuration.'],
-                      )
-                    : h.p(
-                        [h.Class('twin-changed')],
-                        changes.flatMap((change, index) => [
-                          ...(index > 0 ? [' · '] : []),
-                          idLink(model, change.artifact.id, h, 'mono'),
-                        ]),
-                      ),
-                ],
-              ),
               h.div(
-                [h.Class('twin-wide')],
-                [workflowSteps(stage, isUpgraded, h)],
-              ),
-              proposalPanel(model, isUpgraded, isRevB, h),
-              isRevB ? checkPanel(model, h) : h.empty,
-              h.section(
-                [h.Class('panel twin-wide')],
+                [h.Class('twin-toolbar')],
                 [
-                  h.div(
-                    [h.Class('twin-section-head')],
-                    [
-                      h.h2(
-                        [h.Class('twin-heading')],
-                        [`Requirement changes · ${changes.length}`],
-                      ),
-                    ],
-                  ),
-                  changes.length === 0
-                    ? h.p(
-                        [h.Class('muted small-text')],
-                        [
-                          'Swap in the new avionics to see which requirements change.',
-                        ],
-                      )
-                    : h.table(
-                        [h.Class('twin-table')],
-                        [
-                          h.thead(
-                            [],
-                            [
-                              h.tr(
-                                [],
-                                [
-                                  'Artifact',
-                                  'Subsystem',
-                                  'Before (Rev A)',
-                                  'After',
-                                  'Status',
-                                  '',
-                                ].map(label => h.th([], [label])),
-                              ),
-                            ],
-                          ),
-                          h.tbody(
-                            [],
-                            changes.map(change =>
-                              h.keyed('tr')(
-                                change.artifact.id,
-                                [],
-                                [
-                                  h.td(
-                                    [],
-                                    [
-                                      idLink(
-                                        model,
-                                        change.artifact.id,
-                                        h,
-                                        'mono small-text',
-                                      ),
-                                      h.div([], [change.artifact.title]),
-                                    ],
-                                  ),
-                                  h.td([], [change.artifact.subsystem]),
-                                  h.td(
-                                    [h.Class('twin-before')],
-                                    linkifyIds(model, change.before, h),
-                                  ),
-                                  h.td(
-                                    [h.Class('twin-after')],
-                                    linkifyIds(model, change.after, h),
-                                  ),
-                                  h.td(
-                                    [],
-                                    [
-                                      h.span(
-                                        [h.Class(badgeClass(change.status))],
-                                        [change.status],
-                                      ),
-                                      h.div(
-                                        [h.Class('mono small-text muted')],
-                                        [`r${change.revision}`],
-                                      ),
-                                    ],
-                                  ),
-                                  h.td(
-                                    [],
-                                    [
-                                      h.button(
-                                        [
-                                          h.Type('button'),
-                                          h.Class('button outline small'),
-                                          h.OnClick(
-                                            Message.ClickedTraceTwinArtifact({
-                                              id: change.artifact.id,
-                                            }),
-                                          ),
-                                        ],
-                                        ['Trace in graph'],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                  signoffFooter(
-                    model,
-                    'Requirements',
-                    `Reviewed the ${changes.length} requirement changes above?`,
-                    isRevB,
+                  segmented(
+                    'Camera',
+                    ['Airframe', 'Aft bay', 'Cockpit'] as const,
+                    model.twinFocus,
+                    focus => Message.SelectedTwinFocus({ focus }),
                     h,
                   ),
                 ],
               ),
-              h.section(
-                [h.Class('panel twin-wide')],
+              twin([
+                h.Class('twin-canvas'),
+                h.AriaLabel(
+                  '3D model of the F-35 with the aft modular power assembly and the new cockpit avionics module',
+                ),
+                twin.TwinFocus(model.twinFocus),
+                twin.TwinRevision(revision),
+                twin.TwinAvionicsUpgraded(isUpgraded),
+                twin.OnTwinPick(detail =>
+                  Message.ClickedTwinPart({ part: detail.part }),
+                ),
+              ]),
+              h.div(
+                [h.Class('twin-overlay')],
                 [
+                  changeDriver(isRevB, isUpgraded, h),
                   h.div(
-                    [h.Class('twin-section-head')],
+                    [h.Class('twin-legend')],
                     [
-                      h.h2(
-                        [h.Class('twin-heading')],
-                        ['Thermal & mechanical analysis'],
-                      ),
+                      h.span([], ['40 °C']),
+                      h.span([h.Class('twin-ramp')], []),
+                      h.span([], ['95 °C']),
                     ],
                   ),
-                  h.table(
-                    [h.Class('twin-table')],
-                    [
-                      h.thead(
-                        [],
-                        [
-                          h.tr(
-                            [],
-                            [
-                              'Metric',
-                              'Domain',
-                              'Rev A',
-                              'Rev B',
-                              'Limit',
-                              'Result',
-                            ].map(label => h.th([], [label])),
-                          ),
-                        ],
-                      ),
-                      h.tbody(
-                        [],
-                        analysisRows.map(row =>
-                          h.keyed('tr')(
-                            row.metric,
-                            [],
-                            [
-                              h.td([], [row.metric]),
-                              h.td([h.Class('muted')], [row.domain]),
-                              h.td(
-                                [h.Class('mono')],
-                                [`${row.revA} ${row.unit}`],
-                              ),
-                              h.td(
-                                [h.Class(`mono ${isRevB ? 'twin-after' : ''}`)],
-                                [`${row.revB} ${row.unit}`],
-                              ),
-                              h.td([h.Class('mono')], [limitLabel(row)]),
-                              h.td(
-                                [],
-                                [
-                                  h.span(
-                                    [
-                                      h.Class(
-                                        withinLimit(row, row.revB)
-                                          ? 'badge positive'
-                                          : 'badge warning',
-                                      ),
-                                    ],
-                                    [
-                                      withinLimit(row, row.revB)
-                                        ? 'Within limit'
-                                        : 'Exceeds',
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  h.div(
-                    [h.Class('twin-signoff-footers')],
-                    [
-                      signoffFooter(
-                        model,
-                        'Thermal',
-                        'Reviewed the thermal results?',
-                        isRevB,
-                        h,
-                      ),
-                      signoffFooter(
-                        model,
-                        'Mechanical',
-                        'Reviewed the mechanical results?',
-                        isRevB,
-                        h,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              signoffGate(model, isRevB, changes.length, subsystems.length, h),
-              h.section(
-                [h.Class('panel twin-wide')],
-                [
-                  h.div(
-                    [h.Class('twin-section-head')],
-                    [h.h2([h.Class('twin-heading')], ['DO-254 data package'])],
-                  ),
-                  Option.match(pkg, {
-                    onNone: () =>
-                      hasReports
-                        ? h.div(
-                            [],
-                            [
-                              reportEditor(model, h),
-                              h.div(
-                                [h.Class('twin-package-actions')],
-                                [
-                                  h.button(
-                                    [
-                                      h.Type('button'),
-                                      h.Class('button primary'),
-                                      h.Disabled(model.isGeneratingTwinPackage),
-                                      h.OnClick(
-                                        Message.ClickedDownloadTwinPackage(),
-                                      ),
-                                    ],
-                                    [
-                                      model.isGeneratingTwinPackage
-                                        ? 'Packaging…'
-                                        : 'Download DO-254 package',
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )
-                        : h.div(
-                            [],
-                            [
-                              h.p(
-                                [h.Class('muted small-text')],
-                                [
-                                  isRevB && isReviewed
-                                    ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, analysis results, and a SHA-256 manifest as one zip.'
-                                    : 'Available after Rev B is placed and all three sign-offs are in.',
-                                ],
-                              ),
-                              h.button(
-                                [
-                                  h.Type('button'),
-                                  h.Class('button primary'),
-                                  h.Disabled(
-                                    !isRevB ||
-                                      !isReviewed ||
-                                      model.isGeneratingTwinPackage,
-                                  ),
-                                  h.OnClick(
-                                    Message.ClickedGenerateTwinPackage(),
-                                  ),
-                                ],
-                                [
-                                  model.isGeneratingTwinPackage
-                                    ? 'Packaging…'
-                                    : 'Draft DO-254 reports',
-                                ],
-                              ),
-                            ],
-                          ),
-                    onSome: item =>
-                      h.div(
-                        [h.Class('twin-package')],
-                        [
-                          h.dl(
-                            [h.Class('twin-facts')],
-                            [
-                              h.dt([], ['Package']),
-                              h.dd([h.Class('mono')], [item.name]),
-                              h.dt([], ['Size']),
-                              h.dd(
-                                [h.Class('mono')],
-                                [`${(item.bytes / 1024).toFixed(1)} KB`],
-                              ),
-                              h.dt([], ['SHA-256']),
-                              h.dd(
-                                [h.Class('mono')],
-                                [item.digest.slice(0, 16) + '…'],
-                              ),
-                              h.dt([], ['Files']),
-                              h.dd([h.Class('mono')], [item.files.join(' · ')]),
-                            ],
-                          ),
-                          reportEditor(model, h),
-                          h.div(
-                            [h.Class('twin-package-actions')],
-                            [
-                              h.button(
-                                [
-                                  h.Type('button'),
-                                  h.Class('button outline'),
-                                  h.OnClick(
-                                    Message.ClickedDownloadTwinPackage(),
-                                  ),
-                                ],
-                                ['Download again'],
-                              ),
-                              item.isSent
-                                ? h.span(
-                                    [h.Class('badge positive')],
-                                    ['Sent to customer'],
-                                  )
-                                : h.button(
-                                    [
-                                      h.Type('button'),
-                                      h.Class('button primary'),
-                                      h.OnClick(
-                                        Message.ClickedMarkTwinPackageSent(),
-                                      ),
-                                    ],
-                                    ['Mark as sent to customer'],
-                                  ),
-                            ],
-                          ),
-                          h.p(
-                            [h.Class('muted small-text')],
-                            [
-                              'Stream does not email the customer. Send the zip through your usual channel, then mark it as sent.',
-                            ],
-                          ),
-                        ],
-                      ),
-                  }),
                 ],
               ),
             ],
           ),
+          h.aside(
+            [h.Class('twin-side')],
+            [
+              slotCard(model, 'Cockpit', h),
+              slotCard(model, 'Power', h),
+              statusCards(model, h),
+            ],
+          ),
+        ],
+      ),
+      panelTabs(model, h),
+      detailPanel(model, h),
     ],
   )
 }
@@ -2279,10 +2581,7 @@ export const boardReview = (model: Model, tab: BoardReviewTab, h: H): Html =>
           h.div(
             [],
             [
-              h.p(
-                [h.Class('eyebrow')],
-                ['ECP-0219 · electrical engineer review'],
-              ),
+              h.p([h.Class('eyebrow')], ['Electrical engineer review']),
               h.h2(
                 [h.Id('modal-title')],
                 ['MW-MPA-48 power board: Rev A → Rev B'],

@@ -129,6 +129,14 @@ export const TwinPdrUpload = Schema.Struct({
 })
 export type TwinPdrUpload = typeof TwinPdrUpload.Type
 export type TwinCheck = typeof TwinCheck.Type
+export const TwinPanelTab = Schema.Literals([
+  'Change',
+  'Requirements',
+  'Sign-off',
+  'DO-254',
+  'Activity',
+])
+export type TwinPanelTab = typeof TwinPanelTab.Type
 export const TwinReviewItem = Schema.Literals([
   'Requirements',
   'Thermal',

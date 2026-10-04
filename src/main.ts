@@ -39,6 +39,7 @@ import {
   TwinDesignChange,
   TwinFocus,
   TwinPackage,
+  TwinPanelTab,
   TwinPdrUpload,
   TwinProposal,
   TwinReport,
@@ -169,6 +170,7 @@ export const Model = Schema.Struct({
   sidebarWidth: Schema.Number,
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
+  twinPanelTab: TwinPanelTab,
   twinReviewed: Schema.Array(TwinReviewItem),
   twinProposal: TwinProposal,
   twinCheck: TwinCheck,
@@ -246,6 +248,7 @@ export const initialModel: Model = {
   sidebarWidth: 232,
   isResizingSidebar: false,
   twinFocus: 'Airframe',
+  twinPanelTab: 'Change',
   twinReviewed: [],
   twinProposal: 'None',
   twinCheck: 'Not run',
@@ -2760,11 +2763,13 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           writeRequirements(model, requirements.concat(seedTwinArtifacts())),
           'F-35 modular power assembly scenario added · Dakota Edwards',
         ),
-        'Power assembly scenario added to the systems model.',
       )
     },
     SelectedTwinFocus: ({ focus }) => ({
       model: modifyFields(model, { twinFocus: () => focus }),
+    }),
+    SelectedTwinPanelTab: ({ tab }) => ({
+      model: modifyFields(model, { twinPanelTab: () => tab }),
     }),
     ClickedTwinPart: ({ part }) => ({
       model: modifyFields(model, {
@@ -2788,7 +2793,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         }),
         record(
           writeRequirements(model, swapTwinAvionics(requirements)),
-          `ECP-0219 cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
+          `Cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
         ),
         `New avionics swapped in. ${avionicsRequirementIds.length} requirements revised; the power agent is drafting a redesign.`,
       )
@@ -2942,7 +2947,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           model.workspace,
           `Power agent proposed MPA Rev B (${proposalPartChanges.length} part changes) · awaiting ${proposalReviewer.role.toLowerCase()} approval`,
         ),
-        `Power agent proposed Rev B. Waiting for ${proposalReviewer.name} to approve.`,
       )
     },
     OpenedBoardReview: () =>
@@ -3094,6 +3098,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, {
           twinFocus: () => 'Airframe',
+          twinPanelTab: () => 'Change',
           twinProposal: () => 'None',
           twinCheck: () => 'Not run',
           twinReviewed: () => [],
@@ -3160,6 +3165,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return {
         model: modifyFields(model, {
           isGeneratingTwinPackage: () => false,
+          twinPanelTab: () => 'DO-254',
           twinReports: () => files,
           twinReportTab: () =>
             files.find(file => file.name.endsWith('.md'))?.name ?? '',

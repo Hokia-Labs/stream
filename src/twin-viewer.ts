@@ -744,7 +744,7 @@ export class StreamTwin extends HTMLElement {
     if (this.#cockpitLabel) {
       this.#cockpitLabel.className = `label ${this.#upgraded ? 'amber' : ''}`
       this.#cockpitLabel.textContent = this.#upgraded
-        ? `${avionicsChange.id} · new cockpit avionics ${avionicsChange.steadyKw} kW (+${(avionicsChange.steadyKw - avionicsChange.replacedKw).toFixed(1)})`
+        ? `New cockpit avionics ${avionicsChange.steadyKw} kW (+${(avionicsChange.steadyKw - avionicsChange.replacedKw).toFixed(1)})`
         : `Cockpit avionics · ${avionicsChange.replacedKw} kW`
     }
   }

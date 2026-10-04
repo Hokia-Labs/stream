@@ -42,7 +42,7 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     verification: 'Test',
     links: ['REQ-PSU-01', 'REQ-PSU-02'],
     revA: 'The cockpit display processor shall draw no more than 0.9 kW steady from the 48 VDC bus and operate from 42 to 56 VDC.',
-    revB: 'The upgraded cockpit display and mission processor (ECP-0219) shall draw no more than 2.7 kW steady and 3.5 kW for 200 ms from the 48 VDC bus, operate from 42 to 56 VDC, and see no more than 2% feeder voltage drop.',
+    revB: 'The upgraded cockpit display and mission processor shall draw no more than 2.7 kW steady and 3.5 kW for 200 ms from the 48 VDC bus, operate from 42 to 56 VDC, and see no more than 2% feeder voltage drop.',
     statusB: 'Needs review',
   },
   {
@@ -54,7 +54,7 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     verification: 'Test',
     links: ['DES-PSU', 'TST-PSU'],
     revA: 'The MPA shall supply 9.0 kW continuous on the 48 VDC avionics bus with any one converter module failed (N−1).',
-    revB: 'The MPA shall supply 12.0 kW continuous on the 48 VDC avionics bus with any one converter module failed (N−1), to carry the cockpit avionics upgrade (ECP-0219).',
+    revB: 'The MPA shall supply 12.0 kW continuous on the 48 VDC avionics bus with any one converter module failed (N−1), to carry the cockpit avionics upgrade.',
     statusB: 'Needs review',
   },
   {
@@ -895,7 +895,7 @@ const upgradedAvionics: CatalogItem = {
   id: 'MW-AVN-2700',
   revision: 'A',
   slot: 'Cockpit',
-  title: 'Cockpit avionics module · ECP-0219',
+  title: 'Cockpit avionics module',
   status: 'Released',
   released: '2026-09-18',
   value: 2.7,

@@ -441,7 +441,7 @@ export type PdrItem = Readonly<{
 export const pdr = {
   id: 'PDR-MPA-RevB',
   scope:
-    'MW-MPA-48-5 Rev B power board and assembly, raised by ECP-0219 (cockpit avionics 0.9 → 2.7 kW). Covers electrical, thermal and mechanical changes against MW-MPA-48-4 Rev A.',
+    'MW-MPA-48-5 Rev B power board and assembly, raised by the cockpit avionics upgrade ( 0.9 → 2.7 kW). Covers electrical, thermal and mechanical changes against MW-MPA-48-4 Rev A.',
   entry: [
     [
       'Driving requirements revised and baselined (REQ-AVN-01, REQ-PSU-01…03)',
