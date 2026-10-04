@@ -28,7 +28,7 @@ export const do254DocumentId = (
 ): string => `${prefix}-PSU-001-Rev${twinRevision(requirements)}`
 
 const partNumber = (requirements: ReadonlyArray<Requirement>): string =>
-  twinRevision(requirements) === 'B' ? 'MW-PSU-270-45' : 'MW-PSU-270-30'
+  twinRevision(requirements) === 'B' ? 'MW-MPA-48-5' : 'MW-MPA-48-4'
 
 const logicImage = (requirements: ReadonlyArray<Requirement>): string =>
   twinRevision(requirements) === 'B'
@@ -44,7 +44,7 @@ const header = (
 ): ReadonlyArray<string> => [
   `**${systemHigh}**`,
   '',
-  `# ${title} — Aft Power Supply Unit`,
+  `# ${title} — Aft Modular Power Assembly`,
   '',
   `Document: ${document} · Date: ${date} · Hardware item: ${partNumber(requirements)} · ${reference}`,
   '',
@@ -206,7 +206,7 @@ export const verificationResultsDocument = (
     `| Actual results | ${testDone ? 'Recorded in TST-PSU evidence' : 'Not yet run on this configuration'} |`,
     `| Conducted by / witnessed by | ${testDone ? 'Jordan Lee / process assurance' : '— / —'} |`,
     `| Date | ${testDone ? date : '—'} |`,
-    `| Coverage achieved | ${testDone ? 'All test-verified requirements' : 'None for Rev B; Rev A evidence does not cover the 45 kW or 6-point mount configuration'} |`,
+    `| Coverage achieved | ${testDone ? 'All test-verified requirements' : 'None for Rev B; Rev A evidence does not cover the 5-module, 12 kW N−1 configuration'} |`,
     '',
     '## 5. Traceability analysis',
     '',
@@ -263,7 +263,7 @@ export const changeImpactDocument = (
     '## 2. Change classification',
     '',
     changes.length > 0
-      ? '(U) Proposed: **Major**. Continuous output rises from 30 kW to 45 kW and the thermal, electrical, and structural interfaces change. Certification authority concurrence is required.'
+      ? '(U) Proposed: **Major**. Converter modules rise from 4 to 5 to restore N−1 capacity for the cockpit avionics upgrade (ECP-0219), and the thermal, electrical, and structural interfaces change. Certification authority concurrence is required.'
       : '(U) Not applicable.',
     '',
     '## 3. Changed items',

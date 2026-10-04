@@ -22,69 +22,81 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     owner: 'Ben Juntilla',
     subsystem: 'Electrical power',
     verification: 'Analysis',
-    links: ['REQ-PSU-01', 'REQ-PSU-02', 'REQ-PSU-03'],
-    revA: 'Supplies conditioned 270 VDC from the aft power supply unit (PSU) to the mission-systems bus.',
-    revB: 'Supplies conditioned 270 VDC from the aft power supply unit (PSU) to the mission-systems bus.',
+    links: ['REQ-PSU-01', 'REQ-PSU-02', 'REQ-PSU-03', 'REQ-AVN-01'],
+    revA: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a synthetic 48 VDC avionics bus through hot-swappable converter modules run N+1.',
+    revB: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a synthetic 48 VDC avionics bus through hot-swappable converter modules run N+1.',
     statusB: 'Verified',
   },
   {
+    id: 'REQ-AVN-01',
+    title: 'Cockpit avionics load interface',
+    kind: 'Requirement',
+    owner: 'Sarah Chen',
+    subsystem: 'Avionics',
+    verification: 'Test',
+    links: ['REQ-PSU-01', 'REQ-PSU-02'],
+    revA: 'The cockpit display processor shall draw no more than 0.9 kW steady from the 48 VDC bus and operate from 42 to 56 VDC.',
+    revB: 'The upgraded cockpit display and mission processor (ECP-0219) shall draw no more than 2.7 kW steady and 3.5 kW for 200 ms from the 48 VDC bus, operate from 42 to 56 VDC, and see no more than 2% feeder voltage drop.',
+    statusB: 'Needs review',
+  },
+  {
     id: 'REQ-PSU-01',
-    title: 'PSU continuous output power',
+    title: 'MPA 48 V bus capacity',
     kind: 'Requirement',
     owner: 'Sarah Chen',
     subsystem: 'Electrical power',
     verification: 'Test',
     links: ['DES-PSU', 'TST-PSU'],
-    revA: 'The aft PSU shall deliver 270 VDC at 30 kW continuous to the mission-systems bus.',
-    revB: 'The aft PSU shall deliver 270 VDC at 45 kW continuous to the mission-systems bus to support the upgraded mission-systems load.',
+    revA: 'The MPA shall supply 9.0 kW continuous on the 48 VDC avionics bus with any one converter module failed (N−1).',
+    revB: 'The MPA shall supply 12.0 kW continuous on the 48 VDC avionics bus with any one converter module failed (N−1), to carry the cockpit avionics upgrade (ECP-0219).',
     statusB: 'Needs review',
   },
   {
     id: 'REQ-PSU-02',
-    title: 'PSU heat rejection',
+    title: 'MPA heat rejection',
     kind: 'Requirement',
     owner: 'Alex Rivera',
     subsystem: 'Thermal management',
     verification: 'Analysis',
     links: ['INT-PSU', 'SYS-TMS', 'TST-PSU'],
-    revA: 'PSU waste heat shall not exceed 2.8 kW rejected to the PAO coolant loop at an inlet temperature of 55 °C or less.',
-    revB: 'PSU waste heat shall not exceed 3.1 kW rejected to the PAO coolant loop at an inlet temperature of 55 °C or less. The thermal management system shall reserve 0.3 kW of additional aft-bay loop capacity.',
+    revA: 'MPA waste heat shall not exceed 0.50 kW rejected to the aft PAO cold plate at an inlet temperature of 55 °C or less.',
+    revB: 'MPA waste heat shall not exceed 0.65 kW rejected to the aft PAO cold plate at an inlet temperature of 55 °C or less. The thermal management system shall reserve 0.15 kW of additional aft-bay loop capacity.',
     statusB: 'Needs review',
   },
   {
     id: 'REQ-PSU-03',
-    title: 'PSU mass, envelope & mounting',
+    title: 'MPA mass, envelope & mounting',
     kind: 'Requirement',
     owner: 'Jordan Lee',
     subsystem: 'Structures',
     verification: 'Inspection',
     links: ['DES-PSU'],
-    revA: 'PSU installed mass shall not exceed 40 kg within aft bay envelope AB-3. Aircraft CG shift shall not exceed 10 mm.',
-    revB: 'PSU installed mass shall not exceed 45 kg within aft bay envelope AB-3. Aircraft CG shift shall not exceed 15 mm aft. The mounting structure shall keep the first natural frequency at or above 150 Hz.',
+    revA: 'MPA installed mass shall not exceed 22 kg within aft bay envelope AB-3. Aircraft CG shift shall not exceed 10 mm.',
+    revB: 'MPA installed mass shall not exceed 26 kg within aft bay envelope AB-3. Aircraft CG shift shall not exceed 12 mm aft. The chassis shall keep the first natural frequency at or above 150 Hz.',
     statusB: 'Needs review',
   },
   {
     id: 'DES-PSU',
-    title: 'Aft PSU assembly',
+    title: 'Aft modular power assembly',
     kind: 'Design',
     owner: 'Sarah Chen',
     subsystem: 'Electrical power',
     verification: 'Inspection',
     links: ['INT-PSU'],
-    revA: 'Rev A · 30 kW silicon converter, single cold plate, 4-point mount.',
-    revB: 'Rev B · 45 kW silicon-carbide converter, enlarged dual cold plate, 6-point mount.',
+    revA: 'Rev A · 4 × 3.0 kW 270→48 V converter modules (N+1), 4-slot chassis, single cold plate, 25 A SSPC on the cockpit feeder.',
+    revB: 'Rev B · 5 × 3.0 kW 270→48 V converter modules (N+1), 5-slot chassis, extended dual cold plate, 75 A SSPC and 8 AWG cockpit feeder.',
     statusB: 'Needs review',
   },
   {
     id: 'INT-PSU',
-    title: 'PSU coolant & bus interface',
+    title: 'MPA coolant & bus interface',
     kind: 'Interface',
     owner: 'Jordan Lee',
     subsystem: 'Thermal management',
     verification: 'Inspection',
     links: [],
-    revA: 'Coolant: 0.9 kg/s PAO. Electrical: 270 VDC through 2 × MIL-DTL-38999 connectors.',
-    revB: 'Coolant: 1.1 kg/s PAO. Electrical: 270 VDC through 3 × MIL-DTL-38999 connectors.',
+    revA: 'Coolant: 0.25 kg/s PAO. Electrical: 2 × 270 VDC feeds in; 48 VDC out through 2 × MIL-DTL-38999 connectors.',
+    revB: 'Coolant: 0.30 kg/s PAO. Electrical: 2 × 270 VDC feeds in; 48 VDC out through 3 × MIL-DTL-38999 connectors, adding a dedicated cockpit avionics feeder.',
     statusB: 'Needs review',
   },
   {
@@ -95,20 +107,20 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     subsystem: 'Thermal management',
     verification: 'Analysis',
     links: ['INT-PSU'],
-    revA: 'Rejects avionics and power heat loads through the PAO loop. Aft-bay allocation: 3.0 kW.',
-    revB: 'Rejects avionics and power heat loads through the PAO loop. Aft-bay allocation: 3.3 kW (+0.3 kW for PSU Rev B).',
+    revA: 'Rejects avionics and power heat loads through the PAO loop. Aft-bay power allocation: 0.55 kW.',
+    revB: 'Rejects avionics and power heat loads through the PAO loop. Aft-bay power allocation: 0.70 kW (+0.15 kW for MPA Rev B).',
     statusB: 'Needs review',
   },
   {
     id: 'TST-PSU',
-    title: 'PSU thermal & vibration qualification',
+    title: 'MPA thermal, vibration & N−1 qualification',
     kind: 'Test',
     owner: 'Jordan Lee',
     subsystem: 'Verification',
     verification: 'Test',
     links: [],
-    revA: 'Thermal soak and random vibration qualification. Evidence on file for Rev A.',
-    revB: 'Re-qualify Rev B: thermal soak at 45 kW and random vibration with the 6-point mount. Evidence pending.',
+    revA: 'Thermal soak, random vibration, and module-failure transfer tests. Evidence on file for Rev A.',
+    revB: 'Re-qualify Rev B: thermal soak at 12 kW, random vibration with the 5-slot chassis, and a module-failure (N−1) transfer test at 10.2 kW. Evidence pending.',
     statusB: 'Draft',
   },
 ]
@@ -212,104 +224,129 @@ export type AnalysisRow = Readonly<{
 /** Precomputed SAMPLE values, not solver output. */
 export const analysisRows: ReadonlyArray<AnalysisRow> = [
   {
-    metric: 'Continuous output power',
+    metric: 'N−1 bus capacity',
     unit: 'kW',
     domain: 'Electrical',
-    revA: 30,
-    revB: 45,
-    limit: { kind: 'Min', value: 45 },
+    revA: 9,
+    revB: 12,
+    limit: { kind: 'Min', value: 10.2 },
   },
   {
     metric: 'Converter efficiency',
     unit: '%',
     domain: 'Electrical',
-    revA: 92,
-    revB: 94,
-    limit: { kind: 'Min', value: 90 },
+    revA: 95,
+    revB: 95.2,
+    limit: { kind: 'Min', value: 92 },
+  },
+  {
+    metric: 'Cockpit feeder voltage drop',
+    unit: 'V',
+    domain: 'Electrical',
+    revA: 1.18,
+    revB: 0.46,
+    limit: { kind: 'Max', value: 0.96 },
   },
   {
     metric: 'Waste heat to PAO loop',
     unit: 'kW',
     domain: 'Thermal',
-    revA: 2.61,
-    revB: 2.87,
-    limit: { kind: 'Max', value: 3.1 },
+    revA: 0.54,
+    revB: 0.52,
+    limit: { kind: 'Max', value: 0.65 },
   },
   {
     metric: 'Peak cold-plate temperature',
     unit: '°C',
     domain: 'Thermal',
-    revA: 78,
-    revB: 84,
+    revA: 81,
+    revB: 76,
     limit: { kind: 'Max', value: 95 },
   },
   {
     metric: 'Coolant outlet temperature',
     unit: '°C',
     domain: 'Thermal',
-    revA: 61,
-    revB: 64,
+    revA: 62,
+    revB: 63,
     limit: { kind: 'Max', value: 70 },
   },
   {
     metric: 'Installed mass',
     unit: 'kg',
     domain: 'Mechanical',
-    revA: 38,
-    revB: 43,
-    limit: { kind: 'Max', value: 45 },
+    revA: 21,
+    revB: 25.5,
+    limit: { kind: 'Max', value: 26 },
   },
   {
     metric: 'CG shift (aft)',
     unit: 'mm',
     domain: 'Mechanical',
     revA: 6,
-    revB: 11,
-    limit: { kind: 'Max', value: 15 },
+    revB: 9,
+    limit: { kind: 'Max', value: 12 },
   },
   {
     metric: 'First natural frequency',
     unit: 'Hz',
     domain: 'Mechanical',
-    revA: 212,
-    revB: 188,
+    revA: 230,
+    revB: 196,
     limit: { kind: 'Min', value: 150 },
   },
   {
     metric: 'Mount bolt margin of safety',
     unit: '',
     domain: 'Mechanical',
-    revA: 0.42,
-    revB: 0.27,
+    revA: 0.48,
+    revB: 0.31,
     limit: { kind: 'Min', value: 0 },
   },
 ]
 
-/** Notional change driver on a synthetic 270 VDC bus. SAMPLE values. */
+/** Notional change driver on a synthetic 48 VDC bus. SAMPLE values. */
 export const avionicsChange = {
   id: 'ECP-0219',
   title: 'Cockpit avionics upgrade',
   summary:
-    'A new display and mission-processor module joins the 270 VDC mission-systems bus. It raises steady and transient electrical demand and adds heat.',
-  existingLoadKw: 26.4,
-  steadyKw: 7.8,
-  peakKw: 11.5,
+    'An upgraded cockpit display and mission processor replaces a 0.9 kW unit on the 48 VDC avionics bus. Steady demand rises 1.8 kW, transients grow, and the power assembly rejects more heat.',
+  existingLoadKw: 8.4,
+  replacedKw: 0.9,
+  steadyKw: 2.7,
+  peakKw: 3.5,
   peakDurationMs: 200,
+  moduleRatingKw: 3,
+  modules: { A: 4, B: 5 },
   shortTermRating: 1.25,
   requiredMargin: 0.1,
-  efficiency: { A: 0.92, B: 0.94 },
-  heatAllocationKw: { A: 2.8, B: 3.1 },
+  efficiency: 0.95,
+  heatAllocationKw: { A: 0.5, B: 0.65 },
+  busVolts: 48,
+  feederOhms: { A: 0.021, B: 0.0082 },
+  maxDropFraction: 0.02,
   loadSheet: [
-    ['Steady-state power', '7.8 kW'],
-    ['Peak power', '11.5 kW for 200 ms at mode change'],
+    ['Steady-state power', '2.7 kW (was 0.9 kW)'],
+    ['Peak power', '3.5 kW for 200 ms at mode change'],
     ['Startup', '4× inrush for 5 ms, soft-start limited'],
-    ['Voltage tolerance', '250–280 VDC steady, 200 VDC for 50 ms'],
+    ['Voltage tolerance', '42–56 VDC steady, 36 VDC for 50 ms'],
     ['Criticality', 'Flight-essential displays'],
     ['Duty cycle', 'Continuous in flight'],
-    ['Heat rejection', '7.8 kW to the cockpit PAO branch'],
-    ['Fault behavior', 'Shed non-essential channels on undervoltage'],
+    ['Heat rejection', '2.7 kW to the cockpit PAO branch'],
+    ['Fault behavior', 'Shed non-essential channels below 42 VDC'],
   ],
 } as const
+
+export const busDemandKw =
+  avionicsChange.existingLoadKw -
+  avionicsChange.replacedKw +
+  avionicsChange.steadyKw
+
+export const busPeakKw =
+  busDemandKw - avionicsChange.steadyKw + avionicsChange.peakKw
+
+export const capacityKw = (revision: TwinRevision, failed: number): number =>
+  (avionicsChange.modules[revision] - failed) * avionicsChange.moduleRatingKw
 
 export type BudgetRow = Readonly<{
   check: string
@@ -321,41 +358,94 @@ export type BudgetRow = Readonly<{
 
 export const loadBudget = (): ReadonlyArray<BudgetRow> => {
   const change = avionicsChange
-  const steady = change.existingLoadKw + change.steadyKw
-  const peak = change.existingLoadKw + change.peakKw
-  const rating = { A: 30, B: 45 }
-  const heat = (revision: TwinRevision) =>
-    steady * (1 / change.efficiency[revision] - 1)
+  const heat = busDemandKw * (1 / change.efficiency - 1)
+  const amps = (change.steadyKw * 1000) / change.busVolts
+  const maxDrop = change.busVolts * change.maxDropFraction
   return [
     {
-      check: 'Continuous bus load',
+      check: 'Bus load, all modules',
       traceId: 'REQ-PSU-01',
       unit: 'kW',
-      demand: { A: steady, B: steady },
-      capacity: rating,
+      demand: { A: busDemandKw, B: busDemandKw },
+      capacity: { A: capacityKw('A', 0), B: capacityKw('B', 0) },
     },
     {
-      check: `${change.peakDurationMs} ms peak load`,
+      check: 'Bus load, one module failed (N−1)',
       traceId: 'REQ-PSU-01',
       unit: 'kW',
-      demand: { A: peak, B: peak },
+      demand: { A: busDemandKw, B: busDemandKw },
+      capacity: { A: capacityKw('A', 1), B: capacityKw('B', 1) },
+    },
+    {
+      check: `${change.peakDurationMs} ms peak, N−1`,
+      traceId: 'REQ-AVN-01',
+      unit: 'kW',
+      demand: { A: busPeakKw, B: busPeakKw },
       capacity: {
-        A: rating.A * change.shortTermRating,
-        B: rating.B * change.shortTermRating,
+        A: capacityKw('A', 1) * change.shortTermRating,
+        B: capacityKw('B', 1) * change.shortTermRating,
       },
     },
     {
-      check: 'PSU waste heat to PAO loop',
+      check: 'Converter waste heat',
       traceId: 'REQ-PSU-02',
       unit: 'kW',
-      demand: { A: heat('A'), B: heat('B') },
+      demand: { A: heat, B: heat },
       capacity: change.heatAllocationKw,
+    },
+    {
+      check: 'Cockpit feeder voltage drop',
+      traceId: 'REQ-AVN-01',
+      unit: 'V',
+      demand: { A: amps * change.feederOhms.A, B: amps * change.feederOhms.B },
+      capacity: { A: maxDrop, B: maxDrop },
     },
   ]
 }
 
 export const budgetMargin = (row: BudgetRow, revision: TwinRevision): number =>
   (row.capacity[revision] - row.demand[revision]) / row.capacity[revision]
+
+export const failureCases: ReadonlyArray<
+  Readonly<{
+    failure: string
+    effect: Readonly<Record<TwinRevision, string>>
+    isShortA: boolean
+  }>
+> = [
+  {
+    failure: 'One converter module fails',
+    effect: {
+      A: '9.0 kW left for 10.2 kW demand. Non-essential loads shed; displays at risk.',
+      B: '12.0 kW left for 10.2 kW demand. No load shed.',
+    },
+    isShortA: true,
+  },
+  {
+    failure: 'Feed A (270 VDC) lost',
+    effect: {
+      A: 'Modules cross-fed from feed B. Full capacity retained.',
+      B: 'Modules cross-fed from feed B. Full capacity retained.',
+    },
+    isShortA: false,
+  },
+  {
+    failure: 'Cockpit feeder short circuit',
+    effect: {
+      A: 'Existing 25 A SSPC is below the new 56 A load; feeder must be resized.',
+      B: 'Dedicated 75 A SSPC trips; other 48 V loads unaffected.',
+    },
+    isShortA: true,
+  },
+  {
+    failure: 'Cold-plate coolant flow lost',
+    effect: {
+      A: 'Modules derate at 95 °C and shed to essential loads.',
+      B: 'Modules derate at 95 °C and shed to essential loads.',
+    },
+    isShortA: false,
+  },
+]
 
 export const withinLimit = (row: AnalysisRow, value: number): boolean =>
   row.limit.kind === 'Max' ? value <= row.limit.value : value >= row.limit.value
@@ -386,7 +476,7 @@ export const hrdDocument = (
   return [
     `**${systemHigh}**`,
     '',
-    `# Hardware Requirements Document — Aft Power Supply Unit`,
+    `# Hardware Requirements Document — Aft Modular Power Assembly`,
     '',
     `Document: ${hrdName(revision)} · Date: ${date} · Program: F-35 aft power supply upgrade (demo)`,
     '',

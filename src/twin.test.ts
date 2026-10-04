@@ -38,8 +38,9 @@ describe('digital twin', () => {
         row => budgetMargin(row, 'B') >= avionicsChange.requiredMargin,
       ),
     ).toBe(true)
-    expect(rows[0]?.demand.A).toBeCloseTo(34.2)
-    expect(rows[2]?.demand.A).toBeCloseTo(2.974, 3)
+    expect(rows[1]?.demand.A).toBeCloseTo(10.2)
+    expect(rows[1]?.capacity.A).toBe(9)
+    expect(rows[3]?.demand.A).toBeCloseTo(0.537, 3)
   })
 
   it('loads the power-supply scenario at Rev A without changes', () => {
@@ -54,9 +55,10 @@ describe('digital twin', () => {
   it('placing Rev B revises requirements and the subsystems they touch', () => {
     const changes = twinChanges(revB.workspace.requirements)
     expect(twinRevision(revB.workspace.requirements)).toBe('B')
-    expect(changes).toHaveLength(7)
+    expect(changes).toHaveLength(8)
     expect(changes.every(change => change.status !== 'Verified')).toBe(true)
     expect(affectedSubsystems(changes).map(item => item.name)).toEqual([
+      'Avionics',
       'Electrical power',
       'Thermal management',
       'Structures',
@@ -134,7 +136,7 @@ describe('digital twin', () => {
     ]) {
       expect(document).toContain(heading)
     }
-    expect(document).toContain('45 kW continuous')
+    expect(document).toContain('12.0 kW continuous')
     expect(document).toContain('SAMPLE')
     expect(document).toContain('Declassify On: 20511003')
     expect(document.startsWith('**SECRET//NOFORN**')).toBe(true)

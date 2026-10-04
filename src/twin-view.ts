@@ -4,6 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import {
   type Requirement,
+  TwinCondition,
   TwinFocus,
   TwinOverlay,
   type TwinReviewItem,
@@ -18,6 +19,8 @@ import {
   analysisRows,
   avionicsChange,
   budgetMargin,
+  busDemandKw,
+  failureCases,
   hasTwinScenario,
   limitLabel,
   loadBudget,
@@ -37,6 +40,7 @@ const twinSpec = CustomElement.define({
     twinFocus: TwinFocus,
     twinOverlay: TwinOverlay,
     twinRevision: TwinRevision,
+    twinCondition: TwinCondition,
   },
   events: {
     'twin-pick': Schema.Struct({ part: Schema.String }),
@@ -405,7 +409,7 @@ const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
         [
           h.h2(
             [h.Class('twin-heading')],
-            [`Why the PSU is changing · ${avionicsChange.id}`],
+            [`Why the power assembly is changing · ${avionicsChange.id}`],
           ),
           h.span(
             [
@@ -417,8 +421,8 @@ const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
               isRevB
                 ? 'Rev B carries the upgraded load within margin'
                 : isRevAShort
-                  ? 'Rev A cannot carry the upgraded load'
-                  : 'Rev A has margin; no PSU change needed',
+                  ? 'Rev A loses N−1 redundancy with the new load'
+                  : 'Rev A has margin; no power assembly change needed',
             ],
           ),
         ],
@@ -448,9 +452,7 @@ const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
             [
               h.h3(
                 [h.Class('twin-subheading')],
-                [
-                  `Budget (demand / limit) at ${kw(avionicsChange.existingLoadKw)} kW existing + new module`,
-                ],
+                [`Budget (demand / limit) at ${kw(busDemandKw)} kW bus load`],
               ),
               h.table(
                 [h.Class('twin-table')],
@@ -506,17 +508,52 @@ const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
               h.p(
                 [h.Class('muted small-text twin-driver-note')],
                 [
-                  `Margin = (limit − demand) / limit; design rule ≥ ${avionicsChange.requiredMargin * 100}%. Peak limit = ${avionicsChange.shortTermRating}× continuous rating. PSU heat = P × (1/η − 1), with η = ${avionicsChange.efficiency.A} (Rev A) and ${avionicsChange.efficiency.B} (Rev B).`,
+                  `Demand = ${avionicsChange.existingLoadKw} − ${avionicsChange.replacedKw} + ${avionicsChange.steadyKw} = ${kw(busDemandKw)} kW. N−1 capacity = (modules − 1) × ${avionicsChange.moduleRatingKw} kW; peak limit = ${avionicsChange.shortTermRating}× N−1. Heat = P × (1/η − 1), η = ${avionicsChange.efficiency}. Drop = I × R, I = ${avionicsChange.steadyKw * 1000} W / ${avionicsChange.busVolts} V. Margin = (limit − demand) / limit; design rule ≥ ${avionicsChange.requiredMargin * 100}%.`,
                 ],
               ),
             ],
           ),
         ],
       ),
+      h.h3([h.Class('twin-subheading')], ['Failure cases']),
+      h.table(
+        [h.Class('twin-table twin-failures')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                ['Failure', 'Rev A', 'Rev B'].map(label => h.th([], [label])),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            failureCases.map(item =>
+              h.keyed('tr')(
+                item.failure,
+                [],
+                [
+                  h.td([], [item.failure]),
+                  h.td(
+                    [h.Class(item.isShortA ? 'twin-margin bad' : '')],
+                    [item.effect.A],
+                  ),
+                  h.td(
+                    [h.Class(item.isShortA ? 'twin-margin ok' : '')],
+                    [item.effect.B],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
       h.p(
         [h.Class('muted small-text')],
         [
-          'SAMPLE values on a synthetic 270 VDC architecture. The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
+          'SAMPLE values on a synthetic 48 VDC modular architecture fed from 270 VDC. The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
         ],
       ),
     ],
@@ -536,12 +573,12 @@ export const twinPage = (model: Model, h: H): Html => {
   const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
   const steps: ReadonlyArray<Readonly<{ label: string; done: boolean }>> = [
-    { label: 'Check the avionics load change', done: true },
+    { label: 'Check the cockpit avionics change', done: true },
     {
       label: 'Inspect the aft bay',
       done: model.twinFocus === 'Aft bay' || isRevB,
     },
-    { label: 'Place PSU Rev B in the systems model', done: isRevB },
+    { label: 'Place power assembly Rev B in the systems model', done: isRevB },
     {
       label: 'Review requirement changes',
       done: model.twinReviewed.includes('Requirements'),
@@ -562,7 +599,7 @@ export const twinPage = (model: Model, h: H): Html => {
           h.Class('button primary'),
           h.OnClick(Message.ClickedLoadTwinScenario()),
         ],
-        [plusIcon(h), 'Load F-35 PSU scenario'],
+        [plusIcon(h), 'Load F-35 power scenario'],
       )
     : !isRevB
       ? h.button(
@@ -571,7 +608,7 @@ export const twinPage = (model: Model, h: H): Html => {
             h.Class('button primary'),
             h.OnClick(Message.ClickedInstallTwinRevision({ revision: 'B' })),
           ],
-          [arrowIcon(h), 'Place PSU Rev B'],
+          [arrowIcon(h), 'Place power assembly Rev B'],
         )
       : h.button(
           [
@@ -631,17 +668,26 @@ export const twinPage = (model: Model, h: H): Html => {
                         overlay => Message.SelectedTwinOverlay({ overlay }),
                         h,
                       ),
-                      h.span([h.Class('chip mono')], [`PSU Rev ${revision}`]),
+                      segmented(
+                        'Condition',
+                        ['Normal', 'Module failed'] as const,
+                        model.twinCondition,
+                        condition =>
+                          Message.SelectedTwinCondition({ condition }),
+                        h,
+                      ),
+                      h.span([h.Class('chip mono')], [`MPA Rev ${revision}`]),
                     ],
                   ),
                   twin([
                     h.Class('twin-canvas'),
                     h.AriaLabel(
-                      '3D model of the F-35 with the aft power supply unit',
+                      '3D model of the F-35 with the aft modular power assembly and the new cockpit avionics module',
                     ),
                     twin.TwinFocus(model.twinFocus),
                     twin.TwinOverlay(model.twinOverlay),
                     twin.TwinRevision(revision),
+                    twin.TwinCondition(model.twinCondition),
                     twin.OnTwinPick(detail =>
                       Message.ClickedTwinPart({ part: detail.part }),
                     ),
@@ -659,7 +705,7 @@ export const twinPage = (model: Model, h: H): Html => {
                   h.p(
                     [h.Class('muted small-text twin-note')],
                     [
-                      'Airframe: supplied F-35 model. PSU geometry is a placeholder until the supplier models arrive.',
+                      'Airframe: supplied F-35 model. Power assembly and avionics geometry are placeholders until the supplier models arrive.',
                     ],
                   ),
                 ],
@@ -721,7 +767,7 @@ export const twinPage = (model: Model, h: H): Html => {
                             }),
                           ),
                         ],
-                        ['Place PSU Rev B in the systems model'],
+                        ['Place power assembly Rev B in the systems model'],
                       ),
                   h.h2([h.Class('twin-heading')], ['Affected subsystems']),
                   subsystems.length === 0

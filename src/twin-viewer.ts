@@ -1,7 +1,8 @@
 import {
   AmbientLight,
+  Box3,
   BoxGeometry,
-  BufferAttribute,
+  CatmullRomCurve3,
   Color,
   CylinderGeometry,
   DirectionalLight,
@@ -16,6 +17,8 @@ import {
   PerspectiveCamera,
   Raycaster,
   Scene,
+  SphereGeometry,
+  TubeGeometry,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -24,9 +27,12 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 
+import { avionicsChange, busDemandKw, capacityKw } from './twin'
+
 type Focus = 'Airframe' | 'Aft bay'
 type Overlay = 'Shaded' | 'Thermal'
 type Revision = 'A' | 'B'
+type Condition = 'Normal' | 'Module failed'
 
 const presets: Readonly<
   Record<Focus, Readonly<{ position: Vector3; target: Vector3 }>>
@@ -44,12 +50,51 @@ const presets: Readonly<
 const specs: Readonly<
   Record<
     Revision,
-    Readonly<{ size: Vector3; mounts: number; peak: number; plates: number }>
+    Readonly<{ modules: number; mounts: number; plates: number }>
   >
 > = {
-  A: { size: new Vector3(0.28, 0.12, 0.34), mounts: 4, peak: 78, plates: 1 },
-  B: { size: new Vector3(0.34, 0.15, 0.42), mounts: 6, peak: 84, plates: 2 },
+  A: { modules: avionicsChange.modules.A, mounts: 4, plates: 1 },
+  B: { modules: avionicsChange.modules.B, mounts: 6, plates: 2 },
 }
+
+const moduleWidth = 0.062
+const moduleGap = 0.01
+const rackDepth = 0.32
+const rackHeight = 0.12
+const rackWidth = (count: number): number =>
+  count * (moduleWidth + moduleGap) + moduleGap
+const slotX = (index: number, count: number): number =>
+  -rackWidth(count) / 2 +
+  moduleGap +
+  moduleWidth / 2 +
+  index * (moduleWidth + moduleGap)
+
+const failedCount = (condition: Condition): number =>
+  condition === 'Module failed' ? 1 : 0
+const utilization = (revision: Revision, condition: Condition): number =>
+  busDemandKw / capacityKw(revision, failedCount(condition))
+const moduleTemperature = (load: number): number => 50 + 35 * load
+
+const green = new Color('#16a34a')
+const amber = new Color('#d97706')
+const red = new Color('#dc2626')
+
+const powerColor = (revision: Revision, condition: Condition): Color =>
+  utilization(revision, condition) > 1
+    ? red
+    : busDemandKw > capacityKw(revision, 1)
+      ? amber
+      : green
+
+const overlayMaterial = (color: Color | string): MeshStandardMaterial =>
+  new MeshStandardMaterial({
+    color,
+    emissive: color,
+    emissiveIntensity: 0.5,
+    depthTest: false,
+    transparent: true,
+    opacity: 0.95,
+  })
 
 const psuCenter = new Vector3(0, 0.02, 1.32)
 const cobalt = new Color('#1f4fd1')
@@ -120,7 +165,20 @@ export class StreamTwin extends HTMLElement {
   #controls: OrbitControls | undefined
   #airframe: Group | undefined
   #psu = new Group()
-  #psuBody: Mesh<BoxGeometry, MeshStandardMaterial> | undefined
+  #condition: Condition = 'Normal'
+  #rack = new Group()
+  #modules: Array<Mesh<BoxGeometry, MeshStandardMaterial>> = []
+  #slideStart: number | undefined
+  #slidePending = false
+  #cockpitPosition = new Vector3(0, 0.2, -1.3)
+  #cockpit = new Mesh(
+    new BoxGeometry(0.16, 0.08, 0.14),
+    overlayMaterial('#f59e0b'),
+  )
+  #feeder: Mesh<TubeGeometry, MeshStandardMaterial> | undefined
+  #curve: CatmullRomCurve3 | undefined
+  #pulses: Array<Mesh<SphereGeometry, MeshStandardMaterial>> = []
+  #cockpitLabel: HTMLDivElement | undefined
   #fixtures = new Group()
   #frame = 0
   #observer: ResizeObserver | undefined
@@ -133,7 +191,6 @@ export class StreamTwin extends HTMLElement {
         start: number | undefined
       }>
     | undefined
-  #scale = specs.A.size.clone()
   #label: HTMLDivElement | undefined
   #status: HTMLDivElement | undefined
   #down = new Vector2()
@@ -165,17 +222,36 @@ export class StreamTwin extends HTMLElement {
   }
   set twinRevision(value: unknown) {
     if ((value === 'A' || value === 'B') && value !== this.#revision) {
+      this.#slidePending = value === 'B'
+      this.#slideStart = undefined
       this.#revision = value
-      this.#buildFixtures()
+      this.#buildRack()
       this.#paint()
     }
   }
   get twinRevision(): Revision {
     return this.#revision
   }
+  set twinCondition(value: unknown) {
+    if (
+      (value === 'Normal' || value === 'Module failed') &&
+      value !== this.#condition
+    ) {
+      this.#condition = value
+      this.#paint()
+    }
+  }
+  get twinCondition(): Condition {
+    return this.#condition
+  }
 
   connectedCallback(): void {
-    for (const key of ['twinFocus', 'twinOverlay', 'twinRevision'] as const) {
+    for (const key of [
+      'twinFocus',
+      'twinOverlay',
+      'twinRevision',
+      'twinCondition',
+    ] as const) {
       if (Object.hasOwn(this, key)) {
         const value: unknown = Reflect.get(this, key)
         Reflect.deleteProperty(this, key)
@@ -184,9 +260,11 @@ export class StreamTwin extends HTMLElement {
     }
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
     root.innerHTML =
-      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;pointer-events:none}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:#0b1f4d}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
+      '<style>:host{display:block;position:relative;overflow:hidden}canvas{display:block;width:100%;height:100%;outline:none}.label{position:absolute;transform:translate(-50%,-130%);padding:3px 7px;background:#0b1f4d;color:#fff;font:600 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.4px;white-space:nowrap;pointer-events:none}.label.amber{background:#92400e}.label.red{background:#b91c1c}.label.green{background:#166534}.label::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:inherit}.status.fallback{inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;text-align:center;padding:24px}.status{position:absolute;left:12px;bottom:10px;font:500 11px/1.4 "IBM Plex Mono",monospace;color:#4b5563;pointer-events:none}</style>'
     this.#label = document.createElement('div')
     this.#label.className = 'label'
+    this.#cockpitLabel = document.createElement('div')
+    this.#cockpitLabel.className = 'label amber'
     this.#status = document.createElement('div')
     this.#status.className = 'status'
     this.#status.textContent = 'Loading F-35 model…'
@@ -202,7 +280,12 @@ export class StreamTwin extends HTMLElement {
     const renderer = this.#renderer
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
     renderer.setClearColor('#eef1f6')
-    root.append(renderer.domElement, this.#label, this.#status)
+    root.append(
+      renderer.domElement,
+      this.#label,
+      this.#cockpitLabel,
+      this.#status,
+    )
     this.#scene.add(
       new HemisphereLight('#ffffff', '#b8c0cc', 1.4),
       new AmbientLight('#ffffff', 0.35),
@@ -242,10 +325,20 @@ export class StreamTwin extends HTMLElement {
         })
         this.#airframe = airframe
         this.#scene.add(airframe)
+        const bounds = new Box3().setFromObject(airframe)
+        const size = bounds.getSize(new Vector3())
+        this.#cockpitPosition = new Vector3(
+          (bounds.min.x + bounds.max.x) / 2,
+          bounds.min.y + size.y * 0.55,
+          bounds.min.z + size.z * 0.24,
+        )
+        this.#cockpit.position.copy(this.#cockpitPosition)
+        this.#buildFeeder()
+        this.#paint()
         this.#applyFocus()
         if (this.#status) {
           this.#status.textContent =
-            'Drag to orbit · scroll to zoom · click the aft bay to inspect the PSU'
+            'Drag to orbit · scroll to zoom · click the aft bay to inspect the power assembly'
         }
         return undefined
       })
@@ -269,7 +362,11 @@ export class StreamTwin extends HTMLElement {
     this.#renderer = undefined
     this.#scene = new Scene()
     this.#psu = new Group()
+    this.#rack = new Group()
     this.#fixtures = new Group()
+    this.#modules = []
+    this.#pulses = []
+    this.#feeder = undefined
     this.#airframe = undefined
   }
 
@@ -340,21 +437,81 @@ export class StreamTwin extends HTMLElement {
   }
 
   #buildPsu(): void {
-    const geometry = new BoxGeometry(1, 1, 1, 10, 4, 10)
-    const material = new MeshStandardMaterial({
-      color: cobalt,
-      metalness: 0.35,
-      roughness: 0.45,
-    })
-    this.#psuBody = new Mesh(geometry, material)
-    this.#psu.add(this.#psuBody, this.#fixtures)
+    this.#psu.add(this.#rack, this.#fixtures)
     this.#psu.position.copy(psuCenter)
-    this.#scene.add(this.#psu)
-    this.#buildFixtures()
+    this.#cockpit.renderOrder = 10
+    this.#cockpit.position.copy(this.#cockpitPosition)
+    this.#scene.add(this.#psu, this.#cockpit)
+    this.#buildRack()
+    this.#buildFeeder()
     this.#paint()
   }
 
-  #buildFixtures(): void {
+  #buildRack(): void {
+    this.#rack.clear()
+    const count = specs[this.#revision].modules
+    const width = rackWidth(count)
+    const chassis = new Mesh(
+      new BoxGeometry(width, rackHeight + 0.02, rackDepth + 0.02),
+      new MeshStandardMaterial({
+        color: '#cbd2dc',
+        metalness: 0.5,
+        roughness: 0.4,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+      }),
+    )
+    this.#rack.add(chassis)
+    this.#modules = Array.from({ length: count }, (_, index) => {
+      const mesh = new Mesh(
+        new BoxGeometry(moduleWidth, rackHeight, rackDepth),
+        new MeshStandardMaterial({
+          color: cobalt,
+          metalness: 0.35,
+          roughness: 0.45,
+        }),
+      )
+      mesh.position.x = slotX(index, count)
+      this.#rack.add(mesh)
+      return mesh
+    })
+    this.#buildFixtures(width)
+  }
+
+  #buildFeeder(): void {
+    if (this.#feeder) {
+      this.#scene.remove(this.#feeder)
+    }
+    for (const pulse of this.#pulses) {
+      this.#scene.remove(pulse)
+    }
+    const start = psuCenter
+      .clone()
+      .add(new Vector3(0, rackHeight / 2, -rackDepth / 2))
+    const end = this.#cockpitPosition.clone()
+    const middle = start
+      .clone()
+      .lerp(end, 0.5)
+      .add(new Vector3(0, 0.08, 0))
+    this.#curve = new CatmullRomCurve3([start, middle, end])
+    this.#feeder = new Mesh(
+      new TubeGeometry(this.#curve, 64, 0.007, 8),
+      overlayMaterial(green),
+    )
+    this.#feeder.renderOrder = 9
+    this.#pulses = Array.from({ length: 5 }, () => {
+      const pulse = new Mesh(
+        new SphereGeometry(0.02, 12, 12),
+        overlayMaterial(green),
+      )
+      pulse.renderOrder = 11
+      return pulse
+    })
+    this.#scene.add(this.#feeder, ...this.#pulses)
+  }
+
+  #buildFixtures(width: number): void {
     this.#fixtures.clear()
     const spec = specs[this.#revision]
     const plate = new MeshStandardMaterial({
@@ -364,17 +521,13 @@ export class StreamTwin extends HTMLElement {
     })
     for (let index = 0; index < spec.plates; index++) {
       const slab = new Mesh(
-        new BoxGeometry(
-          spec.size.x * 1.08,
-          0.012,
-          spec.size.z / spec.plates - 0.01,
-        ),
+        new BoxGeometry(width * 1.08, 0.012, rackDepth / spec.plates - 0.01),
         plate,
       )
       slab.position.set(
         0,
-        -spec.size.y / 2 - 0.008,
-        -spec.size.z / 2 + (spec.size.z / spec.plates) * (index + 0.5),
+        -rackHeight / 2 - 0.018,
+        -rackDepth / 2 + (rackDepth / spec.plates) * (index + 0.5),
       )
       this.#fixtures.add(slab)
     }
@@ -385,9 +538,9 @@ export class StreamTwin extends HTMLElement {
       const step = index % perSide
       const mount = new Mesh(new CylinderGeometry(0.012, 0.012, 0.05, 10), bolt)
       mount.position.set(
-        side * (spec.size.x / 2 + 0.018),
-        -spec.size.y / 2,
-        -spec.size.z / 2 + (spec.size.z / (perSide - 1)) * step,
+        side * (width / 2 + 0.018),
+        -rackHeight / 2,
+        -rackDepth / 2 + (rackDepth / (perSide - 1)) * step,
       )
       this.#fixtures.add(mount)
     }
@@ -396,40 +549,39 @@ export class StreamTwin extends HTMLElement {
       const line = new Mesh(new CylinderGeometry(0.01, 0.01, 0.3, 10), pipe)
       line.rotation.x = Math.PI / 2
       line.position.set(
-        side * spec.size.x * 0.3,
-        -spec.size.y / 2 - 0.02,
-        -spec.size.z / 2 - 0.15,
+        side * width * 0.3,
+        -rackHeight / 2 - 0.03,
+        -rackDepth / 2 - 0.15,
       )
       this.#fixtures.add(line)
     }
   }
 
   #paint(): void {
-    const body = this.#psuBody
-    if (!body) {
-      return
-    }
-    const geometry = body.geometry
-    const positions = geometry.getAttribute('position')
-    const colors = new Float32Array(positions.count * 3)
-    const peak = specs[this.#revision].peak
-    for (let index = 0; index < positions.count; index++) {
-      const distance = Math.hypot(
-        positions.getX(index) - 0.3,
-        positions.getY(index) - 0.5,
-        positions.getZ(index) + 0.2,
-      )
-      const color = ramp(55 + (peak - 55) * Math.max(0, 1 - distance / 1.3))
-      colors.set([color.r, color.g, color.b], index * 3)
-    }
-    geometry.setAttribute('color', new BufferAttribute(colors, 3))
     const isThermal = this.#overlay === 'Thermal'
-    body.material.vertexColors = isThermal
-    body.material.color = isThermal ? new Color('#ffffff') : cobalt.clone()
-    body.material.emissive = isThermal
-      ? new Color('#220000')
-      : new Color('#000000')
-    body.material.needsUpdate = true
+    const failed = failedCount(this.#condition)
+    const load = utilization(this.#revision, this.#condition)
+    for (const [index, mesh] of this.#modules.entries()) {
+      const isFailed = index < failed
+      mesh.material.color = isFailed
+        ? new Color('#3f3f46')
+        : isThermal
+          ? ramp(moduleTemperature(load))
+          : load > 1
+            ? amber.clone()
+            : cobalt.clone()
+      mesh.material.emissive = isFailed
+        ? new Color('#7f1d1d')
+        : new Color('#000000')
+      mesh.material.needsUpdate = true
+    }
+    const color = powerColor(this.#revision, this.#condition)
+    for (const item of [this.#feeder, ...this.#pulses]) {
+      if (item) {
+        item.material.color = color.clone()
+        item.material.emissive = color.clone()
+      }
+    }
   }
 
   #animate(time: number): void {
@@ -457,23 +609,81 @@ export class StreamTwin extends HTMLElement {
         this.#flight = undefined
       }
     }
-    this.#scale.lerp(specs[this.#revision].size, 0.08)
-    this.#psuBody?.scale.copy(this.#scale)
+    const count = specs[this.#revision].modules
+    const slid = this.#modules[count - 1]
+    if (this.#slidePending) {
+      this.#slidePending = false
+      this.#slideStart = time
+    }
+    if (this.#slideStart !== undefined && slid) {
+      const t = Math.min(1, Math.max(0, (time - this.#slideStart) / 1100))
+      const eased = easeInOut(t)
+      slid.position.set(
+        slotX(count - 1, count) + (1 - eased) * 0.5,
+        (1 - eased) * 0.3,
+        0,
+      )
+      if (t >= 1) {
+        this.#slideStart = undefined
+      }
+    }
     const pulse =
       this.#focus === 'Aft bay' ? 1 : 1 + Math.sin(time / 380) * 0.05
     this.#psu.scale.setScalar(pulse)
+    this.#cockpit.material.emissiveIntensity =
+      0.45 + Math.sin(time / 260) * 0.35
+    const load = utilization(this.#revision, this.#condition)
+    const curve = this.#curve
+    if (curve) {
+      for (const [index, item] of this.#pulses.entries()) {
+        const speed = load > 1 ? 4200 : 1800
+        const t = (time / speed + index / this.#pulses.length) % 1
+        item.position.copy(curve.getPointAt(1 - t))
+        item.material.opacity =
+          load > 1 ? 0.35 + 0.6 * Math.abs(Math.sin(time / 90 + index)) : 0.95
+      }
+    }
     this.#controls?.update()
     renderer.render(this.#scene, this.#camera)
+    this.#place(
+      this.#label,
+      psuCenter.clone().add(new Vector3(0, rackHeight / 2 + 0.02, 0)),
+    )
+    this.#place(
+      this.#cockpitLabel,
+      this.#cockpitPosition.clone().add(new Vector3(0, 0.05, 0)),
+    )
     const label = this.#label
     if (label) {
-      const projected = psuCenter
-        .clone()
-        .add(new Vector3(0, this.#scale.y / 2, 0))
-        .project(this.#camera)
-      label.style.left = `${((projected.x + 1) / 2) * this.clientWidth}px`
-      label.style.top = `${((1 - projected.y) / 2) * this.clientHeight}px`
-      label.textContent = `PSU · Rev ${this.#revision}${this.#overlay === 'Thermal' ? ` · peak ${specs[this.#revision].peak} °C` : ''}`
+      const failed = failedCount(this.#condition)
+      const available = capacityKw(this.#revision, failed)
+      const isShort = load > 1
+      const tone = powerColor(this.#revision, this.#condition)
+      label.className = `label ${tone === red ? 'red' : tone === amber ? 'amber' : 'green'}`
+      const verdict = isShort
+        ? ` · SHORT ${(busDemandKw - available).toFixed(1)} kW`
+        : failed === 0 && busDemandKw > capacityKw(this.#revision, 1)
+          ? ' · no N−1 margin'
+          : ' · OK'
+      const temperature =
+        this.#overlay === 'Thermal'
+          ? ` · ${Math.round(moduleTemperature(load))} °C`
+          : ''
+      label.textContent = `MPA Rev ${this.#revision} · ${count - failed}/${count} modules · ${available.toFixed(1)} kW for ${busDemandKw.toFixed(1)} kW${verdict}${temperature}`
     }
+    if (this.#cockpitLabel) {
+      this.#cockpitLabel.textContent = `${avionicsChange.id} · cockpit avionics +${(avionicsChange.steadyKw - avionicsChange.replacedKw).toFixed(1)} kW`
+    }
+  }
+
+  #place(element: HTMLDivElement | undefined, point: Vector3): void {
+    if (!element) {
+      return
+    }
+    const projected = point.project(this.#camera)
+    element.style.display = projected.z > 1 ? 'none' : ''
+    element.style.left = `${((projected.x + 1) / 2) * this.clientWidth}px`
+    element.style.top = `${((1 - projected.y) / 2) * this.clientHeight}px`
   }
 }
 

@@ -30,6 +30,7 @@ import {
   SortDirection,
   SortKey,
   TaskSession,
+  TwinCondition,
   TwinFocus,
   TwinOverlay,
   TwinPackage,
@@ -146,6 +147,7 @@ export const Model = Schema.Struct({
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
   twinOverlay: TwinOverlay,
+  twinCondition: TwinCondition,
   twinReviewed: Schema.Array(TwinReviewItem),
   maybeTwinPackage: Schema.Option(TwinPackage),
   twinReports: Schema.Array(TwinReport),
@@ -214,6 +216,7 @@ export const initialModel: Model = {
   isResizingSidebar: false,
   twinFocus: 'Airframe',
   twinOverlay: 'Shaded',
+  twinCondition: 'Normal',
   twinReviewed: [],
   maybeTwinPackage: Option.none(),
   twinReports: [],
@@ -2646,9 +2649,9 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         model,
         record(
           writeRequirements(model, requirements.concat(seedTwinArtifacts())),
-          'F-35 aft power-supply scenario added · Ben Juntilla',
+          'F-35 modular power assembly scenario added · Ben Juntilla',
         ),
-        'Power-supply scenario added to the systems model.',
+        'Power assembly scenario added to the systems model.',
       )
     },
     SelectedTwinFocus: ({ focus }) => ({
@@ -2656,6 +2659,9 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     SelectedTwinOverlay: ({ overlay }) => ({
       model: modifyFields(model, { twinOverlay: () => overlay }),
+    }),
+    SelectedTwinCondition: ({ condition }) => ({
+      model: modifyFields(model, { twinCondition: () => condition }),
     }),
     ClickedTwinPart: () => ({
       model: modifyFields(model, { twinFocus: () => 'Aft bay' }),
@@ -2675,8 +2681,8 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       ).length
       const summary =
         revision === 'B'
-          ? `PSU Rev B placed in the systems model · ${count} artifacts revised`
-          : `PSU reverted to Rev A · ${count} artifacts restored`
+          ? `Power assembly Rev B placed in the systems model · ${count} artifacts revised`
+          : `Power assembly reverted to Rev A · ${count} artifacts restored`
       return persist(
         modifyFields(model, {
           twinFocus: () => 'Aft bay',
