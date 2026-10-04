@@ -186,11 +186,6 @@ const empty = (
       action ?? h.empty,
     ],
   )
-const chip = (label: string, value: string, h: H): Html =>
-  h.span(
-    [h.Class('chip')],
-    [h.span([h.Class('chip-label mono')], [label]), value],
-  )
 const pages: ReadonlyArray<{ page: Page; icon: string }> = [
   { page: 'Files', icon: 'file' },
   { page: 'Digital twin', icon: 'box' },
@@ -4341,44 +4336,17 @@ const launchPreview = (
     launchScopeRequirements(workingRequirements(model), targetId, scope),
     model.workspace.agents,
   )
-  const cells: ReadonlyArray<readonly [string, string]> = [
-    ['Agents', String(estimate.agents)],
-    ['Stages', String(estimate.stages)],
-    ['Artifacts', String(estimate.artifacts)],
+  const tokens =
+    model.executionMode === 'Simulation'
+      ? 'no model calls'
+      : `≈${(estimate.minimumInputTokens / 1000).toFixed(1)}k input tokens`
+  return h.p(
     [
-      'Context / agent',
-      `≈${estimate.contextTokens.toLocaleString('en-US')} tok`,
+      h.Class('launch-estimate muted small-text'),
+      h.AriaLabel('Launch estimate'),
     ],
     [
-      'Input, minimum',
-      `≈${estimate.minimumInputTokens.toLocaleString('en-US')} tok`,
-    ],
-    [
-      'Output cap',
-      model.executionMode === 'Simulation' ? 'No model calls' : '2,048 tok',
-    ],
-  ]
-  return h.div(
-    [h.Class('launch-preview')],
-    [
-      h.dl(
-        [h.Class('run-summary'), h.AriaLabel('Launch estimate')],
-        cells.map(([label, value]) =>
-          h.keyed('div')(
-            label,
-            [h.Class('run-summary-cell')],
-            [h.dt([], [label]), h.dd([h.Class('mono')], [value])],
-          ),
-        ),
-      ),
-      h.p(
-        [h.Class('muted small-text')],
-        [
-          model.executionMode === 'Simulation'
-            ? 'No model calls. No cost.'
-            : 'Estimate ≈ 4 chars/token. Cost depends on Workers AI pricing.',
-        ],
-      ),
+      `${estimate.agents} agents · ${estimate.stages} stages · ${estimate.artifacts} artifacts · ${tokens}`,
     ],
   )
 }
@@ -4808,7 +4776,7 @@ const modalContent = (model: Model, h: H): Html =>
           h.h2([h.Id('dialog-title')], ['Launch your fleet']),
           h.p(
             [h.Class('subtitle')],
-            ['Choose the artifact to analyze and confirm the execution mode.'],
+            ['Pick a source artifact and execution mode.'],
           ),
           field(
             'Run title',
@@ -4816,91 +4784,58 @@ const modalContent = (model: Model, h: H): Html =>
             value => Message.UpdatedTitle({ value }),
             h,
           ),
-          h.label(
-            [h.Class('form-field')],
+          h.div(
+            [h.Class('launch-row')],
             [
-              h.span([], ['Source artifact']),
-              h.select(
+              h.label(
+                [h.Class('form-field')],
                 [
-                  h.Value(editor.targetId),
-                  h.OnChange(id => Message.UpdatedRunTarget({ id })),
-                ],
-                model.workspace.requirements.map(item =>
-                  h.option([h.Value(item.id)], [`${item.id} · ${item.title}`]),
-                ),
-              ),
-            ],
-          ),
-          h.label(
-            [h.Class('form-field')],
-            [
-              h.span([], ['Scope']),
-              h.select(
-                [
-                  h.AriaLabel('Scope'),
-                  h.Value(editor.scope),
-                  h.OnChange(value =>
-                    Message.SelectedLaunchScope({
-                      scope: value === 'Impact' ? 'Impact' : 'Workspace',
-                    }),
-                  ),
-                ],
-                LaunchScope.literals.map(scope =>
-                  h.keyed('option')(
-                    scope,
-                    [h.Value(scope)],
+                  h.span([], ['Source artifact']),
+                  h.select(
                     [
-                      scope === 'Workspace'
-                        ? 'Whole workspace'
-                        : 'Sample · source artifact and downstream only',
+                      h.Value(editor.targetId),
+                      h.OnChange(id => Message.UpdatedRunTarget({ id })),
                     ],
+                    model.workspace.requirements.map(item =>
+                      h.option(
+                        [h.Value(item.id)],
+                        [`${item.id} · ${item.title}`],
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
+              h.label(
+                [h.Class('form-field')],
+                [
+                  h.span([], ['Scope']),
+                  h.select(
+                    [
+                      h.AriaLabel('Scope'),
+                      h.Value(editor.scope),
+                      h.OnChange(value =>
+                        Message.SelectedLaunchScope({
+                          scope: value === 'Impact' ? 'Impact' : 'Workspace',
+                        }),
+                      ),
+                    ],
+                    LaunchScope.literals.map(scope =>
+                      h.keyed('option')(
+                        scope,
+                        [h.Value(scope)],
+                        [
+                          scope === 'Workspace'
+                            ? 'Whole workspace'
+                            : 'Sample · source artifact and downstream only',
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           launchPreview(model, editor.targetId, editor.scope, h),
-          h.div(
-            [h.Class('chip-row'), h.AriaLabel('Run metadata')],
-            [
-              chip('Source', editor.targetId, h),
-              chip(
-                'Scope',
-                editor.scope === 'Workspace' ? 'Whole workspace' : 'Sample',
-                h,
-              ),
-              chip(
-                'Agents',
-                String(
-                  model.workspace.agents.filter(agent => agent.enabled).length,
-                ),
-                h,
-              ),
-              chip(
-                'Stages',
-                String(
-                  Array.dedupe(
-                    model.workspace.agents
-                      .filter(agent => agent.enabled)
-                      .map(agent => agent.wave),
-                  ).length,
-                ),
-                h,
-              ),
-              chip(
-                'Branch',
-                Option.getOrElse(model.maybeActiveBranch, () => 'Base'),
-                h,
-              ),
-              chip(
-                'Mode',
-                model.executionMode === 'Simulation'
-                  ? 'Simulation'
-                  : 'Workers AI',
-                h,
-              ),
-            ],
-          ),
           h.label(
             [h.Class('form-field')],
             [
@@ -4953,24 +4888,29 @@ const modalContent = (model: Model, h: H): Html =>
                         [icon('alert', h), error],
                       ),
                   }),
-                  h.div(
-                    [h.Class('executor-actions')],
-                    [
-                      button(
-                        'Check Worker',
-                        Message.ClickedProbeExecutor(),
-                        'outline small',
-                        h,
-                      ),
-                      h.a(
+                  Option.exists(
+                    model.maybeExecutorStatus,
+                    status => status.state === 'Ready',
+                  )
+                    ? h.empty
+                    : h.div(
+                        [h.Class('executor-actions')],
                         [
-                          h.Href('/api/unlock'),
-                          h.Class('button outline small'),
+                          button(
+                            'Check Worker',
+                            Message.ClickedProbeExecutor(),
+                            'outline small',
+                            h,
+                          ),
+                          h.a(
+                            [
+                              h.Href('/api/unlock'),
+                              h.Class('button outline small'),
+                            ],
+                            ['Unlock Worker'],
+                          ),
                         ],
-                        ['Unlock Worker'],
                       ),
-                    ],
-                  ),
                 ],
               )
             : h.empty,
@@ -4982,7 +4922,7 @@ const modalContent = (model: Model, h: H): Html =>
                 [
                   h.span([h.Class('stage-number')], [String(wave + 1)]),
                   h.div(
-                    [],
+                    [h.Class('launch-stage-line')],
                     [
                       h.strong(
                         [],
@@ -4991,8 +4931,8 @@ const modalContent = (model: Model, h: H): Html =>
                             'Stage',
                         ],
                       ),
-                      h.p(
-                        [],
+                      h.span(
+                        [h.Class('muted')],
                         [
                           model.workspace.agents
                             .filter(
@@ -5016,8 +4956,8 @@ const modalContent = (model: Model, h: H): Html =>
             [
               icon('shield', h),
               model.executionMode === 'Simulation'
-                ? 'Local simulation. Agents run in parallel within each stage. Your workspace is snapshotted; nothing changes without human review.'
-                : 'Live, billable Workers AI inference through AI Gateway. Up to 8 agents, 2,048 output tokens per generation, and a 10-minute deadline. The artifact snapshot and findings are sent to Cloudflare. Read-only tools; no artifact writes.',
+                ? 'Local simulation. Nothing changes without human review.'
+                : 'Billable Workers AI calls via AI Gateway. Read-only; nothing changes without human review.',
             ],
           ),
           h.div(

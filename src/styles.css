@@ -7970,3 +7970,27 @@ button.graph-cluster-head:hover {
   width: auto;
   translate: 0 -10px;
 }
+.launch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.launch-row > .form-field select {
+  width: 100%;
+}
+p.launch-estimate {
+  margin: -4px 0 16px;
+}
+.launch-stages .launch-stage {
+  align-items: center;
+  padding: 6px 0;
+}
+.launch-stage-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.launch-stage-line > .muted {
+  font-size: var(--text-sm);
+}
