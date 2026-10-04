@@ -1498,7 +1498,6 @@ const approvals = (
   items: ReadonlyArray<Approval>,
   h: H,
 ): Html => {
-  const pending = items.filter(approval => approval.status === 'Pending')
   return h.div(
     [h.Class('approval-list')],
     Array.match(items, {
@@ -1509,9 +1508,8 @@ const approvals = (
           h,
         ),
       ],
-      onNonEmpty: rows => [
-        Array.isArrayEmpty(pending) ? h.empty : reviewBar(model, pending, h),
-        ...rows.map(approval => {
+      onNonEmpty: rows =>
+        rows.map(approval => {
           const maybeStaged = model.stagedDecisions.find(
             item => item.id === approval.id,
           )
@@ -1652,7 +1650,6 @@ const approvals = (
             ],
           )
         }),
-      ],
     }),
   )
 }
@@ -1796,6 +1793,9 @@ const inboxPage = (model: Model, h: H): Html => {
                   h.span([h.Class('count-pill')], [String(pending.length)]),
                 ],
               ),
+              Array.isArrayEmpty(pending)
+                ? h.empty
+                : reviewBar(model, pending, h),
             ],
           ),
           approvals(model, pending, h),
