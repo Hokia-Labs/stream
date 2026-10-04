@@ -26,8 +26,15 @@ import { crc32, createZip } from './zip'
 
 const ready: Model = modifyFields(initialModel, { storage: () => 'Ready' })
 const loaded = update(ready, Message.ClickedLoadTwinScenario()).model
+const approve = (model: Model): Model =>
+  [
+    Message.ClickedDraftTwinProposal(),
+    Message.DraftedTwinProposal(),
+    Message.OpenedBoardReview(),
+    Message.ClickedApproveTwinProposal(),
+  ].reduce((current, message) => update(current, message).model, model)
 const revB = update(
-  loaded,
+  modifyFields(loaded, { twinProposal: () => 'Approved' }),
   Message.ClickedInstallTwinRevision({ revision: 'B' }),
 ).model
 
@@ -55,10 +62,7 @@ describe('digital twin', () => {
         pick(swapped, 'Power', 'MW-MPA-48-5').workspace.requirements,
       ),
     ).toBe('A')
-    const upgraded = update(
-      swapped,
-      Message.ClickedInstallTwinRevision({ revision: 'B' }),
-    ).model
+    const upgraded = approve(swapped)
     expect(twinRevision(upgraded.workspace.requirements)).toBe('B')
     const restored = pick(upgraded, 'Power', 'MW-MPA-48-4').workspace
       .requirements
@@ -119,7 +123,32 @@ describe('digital twin', () => {
       update(rejected, Message.ClickedDraftTwinProposal()).model.twinProposal,
     ).toBe('Drafting')
 
-    const approved = update(pending, Message.ClickedApproveTwinProposal()).model
+    expect(
+      twinRevision(
+        update(pending, Message.ClickedApproveTwinProposal()).model.workspace
+          .requirements,
+      ),
+    ).toBe('A')
+    expect(
+      twinRevision(
+        update(pending, Message.ClickedInstallTwinRevision({ revision: 'B' }))
+          .model.workspace.requirements,
+      ),
+    ).toBe('A')
+    const reviewing = update(pending, Message.OpenedBoardReview()).model
+    expect(reviewing.modal._tag).toBe('BoardReview')
+    const edited = update(
+      reviewing,
+      Message.UpdatedTwinDesign({ index: 3, field: 'after', value: '60 A' }),
+    ).model
+    expect(edited.twinDesign[3]?.after).toBe('60 A')
+    const approved = update(edited, Message.ClickedApproveTwinProposal()).model
+    expect(approved.modal._tag).toBe('Closed')
+    expect(
+      approved.workspace.events.some(event =>
+        event.includes('engineer-edited design'),
+      ),
+    ).toBe(true)
     expect(approved.twinProposal).toBe('Approved')
     expect(twinRevision(approved.workspace.requirements)).toBe('B')
     expect(

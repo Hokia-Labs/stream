@@ -3,7 +3,23 @@ import { CustomElement } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import {
+  type DiffState,
+  type SchematicBlock,
+  heatColor,
+  heatField,
+  heatScale,
+  isEngineerDesign,
+  pdr,
+  pdrItems,
+  schematic,
+  schematicDiff,
+  thermalReport,
+  thermalResults,
+} from './board-review'
+import {
+  BoardReviewTab,
   type Requirement,
+  type TwinDesignField,
   TwinFocus,
   type TwinReviewItem,
   TwinRevision,
@@ -55,6 +71,12 @@ const twinSpec = CustomElement.define({
   events: {
     'twin-pick': Schema.Struct({ part: Schema.String }),
   },
+})
+
+const rackSpec = CustomElement.define({
+  tag: 'stream-rack',
+  properties: { rackRevision: TwinRevision },
+  events: {},
 })
 
 const reportEditorSpec = CustomElement.define({
@@ -849,26 +871,41 @@ export const twinPartPicker = (
   )
 }
 
-const workflowSteps = (stage: number, h: H): Html =>
-  h.ol(
-    [h.Class('twin-steps')],
+const workflowSteps = (stage: number, canReset: boolean, h: H): Html =>
+  h.div(
+    [h.Class('twin-steps-row')],
     [
-      'Swap avionics',
-      'Requirements revised',
-      'Agent proposes Rev B',
-      'EE approval',
-      'Re-verify',
-    ].map((label, index) =>
-      h.keyed('li')(
-        label,
+      h.ol(
+        [h.Class('twin-steps')],
         [
-          h.Class(
-            `twin-step ${index < stage ? 'done' : index === stage ? 'current' : ''}`,
+          'Swap avionics',
+          'Requirements revised',
+          'Agent proposes Rev B',
+          'EE approval',
+          'Re-verify',
+        ].map((label, index) =>
+          h.keyed('li')(
+            label,
+            [
+              h.Class(
+                `twin-step ${index < stage ? 'done' : index === stage ? 'current' : ''}`,
+              ),
+            ],
+            [h.span([h.Class('twin-step-index')], [String(index + 1)]), label],
           ),
-        ],
-        [h.span([h.Class('twin-step-index')], [String(index + 1)]), label],
+        ),
       ),
-    ),
+      h.button(
+        [
+          h.Type('button'),
+          h.Class('button outline small twin-reset'),
+          h.Disabled(!canReset),
+          h.Title('Put back the original avionics and power assembly Rev A'),
+          h.OnClick(Message.ClickedResetTwin()),
+        ],
+        ['Reset'],
+      ),
+    ],
   )
 
 const proposalPanel = (
@@ -1042,18 +1079,10 @@ const proposalPanel = (
                           h.button(
                             [
                               h.Type('button'),
-                              h.Class('button outline small'),
-                              h.OnClick(Message.ClickedRejectTwinProposal()),
-                            ],
-                            ['Reject'],
-                          ),
-                          h.button(
-                            [
-                              h.Type('button'),
                               h.Class('button primary small'),
-                              h.OnClick(Message.ClickedApproveTwinProposal()),
+                              h.OnClick(Message.OpenedBoardReview()),
                             ],
-                            ['Approve and install Rev B'],
+                            ['Review Rev A → Rev B'],
                           ),
                         ],
                       ),
@@ -1449,18 +1478,6 @@ export const twinPage = (model: Model, h: H): Html => {
                         focus => Message.SelectedTwinFocus({ focus }),
                         h,
                       ),
-                      h.button(
-                        [
-                          h.Type('button'),
-                          h.Class('button outline small twin-reset'),
-                          h.Disabled(!isUpgraded),
-                          h.Title(
-                            'Put back the original avionics and power assembly Rev A',
-                          ),
-                          h.OnClick(Message.ClickedResetTwin()),
-                        ],
-                        ['Reset'],
-                      ),
                     ],
                   ),
                   twin([
@@ -1529,7 +1546,10 @@ export const twinPage = (model: Model, h: H): Html => {
                       ),
                 ],
               ),
-              h.div([h.Class('twin-wide')], [workflowSteps(stage, h)]),
+              h.div(
+                [h.Class('twin-wide')],
+                [workflowSteps(stage, isUpgraded, h)],
+              ),
               changeDriver(model, isRevB, isUpgraded, h),
               proposalPanel(model, isUpgraded, isRevB, h),
               isRevB ? checkPanel(model, h) : h.empty,
@@ -1878,3 +1898,684 @@ export const twinPage = (model: Model, h: H): Html => {
     ],
   )
 }
+
+const diffClass = (state: DiffState): string => `diff-${state.toLowerCase()}`
+
+const schematicBlock = (
+  block: SchematicBlock,
+  x: number,
+  y: number,
+  width: number,
+  h: H,
+): Html =>
+  h.keyed('g')(
+    block.id,
+    [h.Class(`schematic-block ${diffClass(block.state)}`)],
+    [
+      h.rect([
+        h.X(String(x)),
+        h.Y(String(y)),
+        h.Width(String(width)),
+        h.Height('40'),
+      ]),
+      h.text(
+        [h.X(String(x + 8)), h.Y(String(y + 16)), h.Class('schematic-ref')],
+        [block.ref],
+      ),
+      h.text(
+        [h.X(String(x + 8)), h.Y(String(y + 31)), h.Class('schematic-value')],
+        [block.value],
+      ),
+    ],
+  )
+
+const wire = (d: string, h: H): Html =>
+  h.path([h.D(d), h.Class('schematic-wire')])
+
+const schematicSheet = (
+  revision: 'A' | 'B',
+  design: Model['twinDesign'],
+  h: H,
+): Html => {
+  const sheet = schematic(revision, design)
+  const rowGap = 48
+  const top = 40
+  const height = Math.max(
+    top + sheet.modules.length * rowGap + 20,
+    top + sheet.outputs.length * rowGap + 20,
+  )
+  const busX = 300
+  return h.figure(
+    [h.Class('schematic-sheet')],
+    [
+      h.figcaption(
+        [],
+        [revision === 'A' ? 'Rev A · released' : 'Rev B · proposed'],
+      ),
+      h.svg(
+        [
+          h.ViewBox(`0 0 560 ${height}`),
+          h.Role('img'),
+          h.AriaLabel(`Power board schematic, Rev ${revision}`),
+        ],
+        [
+          h.text(
+            [h.X('8'), h.Y('20'), h.Class('schematic-net')],
+            ['270 VDC A/B'],
+          ),
+          h.text(
+            [h.X(String(busX - 30)), h.Y('20'), h.Class('schematic-net')],
+            ['48 V bus'],
+          ),
+          wire(`M 92 30 V ${height - 16}`, h),
+          wire(`M ${busX} 30 V ${height - 16}`, h),
+          ...sheet.modules.flatMap((block, index) => {
+            const y = top + index * rowGap
+            return [
+              wire(`M 92 ${y + 20} H 120 M 250 ${y + 20} H ${busX}`, h),
+              schematicBlock(block, 120, y, 130, h),
+            ]
+          }),
+          ...sheet.outputs.flatMap((block, index) => {
+            const y = top + index * rowGap
+            return [
+              wire(`M ${busX} ${y + 20} H 330`, h),
+              schematicBlock(block, 330, y, 220, h),
+            ]
+          }),
+        ],
+      ),
+    ],
+  )
+}
+
+const diffBadge = (state: DiffState, h: H): Html =>
+  h.span([h.Class(`badge ${diffClass(state)}`)], [state])
+
+const schematicTab = (model: Model, h: H): Html =>
+  h.div(
+    [h.Class('board-review-body')],
+    [
+      h.div(
+        [h.Class('board-review-pair')],
+        [
+          schematicSheet('A', model.twinDesign, h),
+          schematicSheet('B', model.twinDesign, h),
+        ],
+      ),
+      h.ul(
+        [h.Class('schematic-legend')],
+        (['Added', 'Changed', 'Removed'] as const).map(state =>
+          h.keyed('li')(state, [h.Class(diffClass(state))], [state]),
+        ),
+      ),
+      h.table(
+        [h.Class('table board-review-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                ['Part', 'Change', 'Trace', ''].map(label => h.th([], [label])),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            schematicDiff(model.twinDesign).map((row, index) =>
+              h.keyed('tr')(
+                `${row.part}-${index}`,
+                [],
+                [
+                  h.td([], [row.part]),
+                  h.td([], [row.change]),
+                  h.td(
+                    [],
+                    row.trace ? [idLink(model, row.trace, h, 'mono')] : ['—'],
+                  ),
+                  h.td([], [diffBadge(row.state, h)]),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  )
+
+const modelTab = (h: H): Html => {
+  const rack = rackSpec.withMessage(h)
+  return h.div(
+    [h.Class('board-review-body')],
+    [
+      h.div(
+        [h.Class('board-review-pair')],
+        (['A', 'B'] as const).map(revision =>
+          h.keyed('figure')(
+            revision,
+            [h.Class('board-review-3d')],
+            [
+              h.figcaption(
+                [],
+                [
+                  revision === 'A'
+                    ? 'Rev A · 4 modules, single cold plate'
+                    : 'Rev B · 5 modules, dual cold plate, added module outlined',
+                ],
+              ),
+              rack([
+                h.Class('board-review-canvas'),
+                h.AriaLabel(`3D model of the power assembly, Rev ${revision}`),
+                rack.RackRevision(revision),
+              ]),
+            ],
+          ),
+        ),
+      ),
+      h.p(
+        [h.Class('muted small')],
+        [
+          'Drag to orbit. One module is shown failed (dark), the N−1 case. Colours use the thermal scale.',
+        ],
+      ),
+    ],
+  )
+}
+
+const heatColumns = 24
+const heatRows = 12
+
+const heatMap = (revision: 'A' | 'B', h: H): Html =>
+  h.figure(
+    [h.Class('heat-map')],
+    [
+      h.figcaption([], [`Rev ${revision} · module board, worst module, N−1`]),
+      h.div(
+        [
+          h.Class('heat-grid'),
+          h.Role('img'),
+          h.AriaLabel(`Temperature contour, Rev ${revision}`),
+        ],
+        heatField(revision, heatColumns, heatRows).map((temperature, index) =>
+          h.keyed('span')(
+            String(index),
+            [h.Style({ background: heatColor(temperature) })],
+            [],
+          ),
+        ),
+      ),
+    ],
+  )
+
+const thermalTab = (h: H): Html =>
+  h.div(
+    [h.Class('board-review-body')],
+    [
+      h.div([h.Class('board-review-pair')], [heatMap('A', h), heatMap('B', h)]),
+      h.div(
+        [h.Class('heat-legend')],
+        [
+          h.span([], [`${heatScale.min} °C`]),
+          h.span([h.Class('heat-legend-bar')], []),
+          h.span([], [`${heatScale.max} °C · same scale both revisions`]),
+        ],
+      ),
+      h.table(
+        [h.Class('table board-review-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                ['Location', 'Rev A', 'Rev B', 'Limit', 'Rev B margin'].map(
+                  label => h.th([], [label]),
+                ),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            thermalResults().map(row =>
+              h.keyed('tr')(
+                row.location,
+                [],
+                [
+                  h.td([], [row.location]),
+                  h.td(
+                    [h.Class(row.a > row.limit ? 'diff-removed' : '')],
+                    [`${row.a.toFixed(1)} °C`],
+                  ),
+                  h.td(
+                    [h.Class(row.b > row.limit ? 'diff-removed' : '')],
+                    [`${row.b.toFixed(1)} °C`],
+                  ),
+                  h.td([], [`≤ ${row.limit} °C`]),
+                  h.td([], [`${(row.limit - row.b).toFixed(1)} °C`]),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.details(
+        [h.Class('board-review-report')],
+        [
+          h.summary(
+            [],
+            ['MOSFET thermal analysis record (Ansys Mechanical, steady state)'],
+          ),
+          ...thermalReport().map(section =>
+            h.keyed('section')(
+              section.title,
+              [],
+              [
+                h.h4([], [section.title]),
+                h.dl(
+                  [h.Class('board-review-facts')],
+                  section.rows.flatMap(([term, value]) => [
+                    h.dt([], [term]),
+                    h.dd([], [value]),
+                  ]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ],
+  )
+
+const designFields: ReadonlyArray<readonly [TwinDesignField, string]> = [
+  ['part', 'Part'],
+  ['before', 'Rev A'],
+  ['after', 'Rev B'],
+  ['trace', 'Trace'],
+]
+
+const designEditor = (model: Model, h: H): Html =>
+  h.details(
+    [
+      h.Class('board-review-design'),
+      ...(isEngineerDesign(model.twinDesign) ? [h.Open(true)] : []),
+    ],
+    [
+      h.summary([], ['Edit design']),
+      h.p(
+        [h.Class('muted small')],
+        [
+          'Change any proposed value or add your own part change. The schematic and PDR update to match.',
+        ],
+      ),
+      h.table(
+        [h.Class('table board-review-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                [
+                  ...designFields.map(([, label]) => h.th([], [label])),
+                  h.th([], ['']),
+                ],
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            model.twinDesign.map((row, index) =>
+              h.keyed('tr')(
+                String(index),
+                [],
+                [
+                  ...designFields.map(([field, label]) =>
+                    h.td(
+                      [],
+                      [
+                        h.input([
+                          h.AriaLabel(`${label}, row ${index + 1}`),
+                          h.Value(row[field]),
+                          h.OnInput(value =>
+                            Message.UpdatedTwinDesign({ index, field, value }),
+                          ),
+                        ]),
+                      ],
+                    ),
+                  ),
+                  h.td(
+                    [],
+                    [
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button ghost small'),
+                          h.AriaLabel(`Remove row ${index + 1}`),
+                          h.OnClick(
+                            Message.ClickedRemoveTwinDesignChange({ index }),
+                          ),
+                        ],
+                        ['Remove'],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.div(
+        [h.Class('board-review-row')],
+        [
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button outline small'),
+              h.OnClick(Message.ClickedAddTwinDesignChange()),
+            ],
+            ['Add part change'],
+          ),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button ghost small'),
+              h.Disabled(!isEngineerDesign(model.twinDesign)),
+              h.OnClick(Message.ClickedResetTwinDesign()),
+            ],
+            ["Restore agent's design"],
+          ),
+        ],
+      ),
+    ],
+  )
+
+const pdrUpload = (model: Model, h: H): Html =>
+  Option.match(model.maybeTwinPdr, {
+    onNone: () =>
+      h.label(
+        [h.Class('board-review-upload')],
+        [
+          h.span([], ['Upload your own PDR']),
+          h.span([h.Class('muted small')], ['PDF, Word, Markdown or text']),
+          h.input([
+            h.Type('file'),
+            h.Accept('.pdf,.doc,.docx,.md,.markdown,.txt'),
+            h.OnFileChange(files => Message.SelectedTwinPdrFile({ files })),
+          ]),
+        ],
+      ),
+    onSome: upload =>
+      h.div(
+        [h.Class('board-review-uploaded')],
+        [
+          h.div(
+            [h.Class('board-review-row')],
+            [
+              h.strong([], [upload.name]),
+              h.span(
+                [h.Class('muted small')],
+                [
+                  `${Math.max(1, Math.round(upload.size / 1024))} KB · attached to this review`,
+                ],
+              ),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button ghost small'),
+                  h.OnClick(Message.ClickedRemoveTwinPdr()),
+                ],
+                ['Remove'],
+              ),
+            ],
+          ),
+          Option.match(upload.maybeText, {
+            onNone: () =>
+              h.p(
+                [h.Class('muted small')],
+                ['Preview is available for Markdown and text files.'],
+              ),
+            onSome: text => h.pre([h.Class('board-review-pdr-text')], [text]),
+          }),
+        ],
+      ),
+  })
+
+const pdrTab = (model: Model, h: H): Html =>
+  h.div(
+    [h.Class('board-review-body')],
+    [
+      pdrUpload(model, h),
+      h.p(
+        [h.Class('board-review-source')],
+        [
+          h.strong([], [`${pdr.id} · `]),
+          isEngineerDesign(model.twinDesign)
+            ? 'Design edited by the engineer. Items that differ from the agent are marked.'
+            : 'Prepared by the power agent.',
+          ...Option.match(model.maybeTwinPdr, {
+            onNone: () => [],
+            onSome: upload => [
+              ` Your PDR ${upload.name} is attached alongside it.`,
+            ],
+          }),
+        ],
+      ),
+      h.section([], [h.h4([], ['Scope']), h.p([], [pdr.scope])]),
+      h.section(
+        [],
+        [
+          h.h4([], ['Entry criteria']),
+          h.ul(
+            [h.Class('board-review-checks')],
+            pdr.entry.map(([label, isMet]) =>
+              h.keyed('li')(
+                label,
+                [h.Class(isMet ? 'met' : 'open')],
+                [isMet ? '✓ ' : '○ ', label],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.section(
+        [],
+        [
+          h.h4([], ['Design changes']),
+          h.table(
+            [h.Class('table board-review-table')],
+            [
+              h.thead(
+                [],
+                [
+                  h.tr(
+                    [],
+                    ['Change', 'Rationale', 'Risk', 'Mitigation', 'Trace'].map(
+                      label => h.th([], [label]),
+                    ),
+                  ),
+                ],
+              ),
+              h.tbody(
+                [],
+                pdrItems(model.twinDesign).map((item, index) =>
+                  h.keyed('tr')(
+                    `${item.part}-${index}`,
+                    [h.Class(item.isEngineer ? 'engineer-row' : '')],
+                    [
+                      h.td(
+                        [],
+                        [
+                          item.part,
+                          ...(item.isEngineer
+                            ? [
+                                h.span(
+                                  [h.Class('badge diff-changed')],
+                                  ['Engineer'],
+                                ),
+                              ]
+                            : []),
+                        ],
+                      ),
+                      h.td([], [item.rationale]),
+                      h.td(
+                        [],
+                        [
+                          h.span(
+                            [h.Class(`badge risk-${item.risk.toLowerCase()}`)],
+                            [item.risk],
+                          ),
+                        ],
+                      ),
+                      h.td([], [item.mitigation]),
+                      h.td(
+                        [],
+                        item.trace
+                          ? [idLink(model, item.trace, h, 'mono')]
+                          : ['—'],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      designEditor(model, h),
+      h.section(
+        [],
+        [
+          h.h4([], ['Action items']),
+          h.table(
+            [h.Class('table board-review-table')],
+            [
+              h.thead(
+                [],
+                [
+                  h.tr(
+                    [],
+                    ['ID', 'Action', 'Owner', 'Due'].map(label =>
+                      h.th([], [label]),
+                    ),
+                  ),
+                ],
+              ),
+              h.tbody(
+                [],
+                pdr.actions.map(([id, action, owner, due]) =>
+                  h.keyed('tr')(
+                    id,
+                    [],
+                    [
+                      h.td([], [id]),
+                      h.td([], [action]),
+                      h.td([], [owner]),
+                      h.td([], [due]),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      h.section(
+        [],
+        [h.h4([], ['Recommendation']), h.p([], [pdr.recommendation])],
+      ),
+      h.section(
+        [],
+        [
+          h.h4([], ['Exit criteria']),
+          h.ul(
+            [],
+            pdr.exit.map(item => h.keyed('li')(item, [], [item])),
+          ),
+        ],
+      ),
+    ],
+  )
+
+export const boardReview = (model: Model, tab: BoardReviewTab, h: H): Html =>
+  h.div(
+    [h.Class('board-review')],
+    [
+      h.div(
+        [h.Class('board-review-head')],
+        [
+          h.div(
+            [],
+            [
+              h.p(
+                [h.Class('eyebrow')],
+                ['ECP-0219 · electrical engineer review'],
+              ),
+              h.h2(
+                [h.Id('modal-title')],
+                ['MW-MPA-48 power board: Rev A → Rev B'],
+              ),
+            ],
+          ),
+        ],
+      ),
+      h.div(
+        [
+          h.Class('segmented run-view-toggle board-review-tabs'),
+          h.Role('tablist'),
+        ],
+        BoardReviewTab.literals.map(item =>
+          h.keyed('button')(
+            item,
+            [
+              h.Type('button'),
+              h.Role('tab'),
+              h.AriaSelected(item === tab),
+              h.Class(item === tab ? 'active' : ''),
+              h.OnClick(Message.SelectedBoardReviewTab({ tab: item })),
+            ],
+            [item],
+          ),
+        ),
+      ),
+      tab === 'PDR'
+        ? pdrTab(model, h)
+        : tab === 'Schematic'
+          ? schematicTab(model, h)
+          : tab === '3D model'
+            ? modelTab(h)
+            : thermalTab(h),
+      h.div(
+        [h.Class('board-review-foot')],
+        [
+          h.p(
+            [h.Class('muted small')],
+            [
+              `Signing as ${proposalReviewer.name}, ${proposalReviewer.role}. Rev A stays installed until you approve.`,
+            ],
+          ),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button outline'),
+              h.OnClick(Message.ClickedRejectTwinProposal()),
+            ],
+            ['Reject'],
+          ),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.OnClick(Message.ClickedApproveTwinProposal()),
+            ],
+            [
+              isEngineerDesign(model.twinDesign)
+                ? 'Approve edited Rev B and install'
+                : 'Approve and install Rev B',
+            ],
+          ),
+        ],
+      ),
+    ],
+  )

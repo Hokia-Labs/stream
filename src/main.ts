@@ -1,8 +1,10 @@
 import { Array, Effect, Option, Order, Schema, Stream } from 'effect'
 import { Command, Dom, type Runtime, Subscription, type Update } from 'foldkit'
+import * as FoldkitFile from 'foldkit/file'
 import { modifyFields } from 'foldkit/struct'
 
 import { visibleArtifacts } from './artifact-order'
+import { agentDesign, isEngineerDesign } from './board-review'
 import {
   branchChanges,
   branchConflicts,
@@ -34,8 +36,10 @@ import {
   SortKey,
   TaskSession,
   TwinCheck,
+  TwinDesignChange,
   TwinFocus,
   TwinPackage,
+  TwinPdrUpload,
   TwinProposal,
   TwinReport,
   TwinReportSync,
@@ -167,6 +171,8 @@ export const Model = Schema.Struct({
   twinReviewed: Schema.Array(TwinReviewItem),
   twinProposal: TwinProposal,
   twinCheck: TwinCheck,
+  twinDesign: Schema.Array(TwinDesignChange),
+  maybeTwinPdr: Schema.Option(TwinPdrUpload),
   maybeTwinPackage: Schema.Option(TwinPackage),
   twinReports: Schema.Array(TwinReport),
   twinReportTab: Schema.String,
@@ -241,6 +247,8 @@ export const initialModel: Model = {
   twinReviewed: [],
   twinProposal: 'None',
   twinCheck: 'Not run',
+  twinDesign: agentDesign,
+  maybeTwinPdr: Option.none(),
   maybeTwinPackage: Option.none(),
   twinReports: [],
   twinReportTab: '',
@@ -709,6 +717,37 @@ const WaitTwinProposal = Command.define('WaitTwinProposal', {
   execute: Effect.sleep('1600 millis').pipe(
     Effect.as(Message.DraftedTwinProposal()),
   ),
+})
+
+const isTextFile = (file: File): boolean =>
+  FoldkitFile.mimeType(file).startsWith('text/') ||
+  /\.(md|markdown|txt|csv)$/i.test(FoldkitFile.name(file))
+
+const ReadTwinPdr = Command.define('ReadTwinPdr', {
+  args: { file: FoldkitFile.File },
+  messages: [Message.LoadedTwinPdr, Message.FailedLoadTwinPdr],
+  execute: ({ file }) =>
+    (isTextFile(file)
+      ? FoldkitFile.readAsText(file).pipe(
+          Effect.map(text => Option.some(text.slice(0, 200_000))),
+        )
+      : Effect.succeed(Option.none<string>())
+    ).pipe(
+      Effect.map(maybeText =>
+        Message.LoadedTwinPdr({
+          upload: {
+            name: FoldkitFile.name(file),
+            size: FoldkitFile.size(file),
+            maybeText,
+          },
+        }),
+      ),
+      Effect.catch(() =>
+        Effect.succeed(
+          Message.FailedLoadTwinPdr({ name: FoldkitFile.name(file) }),
+        ),
+      ),
+    ),
 })
 
 const WaitTwinCheck = Command.define('WaitTwinCheck', {
@@ -1604,6 +1643,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             CommandPalette: () => modal,
             Shortcuts: () => modal,
             PartPicker: () => modal,
+            BoardReview: () => modal,
           }),
       }),
     }),
@@ -2853,7 +2893,8 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       if (
         !hasTwinScenario(requirements) ||
         model.storage === 'Loading' ||
-        twinRevision(requirements) === revision
+        twinRevision(requirements) === revision ||
+        (revision === 'B' && model.twinProposal !== 'Approved')
       ) {
         return { model }
       }
@@ -2912,15 +2953,102 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         `Power agent proposed Rev B. Waiting for ${proposalReviewer.name} to approve.`,
       )
     },
+    OpenedBoardReview: () =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              modal: () => Modal.BoardReview({ tab: 'PDR' }),
+            }),
+          },
+    SelectedBoardReviewTab: ({ tab }) =>
+      model.modal._tag !== 'BoardReview'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              modal: () => Modal.BoardReview({ tab }),
+            }),
+          },
+    SelectedTwinPdrFile: ({ files }) => {
+      const [file] = files
+      return file ? { model, commands: [ReadTwinPdr({ file })] } : { model }
+    },
+    LoadedTwinPdr: ({ upload }) =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : persist(
+            modifyFields(model, { maybeTwinPdr: () => Option.some(upload) }),
+            record(
+              model.workspace,
+              `PDR uploaded for MPA Rev B · ${upload.name}`,
+            ),
+            `Attached ${upload.name} to the Rev B review.`,
+          ),
+    FailedLoadTwinPdr: ({ name }) =>
+      notifyError(model, `Couldn't read ${name}.`),
+    ClickedRemoveTwinPdr: () => ({
+      model: modifyFields(model, { maybeTwinPdr: () => Option.none() }),
+    }),
+    UpdatedTwinDesign: ({ index, field, value }) =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              twinDesign: design =>
+                design.map((row, rowIndex) =>
+                  rowIndex === index
+                    ? {
+                        part: field === 'part' ? value : row.part,
+                        before: field === 'before' ? value : row.before,
+                        after: field === 'after' ? value : row.after,
+                        trace: field === 'trace' ? value : row.trace,
+                      }
+                    : row,
+                ),
+            }),
+          },
+    ClickedAddTwinDesignChange: () =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              twinDesign: design => [
+                ...design,
+                { part: '', before: '', after: '', trace: '' },
+              ],
+            }),
+          },
+    ClickedRemoveTwinDesignChange: ({ index }) => ({
+      model: modifyFields(model, {
+        twinDesign: design =>
+          design.filter((_, rowIndex) => rowIndex !== index),
+      }),
+    }),
+    ClickedResetTwinDesign: () => ({
+      model: modifyFields(model, { twinDesign: () => agentDesign }),
+    }),
     ClickedApproveTwinProposal: () =>
-      model.twinProposal !== 'Pending' || model.storage === 'Loading'
+      model.twinProposal !== 'Pending' ||
+      model.storage === 'Loading' ||
+      model.modal._tag !== 'BoardReview'
         ? { model }
         : updateMessage(
             modifyFields(model, {
+              twinProposal: () => 'Approved',
+              modal: () => Modal.Closed(),
               workspace: workspace =>
                 record(
                   workspace,
-                  `MPA Rev B proposal approved · ${proposalReviewer.name}, ${proposalReviewer.role}`,
+                  [
+                    `MPA Rev B proposal approved · ${proposalReviewer.name}, ${proposalReviewer.role}`,
+                    isEngineerDesign(model.twinDesign)
+                      ? 'engineer-edited design'
+                      : 'agent design',
+                    ...Option.match(model.maybeTwinPdr, {
+                      onNone: () => ['agent PDR'],
+                      onSome: upload => [`PDR ${upload.name}`],
+                    }),
+                  ].join(' · '),
                 ),
             }),
             Message.ClickedInstallTwinRevision({ revision: 'B' }),
@@ -2929,7 +3057,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       model.twinProposal !== 'Pending'
         ? { model }
         : persist(
-            modifyFields(model, { twinProposal: () => 'Rejected' }),
+            modifyFields(model, {
+              twinProposal: () => 'Rejected',
+              modal: () => Modal.Closed(),
+            }),
             record(
               model.workspace,
               `MPA Rev B proposal rejected · ${proposalReviewer.name}, ${proposalReviewer.role}`,
@@ -2976,6 +3107,8 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinReviewed: () => [],
           maybeTwinPackage: () => Option.none(),
           twinReports: () => [],
+          twinDesign: () => agentDesign,
+          maybeTwinPdr: () => Option.none(),
           modal: () => Modal.Closed(),
         }),
         record(

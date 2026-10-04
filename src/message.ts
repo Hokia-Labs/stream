@@ -1,4 +1,5 @@
 import { Schema } from 'effect'
+import { File } from 'foldkit/file'
 import { defineMessageUnion } from 'foldkit/message'
 
 import {
@@ -6,6 +7,7 @@ import {
   ArtifactField,
   ArtifactKind,
   ArtifactView,
+  BoardReviewTab,
   CloudflareAiMode,
   ExecutionMode,
   GraphPreviewTab,
@@ -18,7 +20,9 @@ import {
   Run,
   RunView,
   SortKey,
+  TwinDesignField,
   TwinFocus,
+  TwinPdrUpload,
   TwinReport,
   TwinReviewItem,
   TwinRevision,
@@ -215,6 +219,20 @@ export const Message = defineMessageUnion({
   CompletedTwinCheck: {},
   ClickedOpenTwinMatrix: {},
   ClickedResetTwin: {},
+  OpenedBoardReview: {},
+  SelectedBoardReviewTab: { tab: BoardReviewTab },
+  SelectedTwinPdrFile: { files: Schema.Array(File) },
+  LoadedTwinPdr: { upload: TwinPdrUpload },
+  FailedLoadTwinPdr: { name: Schema.String },
+  ClickedRemoveTwinPdr: {},
+  UpdatedTwinDesign: {
+    index: Schema.Number,
+    field: TwinDesignField,
+    value: Schema.String,
+  },
+  ClickedAddTwinDesignChange: {},
+  ClickedRemoveTwinDesignChange: { index: Schema.Number },
+  ClickedResetTwinDesign: {},
   ToggledTwinReview: { item: TwinReviewItem },
   ClickedGenerateTwinPackage: {},
   DraftedTwinReports: { files: Schema.Array(TwinReport) },

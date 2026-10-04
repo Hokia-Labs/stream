@@ -97,6 +97,36 @@ export const TwinProposal = Schema.Literals([
 ])
 export type TwinProposal = typeof TwinProposal.Type
 export const TwinCheck = Schema.Literals(['Not run', 'Running', 'Done'])
+export const BoardReviewTab = Schema.Literals([
+  'PDR',
+  'Schematic',
+  '3D model',
+  'Thermal',
+])
+export type BoardReviewTab = typeof BoardReviewTab.Type
+
+export const TwinDesignChange = Schema.Struct({
+  part: Schema.String,
+  before: Schema.String,
+  after: Schema.String,
+  trace: Schema.String,
+})
+export type TwinDesignChange = typeof TwinDesignChange.Type
+
+export const TwinDesignField = Schema.Literals([
+  'part',
+  'before',
+  'after',
+  'trace',
+])
+export type TwinDesignField = typeof TwinDesignField.Type
+
+export const TwinPdrUpload = Schema.Struct({
+  name: Schema.String,
+  size: Schema.Number,
+  maybeText: Schema.Option(Schema.String),
+})
+export type TwinPdrUpload = typeof TwinPdrUpload.Type
 export type TwinCheck = typeof TwinCheck.Type
 export const TwinReviewItem = Schema.Literals([
   'Requirements',
@@ -272,6 +302,7 @@ export const Modal = defineTaggedUnion({
   CommandPalette: { query: Schema.String, index: Schema.Number },
   Shortcuts: {},
   PartPicker: { slot: TwinSlot, selectedId: Schema.String },
+  BoardReview: { tab: BoardReviewTab },
 })
 export type Modal = typeof Modal.Type
 

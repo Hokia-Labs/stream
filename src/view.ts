@@ -82,7 +82,7 @@ import {
 import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
-import { twinPage, twinPartPicker } from './twin-view'
+import { boardReview, twinPage, twinPartPicker } from './twin-view'
 
 type H = HtmlBuilder<Message>
 const paths: Readonly<Record<string, string>> = {
@@ -4715,6 +4715,7 @@ const launchPreview = (
 const modalContent = (model: Model, h: H): Html =>
   Modal.match(model.modal, {
     PartPicker: picker => twinPartPicker(model, picker, h),
+    BoardReview: review => boardReview(model, review.tab, h),
     ArtifactFields: () =>
       h.div(
         [],
@@ -5477,7 +5478,9 @@ const modal = (model: Model, h: H, isClosing = false): Html =>
                   ? 'modal palette-modal'
                   : model.modal._tag === 'PartPicker'
                     ? 'modal twin-picker-modal'
-                    : 'modal',
+                    : model.modal._tag === 'BoardReview'
+                      ? 'modal board-review-modal'
+                      : 'modal',
               ),
               ...(isClosing
                 ? [h.AriaHidden(true)]
