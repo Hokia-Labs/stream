@@ -33,8 +33,10 @@ import {
   SortDirection,
   SortKey,
   TaskSession,
+  TwinCheck,
   TwinFocus,
   TwinPackage,
+  TwinProposal,
   TwinReport,
   TwinReportSync,
   TwinReviewItem,
@@ -60,15 +62,20 @@ import {
 import { Message } from './message'
 import { pageShortcuts, paletteItems } from './palette'
 import {
+  avionicsRequirementIds,
   catalogBlocker,
   hasTwinScenario,
   installTwinRevision,
   isAvionicsUpgraded,
+  proposalPartChanges,
+  proposalReviewer,
+  requirementChecks,
   seedTwinArtifacts,
   signoffTitle,
   suggestedPart,
   swapTwinAvionics,
   twinCatalog,
+  twinChanges,
   twinPackageFiles,
   twinRevision,
 } from './twin'
@@ -158,6 +165,8 @@ export const Model = Schema.Struct({
   isResizingSidebar: Schema.Boolean,
   twinFocus: TwinFocus,
   twinReviewed: Schema.Array(TwinReviewItem),
+  twinProposal: TwinProposal,
+  twinCheck: TwinCheck,
   maybeTwinPackage: Schema.Option(TwinPackage),
   twinReports: Schema.Array(TwinReport),
   twinReportTab: Schema.String,
@@ -230,6 +239,8 @@ export const initialModel: Model = {
   isResizingSidebar: false,
   twinFocus: 'Airframe',
   twinReviewed: [],
+  twinProposal: 'None',
+  twinCheck: 'Not run',
   maybeTwinPackage: Option.none(),
   twinReports: [],
   twinReportTab: '',
@@ -691,6 +702,20 @@ const WaitTwinReportSave = Command.define('WaitTwinReportSave', {
     Effect.sleep('700 millis').pipe(
       Effect.as(Message.ElapsedTwinReportSave({ token })),
     ),
+})
+
+const WaitTwinProposal = Command.define('WaitTwinProposal', {
+  messages: [Message.DraftedTwinProposal],
+  execute: Effect.sleep('1600 millis').pipe(
+    Effect.as(Message.DraftedTwinProposal()),
+  ),
+})
+
+const WaitTwinCheck = Command.define('WaitTwinCheck', {
+  messages: [Message.CompletedTwinCheck],
+  execute: Effect.sleep('1200 millis').pipe(
+    Effect.as(Message.CompletedTwinCheck()),
+  ),
 })
 
 const SaveTwinReports = Command.define('SaveTwinReports', {
@@ -2726,14 +2751,22 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       ) {
         return { model }
       }
-      return persist(
-        modifyFields(model, { twinFocus: () => 'Cockpit' }),
+      const swapped = persist(
+        modifyFields(model, {
+          twinFocus: () => 'Cockpit',
+          twinProposal: () => 'Drafting',
+          twinCheck: () => 'Not run',
+        }),
         record(
           writeRequirements(model, swapTwinAvionics(requirements)),
-          'ECP-0219 cockpit avionics module swapped in · Ben Juntilla',
+          `ECP-0219 cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Ben Juntilla`,
         ),
-        'New cockpit avionics module swapped in. REQ-AVN-01 revised.',
+        `New avionics swapped in. ${avionicsRequirementIds.length} requirements revised; the power agent is drafting a redesign.`,
       )
+      return {
+        model: swapped.model,
+        commands: [...(swapped.commands ?? []), WaitTwinProposal()],
+      }
     },
     OpenedTwinPartPicker: ({ slot }) => ({
       model: modifyFields(model, {
@@ -2770,7 +2803,11 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       if (item.slot === 'Cockpit') {
         return isAvionicsUpgraded(requirements)
           ? persist(
-              modifyFields(closed, { twinFocus: () => 'Cockpit' }),
+              modifyFields(closed, {
+                twinFocus: () => 'Cockpit',
+                twinProposal: () => 'None',
+                twinCheck: () => 'Not run',
+              }),
               record(
                 writeRequirements(
                   model,
@@ -2778,7 +2815,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                 ),
                 `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Ben Juntilla`,
               ),
-              `${item.id} reinstalled. REQ-AVN-01 restored.`,
+              `${item.id} reinstalled. Requirements restored.`,
             )
           : updateMessage(closed, Message.ClickedSwapTwinAvionics())
       }
@@ -2792,6 +2829,9 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(closed, {
           twinFocus: () => 'Aft bay',
+          twinProposal: () =>
+            isAvionicsUpgraded(requirements) ? 'Pending' : 'None',
+          twinCheck: () => 'Not run',
           twinReviewed: () => [],
           maybeTwinPackage: () => Option.none(),
           twinReports: () => [],
@@ -2828,6 +2868,13 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, {
           twinFocus: () => 'Aft bay',
+          twinProposal: () =>
+            revision === 'B'
+              ? 'Approved'
+              : isAvionicsUpgraded(updated)
+                ? 'Pending'
+                : 'None',
+          twinCheck: () => 'Not run',
           twinReviewed: () => [],
           maybeTwinPackage: () => Option.none(),
           twinReports: () => [],
@@ -2836,6 +2883,113 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         `${summary}.`,
       )
     },
+    ClickedDraftTwinProposal: () => {
+      const requirements = workingRequirements(model)
+      return !isAvionicsUpgraded(requirements) ||
+        twinRevision(requirements) === 'B' ||
+        model.twinProposal === 'Drafting'
+        ? { model }
+        : {
+            model: modifyFields(model, { twinProposal: () => 'Drafting' }),
+            commands: [WaitTwinProposal()],
+          }
+    },
+    DraftedTwinProposal: () => {
+      const requirements = workingRequirements(model)
+      if (
+        model.twinProposal !== 'Drafting' ||
+        !isAvionicsUpgraded(requirements) ||
+        twinRevision(requirements) === 'B'
+      ) {
+        return { model }
+      }
+      return persist(
+        modifyFields(model, { twinProposal: () => 'Pending' }),
+        record(
+          model.workspace,
+          `Power agent proposed MPA Rev B (${proposalPartChanges.length} part changes) · awaiting ${proposalReviewer.role.toLowerCase()} approval`,
+        ),
+        `Power agent proposed Rev B. Waiting for ${proposalReviewer.name} to approve.`,
+      )
+    },
+    ClickedApproveTwinProposal: () =>
+      model.twinProposal !== 'Pending' || model.storage === 'Loading'
+        ? { model }
+        : updateMessage(
+            modifyFields(model, {
+              workspace: workspace =>
+                record(
+                  workspace,
+                  `MPA Rev B proposal approved · ${proposalReviewer.name}, ${proposalReviewer.role}`,
+                ),
+            }),
+            Message.ClickedInstallTwinRevision({ revision: 'B' }),
+          ),
+    ClickedRejectTwinProposal: () =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : persist(
+            modifyFields(model, { twinProposal: () => 'Rejected' }),
+            record(
+              model.workspace,
+              `MPA Rev B proposal rejected · ${proposalReviewer.name}, ${proposalReviewer.role}`,
+            ),
+            'Rev B rejected. Rev A stays in the twin.',
+          ),
+    ClickedRunTwinCheck: () =>
+      twinRevision(workingRequirements(model)) !== 'B' ||
+      model.twinCheck === 'Running'
+        ? { model }
+        : {
+            model: modifyFields(model, { twinCheck: () => 'Running' }),
+            commands: [WaitTwinCheck()],
+          },
+    CompletedTwinCheck: () => {
+      const requirements = workingRequirements(model)
+      if (model.twinCheck !== 'Running' || twinRevision(requirements) !== 'B') {
+        return { model }
+      }
+      const checks = requirementChecks('B')
+      const passed = checks.filter(check => check.isPass).length
+      const pending = twinChanges(requirements).filter(
+        change => change.status !== 'Verified',
+      ).length
+      return persist(
+        modifyFields(model, { twinCheck: () => 'Done' }),
+        record(
+          model.workspace,
+          `Rev B requirement check · ${passed}/${checks.length} pass · ${pending} artifacts to re-verify`,
+        ),
+        `${passed} of ${checks.length} checks pass on Rev B. ${pending} artifacts need re-verification.`,
+      )
+    },
+    ClickedResetTwin: () => {
+      const requirements = workingRequirements(model)
+      if (!hasTwinScenario(requirements) || model.storage === 'Loading') {
+        return { model }
+      }
+      return persist(
+        modifyFields(model, {
+          twinFocus: () => 'Airframe',
+          twinProposal: () => 'None',
+          twinCheck: () => 'Not run',
+          twinReviewed: () => [],
+          maybeTwinPackage: () => Option.none(),
+          twinReports: () => [],
+          modal: () => Modal.Closed(),
+        }),
+        record(
+          writeRequirements(model, installTwinRevision(requirements, 'A')),
+          'Digital twin reset to the baseline configuration · Ben Juntilla',
+        ),
+        'Digital twin reset to the baseline.',
+      )
+    },
+    ClickedOpenTwinMatrix: () =>
+      updateMessage(
+        modifyFields(model, { graphView: () => 'Matrix' }),
+        Message.ClickedTraceTwinArtifact({ id: 'REQ-AVN-01' }),
+      ),
     ToggledTwinReview: ({ item }) => {
       if (twinRevision(workingRequirements(model)) !== 'B') {
         return { model }

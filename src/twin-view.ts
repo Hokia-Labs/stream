@@ -17,6 +17,7 @@ import {
   affectedSubsystems,
   analysisRows,
   avionicsChange,
+  avionicsRequirementIds,
   budgetMargin,
   busDemandKw,
   capacityKw,
@@ -30,6 +31,9 @@ import {
   limitLabel,
   loadBudget,
   lowMargin,
+  proposalPartChanges,
+  proposalReviewer,
+  requirementChecks,
   signoffTitle,
   slotHealth,
   twinCatalog,
@@ -845,6 +849,426 @@ export const twinPartPicker = (
   )
 }
 
+const workflowSteps = (stage: number, h: H): Html =>
+  h.ol(
+    [h.Class('twin-steps')],
+    [
+      'Swap avionics',
+      'Requirements revised',
+      'Agent proposes Rev B',
+      'EE approval',
+      'Re-verify',
+    ].map((label, index) =>
+      h.keyed('li')(
+        label,
+        [
+          h.Class(
+            `twin-step ${index < stage ? 'done' : index === stage ? 'current' : ''}`,
+          ),
+        ],
+        [h.span([h.Class('twin-step-index')], [String(index + 1)]), label],
+      ),
+    ),
+  )
+
+const proposalPanel = (
+  model: Model,
+  isUpgraded: boolean,
+  isRevB: boolean,
+  h: H,
+): Html => {
+  const proposal = model.twinProposal
+  const reviewer = `${proposalReviewer.name} · ${proposalReviewer.role}`
+  const rows = loadBudget()
+  const head = h.div(
+    [h.Class('twin-section-head')],
+    [
+      h.h2([h.Class('twin-heading')], ['Power board redesign · MPA Rev B']),
+      isRevB
+        ? h.span([h.Class('badge positive')], ['Approved · installed'])
+        : proposal === 'Pending'
+          ? h.span([h.Class('badge warning')], ['Awaiting EE approval'])
+          : proposal === 'Rejected'
+            ? h.span([h.Class('badge danger')], ['Rejected'])
+            : h.empty,
+    ],
+  )
+  const body = !isUpgraded
+    ? [
+        h.p(
+          [h.Class('muted small-text')],
+          [
+            'Swap in the new cockpit avionics first. Its revised requirements drive the power board redesign.',
+          ],
+        ),
+      ]
+    : !isRevB && (proposal === 'None' || proposal === 'Approved')
+      ? [
+          h.p(
+            [h.Class('muted small-text')],
+            [
+              `${avionicsRequirementIds.length} requirements were revised. Ask the power agent to redesign the board against them.`,
+            ],
+          ),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary small'),
+              h.OnClick(Message.ClickedDraftTwinProposal()),
+            ],
+            ['Ask agent for a redesign'],
+          ),
+        ]
+      : proposal === 'Drafting' && !isRevB
+        ? [
+            h.p(
+              [h.Class('twin-drafting')],
+              [
+                h.span([h.Class('twin-pulse')], []),
+                `Power agent is checking ${avionicsRequirementIds.length} revised requirements against MW-MPA-48-4 Rev A and drafting part changes…`,
+              ],
+            ),
+          ]
+        : [
+            h.p(
+              [h.Class('twin-proposal-why')],
+              [
+                'Proposed by the power agent to meet ',
+                ...avionicsRequirementIds.flatMap((id, index) =>
+                  index > 0
+                    ? [', ', idLink(model, id, h, 'mono')]
+                    : [idLink(model, id, h, 'mono')],
+                ),
+                '. Rev A gives 9.0 kW with one module failed; the revised load is 10.2 kW.',
+              ],
+            ),
+            h.table(
+              [h.Class('twin-table twin-proposal-table')],
+              [
+                h.thead(
+                  [],
+                  [
+                    h.tr(
+                      [],
+                      ['Part', 'Rev A', 'Proposed Rev B', 'Driven by'].map(
+                        label => h.th([], [label]),
+                      ),
+                    ),
+                  ],
+                ),
+                h.tbody(
+                  [],
+                  proposalPartChanges.map(change =>
+                    h.keyed('tr')(
+                      change.part,
+                      [],
+                      [
+                        h.td([], [change.part]),
+                        h.td([h.Class('twin-before')], [change.before]),
+                        h.td([h.Class('twin-after')], [change.after]),
+                        h.td([], [idLink(model, change.trace, h, 'mono')]),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            h.ul(
+              [h.Class('twin-predicted')],
+              [rows[1], rows[3], rows[4]].flatMap(row =>
+                row
+                  ? [
+                      h.keyed('li')(
+                        row.check,
+                        [],
+                        [
+                          h.span([], [row.check]),
+                          h.span(
+                            [h.Class('mono twin-margin bad')],
+                            [
+                              `${row.demand.A.toFixed(2)} / ${row.capacity.A.toFixed(2)} ${row.unit}`,
+                            ],
+                          ),
+                          '→',
+                          h.span(
+                            [h.Class('mono twin-margin ok')],
+                            [
+                              `${row.demand.B.toFixed(2)} / ${row.capacity.B.toFixed(2)} ${row.unit}`,
+                            ],
+                          ),
+                        ],
+                      ),
+                    ]
+                  : [],
+              ),
+            ),
+            h.div(
+              [h.Class(`twin-approver ${isRevB ? 'ok' : ''}`)],
+              isRevB
+                ? [
+                    h.p(
+                      [],
+                      [
+                        `Approved by ${reviewer}. MW-MPA-48-5 Rev B is installed in the twin.`,
+                      ],
+                    ),
+                  ]
+                : proposal === 'Rejected'
+                  ? [
+                      h.p(
+                        [],
+                        [`Rejected by ${reviewer}. Rev A stays in the twin.`],
+                      ),
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button outline small'),
+                          h.OnClick(Message.ClickedDraftTwinProposal()),
+                        ],
+                        ['Ask agent to revise'],
+                      ),
+                    ]
+                  : [
+                      h.p(
+                        [],
+                        [
+                          h.strong([], ['Electrical engineer review · ']),
+                          `${reviewer}. Nothing changes in the twin until this is approved.`,
+                        ],
+                      ),
+                      h.div(
+                        [h.Class('twin-approver-actions')],
+                        [
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('button outline small'),
+                              h.OnClick(Message.ClickedRejectTwinProposal()),
+                            ],
+                            ['Reject'],
+                          ),
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('button primary small'),
+                              h.OnClick(Message.ClickedApproveTwinProposal()),
+                            ],
+                            ['Approve and install Rev B'],
+                          ),
+                        ],
+                      ),
+                    ],
+            ),
+          ]
+  return h.section(
+    [h.Class('panel twin-wide'), h.AriaLabel('Power board redesign')],
+    [head, ...body],
+  )
+}
+
+const checkPanel = (model: Model, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const checks = requirementChecks('B')
+  const passed = checks.filter(check => check.isPass).length
+  const queue = twinChanges(requirements).filter(
+    change => change.status !== 'Verified',
+  )
+  const head = h.div(
+    [h.Class('twin-section-head')],
+    [
+      h.h2([h.Class('twin-heading')], ['Requirement check · Rev B']),
+      model.twinCheck === 'Done'
+        ? h.button(
+            [
+              h.Type('button'),
+              h.Class('button outline small'),
+              h.OnClick(Message.ClickedOpenTwinMatrix()),
+            ],
+            ['Open traceability matrix'],
+          )
+        : h.empty,
+    ],
+  )
+  if (model.twinCheck !== 'Done') {
+    return h.section(
+      [h.Class('panel twin-wide')],
+      [
+        head,
+        model.twinCheck === 'Running'
+          ? h.p(
+              [h.Class('twin-drafting')],
+              [
+                h.span([h.Class('twin-pulse')], []),
+                `Checking ${checks.length} requirement checks against MW-MPA-48-5 Rev B and walking the trace links…`,
+              ],
+            )
+          : h.div(
+              [],
+              [
+                h.p(
+                  [h.Class('muted small-text')],
+                  [
+                    'Rev B is installed. Check every revised requirement against it and find what needs re-verifying.',
+                  ],
+                ),
+                h.button(
+                  [
+                    h.Type('button'),
+                    h.Class('button primary small'),
+                    h.OnClick(Message.ClickedRunTwinCheck()),
+                  ],
+                  ['Check requirements against Rev B'],
+                ),
+              ],
+            ),
+      ],
+    )
+  }
+  return h.section(
+    [h.Class('panel twin-wide'), h.AriaLabel('Requirement check')],
+    [
+      head,
+      h.p(
+        [h.Class('twin-check-summary')],
+        [
+          h.strong(
+            [
+              h.Class(
+                passed === checks.length ? 'twin-margin ok' : 'twin-margin bad',
+              ),
+            ],
+            [`${passed} of ${checks.length} checks pass`],
+          ),
+          ` · ${queue.length} artifacts need re-verification before ECP-0219 closes`,
+        ],
+      ),
+      h.table(
+        [h.Class('twin-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                [
+                  'Requirement',
+                  'Check',
+                  'Rev B',
+                  'Limit',
+                  'Result',
+                  'Re-verify by',
+                ].map(label => h.th([], [label])),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            checks.map(check =>
+              h.keyed('tr')(
+                `${check.id}-${check.check}`,
+                [],
+                [
+                  h.td([], [idLink(model, check.id, h, 'mono small-text')]),
+                  h.td([], [check.check]),
+                  h.td([h.Class('mono')], [check.value]),
+                  h.td([h.Class('mono')], [check.limit]),
+                  h.td(
+                    [],
+                    [
+                      h.span(
+                        [
+                          h.Class(
+                            check.isPass ? 'badge positive' : 'badge warning',
+                          ),
+                        ],
+                        [check.isPass ? 'Pass' : 'Fail'],
+                      ),
+                    ],
+                  ),
+                  h.td(
+                    [],
+                    [
+                      check.verification,
+                      ...check.tests.flatMap(id => [
+                        ' · ',
+                        idLink(model, id, h, 'mono'),
+                      ]),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      h.h3([h.Class('twin-subheading')], ['Re-verification queue']),
+      h.table(
+        [h.Class('twin-table')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                ['Artifact', 'Kind', 'Method', 'Owner', 'Status', ''].map(
+                  label => h.th([], [label]),
+                ),
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            queue.map(change =>
+              h.keyed('tr')(
+                change.artifact.id,
+                [],
+                [
+                  h.td(
+                    [],
+                    [
+                      idLink(model, change.artifact.id, h, 'mono small-text'),
+                      h.div([], [change.artifact.title]),
+                    ],
+                  ),
+                  h.td([], [change.artifact.kind]),
+                  h.td([], [change.artifact.verification]),
+                  h.td([], [change.artifact.owner]),
+                  h.td(
+                    [],
+                    [
+                      h.span(
+                        [h.Class(badgeClass(change.status))],
+                        [change.status],
+                      ),
+                    ],
+                  ),
+                  h.td(
+                    [],
+                    [
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button outline small'),
+                          h.OnClick(
+                            Message.ClickedTraceTwinArtifact({
+                              id: change.artifact.id,
+                            }),
+                          ),
+                        ],
+                        ['Trace'],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
 export const twinPage = (model: Model, h: H): Html => {
   const twin = twinSpec.withMessage(h)
   const requirements = model.workspace.requirements
@@ -858,47 +1282,84 @@ export const twinPage = (model: Model, h: H): Html => {
   const pkg = model.maybeTwinPackage
   const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
+  const proposal = model.twinProposal
+  const stage = !isUpgraded
+    ? 0
+    : !isRevB
+      ? proposal === 'Pending' || proposal === 'Rejected'
+        ? 3
+        : 2
+      : model.twinCheck === 'Done'
+        ? 5
+        : 4
   const next: Readonly<{
     text: string
     tone: string
-    slot: TwinSlot | undefined
+    message: Message | undefined
     label: string
   }> = !isUpgraded
     ? {
         text: 'ECP-0219 replaces the 0.9 kW cockpit unit with a 2.7 kW module. Pick it from Teamcenter.',
         tone: '',
-        slot: 'Cockpit',
+        message: Message.OpenedTwinPartPicker({ slot: 'Cockpit' }),
         label: 'Choose avionics module',
       }
-    : !isRevB
+    : !isRevB && proposal === 'Drafting'
       ? {
-          text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. Pick a larger power assembly.`,
+          text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. The power agent is drafting Rev B.`,
           tone: 'bad',
-          slot: 'Power',
-          label: 'Choose power assembly',
+          message: undefined,
+          label: '',
         }
-      : !isReviewed
+      : !isRevB && proposal === 'Pending'
         ? {
-            text: 'Sign off the requirement, thermal and mechanical reviews below.',
+            text: `Rev B proposal is waiting for ${proposalReviewer.name} (${proposalReviewer.role.toLowerCase()}) to approve.`,
             tone: '',
-            slot: undefined,
+            message: undefined,
             label: '',
           }
-        : !hasReports
+        : !isRevB
           ? {
-              text: 'All three reviews are signed. Draft the DO-254 reports.',
-              tone: 'ok',
-              slot: undefined,
-              label: '',
+              text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. Ask the power agent for a redesign.`,
+              tone: 'bad',
+              message: Message.ClickedDraftTwinProposal(),
+              label:
+                proposal === 'Rejected'
+                  ? 'Ask agent to revise'
+                  : 'Ask agent for a redesign',
             }
-          : {
-              text: isSent
-                ? 'Package sent to the customer.'
-                : 'Download the DO-254 package and send it to the customer.',
-              tone: 'ok',
-              slot: undefined,
-              label: '',
-            }
+          : model.twinCheck !== 'Done'
+            ? {
+                text: 'Rev B is approved and installed. Check the requirements against it.',
+                tone: 'ok',
+                message:
+                  model.twinCheck === 'Running'
+                    ? undefined
+                    : Message.ClickedRunTwinCheck(),
+                label: 'Check requirements',
+              }
+            : !isReviewed
+              ? {
+                  text: 'Sign off the requirement, thermal and mechanical reviews below.',
+                  tone: '',
+                  message: undefined,
+                  label: '',
+                }
+              : !hasReports
+                ? {
+                    text: 'All three reviews are signed. Draft the DO-254 reports.',
+                    tone: 'ok',
+                    message: undefined,
+                    label: '',
+                  }
+                : {
+                    text: isSent
+                      ? 'Package sent to the customer.'
+                      : 'Download the DO-254 package and send it to the customer.',
+                    tone: 'ok',
+                    message: undefined,
+                    label: '',
+                  }
   const action = !isLoaded
     ? h.button(
         [
@@ -917,15 +1378,26 @@ export const twinPage = (model: Model, h: H): Html => {
           ],
           [arrowIcon(h), 'Swap in new avionics…'],
         )
-      : !isRevB
-        ? h.button(
-            [
-              h.Type('button'),
-              h.Class('button primary'),
-              h.OnClick(Message.OpenedTwinPartPicker({ slot: 'Power' })),
-            ],
-            [arrowIcon(h), 'Replace power assembly…'],
-          )
+      : !isRevB || model.twinCheck !== 'Done'
+        ? next.message
+          ? h.button(
+              [
+                h.Type('button'),
+                h.Class('button primary'),
+                h.OnClick(next.message),
+              ],
+              [arrowIcon(h), next.label],
+            )
+          : h.button(
+              [h.Type('button'), h.Class('button outline'), h.Disabled(true)],
+              [
+                proposal === 'Pending'
+                  ? 'Awaiting EE approval'
+                  : model.twinCheck === 'Running'
+                    ? 'Checking…'
+                    : 'Agent drafting…',
+              ],
+            )
         : h.button(
             [
               h.Type('button'),
@@ -977,6 +1449,18 @@ export const twinPage = (model: Model, h: H): Html => {
                         focus => Message.SelectedTwinFocus({ focus }),
                         h,
                       ),
+                      h.button(
+                        [
+                          h.Type('button'),
+                          h.Class('button outline small twin-reset'),
+                          h.Disabled(!isUpgraded),
+                          h.Title(
+                            'Put back the original avionics and power assembly Rev A',
+                          ),
+                          h.OnClick(Message.ClickedResetTwin()),
+                        ],
+                        ['Reset'],
+                      ),
                     ],
                   ),
                   twin([
@@ -1015,16 +1499,12 @@ export const twinPage = (model: Model, h: H): Html => {
                     [
                       h.p([h.Class('twin-next-label')], ['Next step']),
                       h.p([h.Class('twin-next-text')], [next.text]),
-                      next.slot
+                      next.message
                         ? h.button(
                             [
                               h.Type('button'),
                               h.Class('button primary small'),
-                              h.OnClick(
-                                Message.OpenedTwinPartPicker({
-                                  slot: next.slot,
-                                }),
-                              ),
+                              h.OnClick(next.message),
                             ],
                             [next.label],
                           )
@@ -1049,7 +1529,10 @@ export const twinPage = (model: Model, h: H): Html => {
                       ),
                 ],
               ),
+              h.div([h.Class('twin-wide')], [workflowSteps(stage, h)]),
               changeDriver(model, isRevB, isUpgraded, h),
+              proposalPanel(model, isUpgraded, isRevB, h),
+              isRevB ? checkPanel(model, h) : h.empty,
               h.section(
                 [h.Class('panel twin-wide')],
                 [
@@ -1065,7 +1548,9 @@ export const twinPage = (model: Model, h: H): Html => {
                   changes.length === 0
                     ? h.p(
                         [h.Class('muted small-text')],
-                        ['Place Rev B to see which requirements change.'],
+                        [
+                          'Swap in the new avionics to see which requirements change.',
+                        ],
                       )
                     : h.table(
                         [h.Class('twin-table')],

@@ -17,6 +17,7 @@ import {
   hrdDocument,
   isAvionicsUpgraded,
   loadBudget,
+  requirementChecks,
   twinChanges,
   twinPackageFiles,
   twinRevision,
@@ -49,7 +50,15 @@ describe('digital twin', () => {
         pick(swapped, 'Power', 'MW-MPA-48-6').workspace.requirements,
       ),
     ).toBe('A')
-    const upgraded = pick(swapped, 'Power', 'MW-MPA-48-5')
+    expect(
+      twinRevision(
+        pick(swapped, 'Power', 'MW-MPA-48-5').workspace.requirements,
+      ),
+    ).toBe('A')
+    const upgraded = update(
+      swapped,
+      Message.ClickedInstallTwinRevision({ revision: 'B' }),
+    ).model
     expect(twinRevision(upgraded.workspace.requirements)).toBe('B')
     const restored = pick(upgraded, 'Power', 'MW-MPA-48-4').workspace
       .requirements
@@ -80,10 +89,55 @@ describe('digital twin', () => {
   })
 
   it('swaps in the new avionics module before Rev B', () => {
+    const swapped = update(loaded, Message.ClickedSwapTwinAvionics())
+    const changes = twinChanges(swapped.model.workspace.requirements)
+    expect(changes.map(change => change.artifact.id)).toEqual([
+      'REQ-AVN-01',
+      'REQ-PSU-01',
+      'REQ-PSU-02',
+      'REQ-PSU-03',
+    ])
+    expect(twinRevision(swapped.model.workspace.requirements)).toBe('A')
+    expect(swapped.model.twinProposal).toBe('Drafting')
+    expect(swapped.commands).toHaveLength(2)
+  })
+
+  it('installs Rev B only after an electrical engineer approves the proposal', () => {
     const swapped = update(loaded, Message.ClickedSwapTwinAvionics()).model
-    const changes = twinChanges(swapped.workspace.requirements)
-    expect(changes.map(change => change.artifact.id)).toEqual(['REQ-AVN-01'])
-    expect(twinRevision(swapped.workspace.requirements)).toBe('A')
+    expect(
+      update(swapped, Message.ClickedApproveTwinProposal()).model.workspace
+        .requirements,
+    ).toBe(swapped.workspace.requirements)
+    const pending = update(swapped, Message.DraftedTwinProposal()).model
+    expect(pending.twinProposal).toBe('Pending')
+    expect(twinRevision(pending.workspace.requirements)).toBe('A')
+
+    const rejected = update(pending, Message.ClickedRejectTwinProposal()).model
+    expect(rejected.twinProposal).toBe('Rejected')
+    expect(twinRevision(rejected.workspace.requirements)).toBe('A')
+    expect(
+      update(rejected, Message.ClickedDraftTwinProposal()).model.twinProposal,
+    ).toBe('Drafting')
+
+    const approved = update(pending, Message.ClickedApproveTwinProposal()).model
+    expect(approved.twinProposal).toBe('Approved')
+    expect(twinRevision(approved.workspace.requirements)).toBe('B')
+    expect(
+      approved.workspace.events.some(event =>
+        event.includes('approved · Sarah Chen'),
+      ),
+    ).toBe(true)
+
+    const running = update(approved, Message.ClickedRunTwinCheck())
+    expect(running.model.twinCheck).toBe('Running')
+    expect(running.commands).toHaveLength(1)
+    const checked = update(running.model, Message.CompletedTwinCheck()).model
+    expect(checked.twinCheck).toBe('Done')
+    const reset = update(checked, Message.ClickedResetTwin()).model
+    expect(twinChanges(reset.workspace.requirements)).toHaveLength(0)
+    expect(reset.twinProposal).toBe('None')
+    expect(requirementChecks('B').every(check => check.isPass)).toBe(true)
+    expect(requirementChecks('A').some(check => !check.isPass)).toBe(true)
   })
 
   it('placing Rev B revises requirements and the subsystems they touch', () => {

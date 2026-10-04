@@ -417,21 +417,151 @@ export const isAvionicsUpgraded = (
   return current !== undefined && current.description !== avionicsArtifact?.revA
 }
 
+const avionicsDriven = twinArtifacts.filter(item => item.kind === 'Requirement')
+
+export const avionicsRequirementIds = avionicsDriven.map(item => item.id)
+
 export const swapTwinAvionics = (
   requirements: ReadonlyArray<Requirement>,
 ): ReadonlyArray<Requirement> =>
-  requirements.map(item =>
-    item.id === 'REQ-AVN-01' &&
-    avionicsArtifact &&
-    item.description !== avionicsArtifact.revB
+  requirements.map(item => {
+    const artifact = avionicsDriven.find(candidate => candidate.id === item.id)
+    return artifact && item.description !== artifact.revB
       ? {
           ...item,
-          description: avionicsArtifact.revB,
-          status: avionicsArtifact.statusB,
+          description: artifact.revB,
+          status: artifact.statusB,
           revision: item.revision + 1,
         }
-      : item,
+      : item
+  })
+
+export const proposalReviewer = {
+  name: 'Sarah Chen',
+  role: 'Electrical engineer',
+} as const
+
+export const proposalPartChanges: ReadonlyArray<
+  Readonly<{ part: string; before: string; after: string; trace: string }>
+> = [
+  {
+    part: 'Converter modules',
+    before: '4 × 3.0 kW',
+    after: '5 × 3.0 kW',
+    trace: 'REQ-PSU-01',
+  },
+  {
+    part: 'Chassis',
+    before: '4-slot',
+    after: '5-slot, stiffened',
+    trace: 'REQ-PSU-03',
+  },
+  {
+    part: 'Cold plate',
+    before: 'Single',
+    after: 'Extended dual',
+    trace: 'REQ-PSU-02',
+  },
+  {
+    part: 'Cockpit feeder SSPC',
+    before: '25 A',
+    after: '75 A',
+    trace: 'REQ-AVN-01',
+  },
+  {
+    part: 'Cockpit feeder wire',
+    before: '10 AWG',
+    after: '8 AWG',
+    trace: 'REQ-AVN-01',
+  },
+  {
+    part: '48 V output connectors',
+    before: '2 × MIL-DTL-38999',
+    after: '3 × MIL-DTL-38999',
+    trace: 'INT-PSU',
+  },
+]
+
+const downstreamTests = (
+  id: string,
+  seen: Set<string> = new Set(),
+): ReadonlyArray<string> => {
+  if (seen.has(id)) {
+    return []
+  }
+  seen.add(id)
+  const artifact = twinArtifacts.find(item => item.id === id)
+  if (!artifact) {
+    return []
+  }
+  return [
+    ...new Set([
+      ...(artifact.kind === 'Test' ? [id] : []),
+      ...artifact.links.flatMap(link => downstreamTests(link, seen)),
+    ]),
+  ]
+}
+
+export type RequirementCheck = Readonly<{
+  id: string
+  check: string
+  value: string
+  limit: string
+  isPass: boolean
+  verification: TwinArtifact['verification']
+  tests: ReadonlyArray<string>
+}>
+
+const fixed = (value: number): string => value.toFixed(2)
+
+const checkRow = (
+  id: string,
+  check: string,
+  value: string,
+  limit: string,
+  isPass: boolean,
+): RequirementCheck => ({
+  id,
+  check,
+  value,
+  limit,
+  isPass,
+  verification:
+    twinArtifacts.find(item => item.id === id)?.verification ?? 'Analysis',
+  tests: downstreamTests(id),
+})
+
+export const requirementChecks = (
+  revision: TwinRevision,
+): ReadonlyArray<RequirementCheck> => {
+  const budget = loadBudget().map(row =>
+    checkRow(
+      row.traceId,
+      row.check,
+      `${fixed(row.demand[revision])} ${row.unit}`,
+      `≤ ${fixed(row.capacity[revision])} ${row.unit}`,
+      row.demand[revision] <= row.capacity[revision],
+    ),
   )
+  const mechanical = analysisRows
+    .filter(
+      row =>
+        row.domain === 'Mechanical' &&
+        row.metric !== 'Mount bolt margin of safety',
+    )
+    .map(row => {
+      const value = revision === 'A' ? row.revA : row.revB
+      return checkRow(
+        'REQ-PSU-03',
+        row.metric,
+        `${value} ${row.unit}`,
+        limitLabel(row),
+        withinLimit(row, value),
+      )
+    })
+  const rows = budget.concat(mechanical)
+  return avionicsRequirementIds.flatMap(id => rows.filter(row => row.id === id))
+}
 
 export const budgetMargin = (row: BudgetRow, revision: TwinRevision): number =>
   (row.capacity[revision] - row.demand[revision]) / row.capacity[revision]
@@ -844,7 +974,9 @@ export const catalogBlocker = (
         ? 'Put power assembly Rev A back first.'
         : item.id === assemblyRevB.id && !isAvionicsUpgraded(requirements)
           ? 'Rev A carries the current 8.4 kW load. Swap in the new avionics first.'
-          : undefined
+          : item.id === assemblyRevB.id
+            ? 'Rev B comes from the agent proposal. An electrical engineer approves it on the Digital twin page.'
+            : undefined
 
 export type Health = Readonly<{ text: string; tone: 'ok' | 'low' | 'bad' }>
 

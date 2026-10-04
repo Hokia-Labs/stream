@@ -7469,3 +7469,125 @@ button.graph-cluster-head:hover {
 .matrix-id:hover {
   color: var(--accent-strong);
 }
+
+.twin-steps {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.twin-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+.twin-step-index {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.twin-step.done {
+  color: var(--positive, #1b7f3b);
+}
+.twin-step.done .twin-step-index {
+  background: currentColor;
+}
+.twin-step.done .twin-step-index {
+  color: var(--surface);
+}
+.twin-step.current {
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.twin-step.current .twin-step-index {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.twin-drafting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.twin-pulse {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: twin-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes twin-pulse {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .twin-pulse {
+    animation: none;
+  }
+}
+.twin-proposal-why,
+.twin-check-summary {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.twin-predicted {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.twin-predicted li {
+  display: grid;
+  grid-template-columns: 220px auto 16px auto;
+  gap: 8px;
+  align-items: center;
+  justify-content: start;
+}
+.twin-approver {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--warning, #b7791f);
+  font-size: 13px;
+}
+.twin-approver.ok {
+  border-color: var(--positive, #1b7f3b);
+}
+.twin-approver p {
+  margin: 0;
+}
+.twin-approver-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.twin-subheading {
+  margin: 20px 0 8px;
+  font-size: 13px;
+}
+
+.twin-reset {
+  margin-left: auto;
+}

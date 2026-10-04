@@ -88,6 +88,16 @@ export const TwinSlot = Schema.Literals(['Cockpit', 'Power'])
 export type TwinSlot = typeof TwinSlot.Type
 export const TwinRevision = Schema.Literals(['A', 'B'])
 export type TwinRevision = typeof TwinRevision.Type
+export const TwinProposal = Schema.Literals([
+  'None',
+  'Drafting',
+  'Pending',
+  'Rejected',
+  'Approved',
+])
+export type TwinProposal = typeof TwinProposal.Type
+export const TwinCheck = Schema.Literals(['Not run', 'Running', 'Done'])
+export type TwinCheck = typeof TwinCheck.Type
 export const TwinReviewItem = Schema.Literals([
   'Requirements',
   'Thermal',
