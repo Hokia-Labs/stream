@@ -5094,7 +5094,7 @@ const consentDialog = (h: H): Html =>
         [
           h.p(
             [h.Class('consent-eyebrow mono')],
-            [`${systemHigh} · ${enclaveName} enclave`],
+            [`${systemHigh} · ${enclaveName} network`],
           ),
           h.h2([h.Id('consent-title')], ['U.S. Government Information System']),
           h.p(
