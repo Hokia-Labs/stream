@@ -8835,3 +8835,12 @@ p.launch-estimate {
 .twin-req-set-body {
   padding: 0 12px 12px;
 }
+
+.twin-signoff-done {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: var(--space-3) 0 0;
+  color: var(--success);
+  font-size: var(--text-sm);
+}

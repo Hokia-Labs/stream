@@ -328,6 +328,22 @@ const signoffGate = (
           ),
         ],
       ),
+      model.twinReviewed.length === twinSignoffs.length
+        ? h.p(
+            [h.Class('twin-signoff-done')],
+            [
+              'All disciplines signed. ',
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('text-button'),
+                  h.OnClick(Message.SelectedTwinPanelTab({ tab: 'DO-254' })),
+                ],
+                ['Download the package in DO-254 →'],
+              ),
+            ],
+          )
+        : h.empty,
     ],
   )
 }
