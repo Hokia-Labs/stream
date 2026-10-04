@@ -3041,6 +3041,8 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : {
             model: modifyFields(model, {
               modal: () => Modal.BoardReview({ tab: 'PDR' }),
+              schematicBoard: () => 1,
+              schematicPage: () => 4,
             }),
           },
     OpenedBoardReviewAt: ({ tab }) =>
@@ -3049,6 +3051,8 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : {
             model: modifyFields(model, {
               modal: () => Modal.BoardReview({ tab }),
+              schematicBoard: () => 1,
+              schematicPage: () => 4,
             }),
           },
     SelectedBoardReviewTab: ({ tab }) =>
