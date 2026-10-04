@@ -7621,10 +7621,44 @@ button.graph-cluster-head:hover {
 }
 .board-review-body {
   display: grid;
-  gap: var(--space-3);
+  gap: 20px;
 }
 .board-review-body h4 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.board-review-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.board-review-meta .board-review-source {
+  margin: 0;
+  color: var(--muted);
+}
+.board-review-meta .board-review-source strong {
+  color: var(--text, inherit);
+}
+.board-review-recommendation {
+  padding: var(--space-3);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+.board-review-actions th:first-child {
+  width: 80px;
+}
+.board-review-actions th:nth-child(3),
+.board-review-actions th:nth-child(4) {
+  width: 140px;
+}
+.board-review-table td > .badge:only-child {
+  margin-left: 0;
 }
 .board-review-body section p {
   margin: 0;
@@ -7775,15 +7809,8 @@ button.graph-cluster-head:hover {
   font-weight: 600;
 }
 .board-review-upload {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px dashed var(--rule-strong);
+  flex: none;
   cursor: pointer;
-}
-.board-review-upload input {
-  margin-left: auto;
 }
 .board-review-uploaded {
   display: grid;
@@ -7802,6 +7829,9 @@ button.graph-cluster-head:hover {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.board-review-checks .met {
+  color: var(--positive, #15803d);
 }
 .board-review-checks .open {
   color: #b45309;

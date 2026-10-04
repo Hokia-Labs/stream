@@ -2314,11 +2314,14 @@ const pdrUpload = (model: Model, h: H): Html =>
   Option.match(model.maybeTwinPdr, {
     onNone: () =>
       h.label(
-        [h.Class('board-review-upload')],
         [
-          h.span([], ['Upload your own PDR']),
-          h.span([h.Class('muted small')], ['PDF, Word, Markdown or text']),
+          h.Class('button outline small board-review-upload'),
+          h.Title('PDF, Word, Markdown or text'),
+        ],
+        [
+          'Attach your PDR…',
           h.input([
+            h.Class('visually-hidden'),
             h.Type('file'),
             h.Accept('.pdf,.doc,.docx,.md,.markdown,.txt'),
             h.OnFileChange(files => Message.SelectedTwinPdrFile({ files })),
@@ -2365,21 +2368,31 @@ const pdrTab = (model: Model, h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
-      pdrUpload(model, h),
-      h.p(
-        [h.Class('board-review-source')],
+      h.div(
+        [h.Class('board-review-meta')],
         [
-          h.strong([], [`${pdr.id} · `]),
-          isEngineerDesign(model.twinDesign)
-            ? 'Design edited by the engineer. Items that differ from the agent are marked.'
-            : 'Prepared by the power agent.',
-          ...Option.match(model.maybeTwinPdr, {
-            onNone: () => [],
-            onSome: upload => [
-              ` Your PDR ${upload.name} is attached alongside it.`,
+          h.p(
+            [h.Class('board-review-source')],
+            [
+              h.strong([], [pdr.id]),
+              isEngineerDesign(model.twinDesign)
+                ? ' · Design edited by the engineer. Items that differ from the agent are marked.'
+                : ' · Prepared by the power agent.',
             ],
+          ),
+          ...Option.match(model.maybeTwinPdr, {
+            onNone: () => [pdrUpload(model, h)],
+            onSome: () => [],
           }),
         ],
+      ),
+      ...Option.match(model.maybeTwinPdr, {
+        onNone: () => [],
+        onSome: () => [pdrUpload(model, h)],
+      }),
+      h.section(
+        [h.Class('board-review-recommendation')],
+        [h.h4([], ['Recommendation']), h.p([], [pdr.recommendation])],
       ),
       h.section([], [h.h4([], ['Scope']), h.p([], [pdr.scope])]),
       h.section(
@@ -2468,7 +2481,7 @@ const pdrTab = (model: Model, h: H): Html =>
         [
           h.h4([], ['Action items']),
           h.table(
-            [h.Class('table board-review-table')],
+            [h.Class('table board-review-table board-review-actions')],
             [
               h.thead(
                 [],
@@ -2488,7 +2501,7 @@ const pdrTab = (model: Model, h: H): Html =>
                     id,
                     [],
                     [
-                      h.td([], [id]),
+                      h.td([h.Class('mono')], [id]),
                       h.td([], [action]),
                       h.td([], [owner]),
                       h.td([], [due]),
@@ -2502,15 +2515,11 @@ const pdrTab = (model: Model, h: H): Html =>
       ),
       h.section(
         [],
-        [h.h4([], ['Recommendation']), h.p([], [pdr.recommendation])],
-      ),
-      h.section(
-        [],
         [
           h.h4([], ['Exit criteria']),
           h.ul(
-            [],
-            pdr.exit.map(item => h.keyed('li')(item, [], [item])),
+            [h.Class('board-review-checks')],
+            pdr.exit.map(item => h.keyed('li')(item, [], ['○ ', item])),
           ),
         ],
       ),
