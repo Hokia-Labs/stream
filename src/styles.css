@@ -8296,10 +8296,10 @@ p.launch-estimate {
   color: var(--ink);
   white-space: nowrap;
 }
-.ibm-logo {
+.doors-mark {
   display: block;
-  height: 13px;
-  width: auto;
+  width: 18px;
+  height: 18px;
 }
 .jira-logo {
   display: block;
