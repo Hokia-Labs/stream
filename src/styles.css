@@ -8017,3 +8017,22 @@ p.launch-estimate {
   color: var(--success);
   font-weight: 600;
 }
+.graph-toolbar > *,
+.graph-toolbar-group > * {
+  margin: 0;
+}
+.graph-toolbar .run-view-toggle,
+.graph-toolbar .search-input,
+.graph-toolbar .kind-chip {
+  box-sizing: border-box;
+  height: 32px;
+  margin: 0;
+}
+.graph-toolbar .run-view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+}
+.graph-toolbar .search-input input {
+  height: 100%;
+}
