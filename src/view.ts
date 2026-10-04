@@ -1668,18 +1668,18 @@ const overview = (model: Model, h: H): Html => {
       pageHeading('Files', '', h.empty, h),
       h.div(
         [h.Class('files-subheading')],
-        [h.h2([], ['Requirements']), doorsLogo(h)],
+        [doorsLogo(h), h.h2([], ['Requirements'])],
       ),
       doorsPanel(doorsSync(model.workspace.requirements), h),
       h.div(
         [h.Class('files-subheading')],
         [
-          h.h2([], ['Datasets']),
           h.img([
             h.Src('/teamcenter-logo.png'),
             h.Alt('Teamcenter'),
             h.Class('tc-logo'),
           ]),
+          h.h2([], ['Datasets']),
         ],
       ),
       h.section(

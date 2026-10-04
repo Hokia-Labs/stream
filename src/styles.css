@@ -8025,7 +8025,6 @@ button.graph-cluster-head:hover {
 .files-subheading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   margin: var(--space-6) 0 var(--space-3);
 }
