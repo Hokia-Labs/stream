@@ -1437,7 +1437,7 @@ const changeHeader = (model: Model, h: H): Html => {
           h.h1([h.Class('twin-title')], [title]),
           h.span([h.Class(`badge ${status.tone}`)], [status.label]),
           ...jiraHandoffs(requirements, model.twinProposal).map(ticket =>
-            jiraChip(ticket, h),
+            jiraChip(ticket, h, false),
           ),
         ],
       ),

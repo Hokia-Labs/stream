@@ -161,7 +161,11 @@ export const syncedWith = (logos: ReadonlyArray<Html>, h: H): Html =>
 const jiraTone = (status: JiraStatus): string =>
   status === 'Done' ? 'ok' : status === 'In Review' ? 'pending' : 'closed'
 
-export const jiraChip = (ticket: JiraTicket, h: H): Html =>
+export const jiraChip = (
+  ticket: JiraTicket,
+  h: H,
+  isStatusShown = true,
+): Html =>
   h.span(
     [
       h.Class('jira-chip'),
@@ -172,10 +176,14 @@ export const jiraChip = (ticket: JiraTicket, h: H): Html =>
     [
       h.img([h.Src('/jira-icon.svg'), h.Alt(''), h.Class('jira-icon')]),
       h.span([h.Class('mono')], [ticket.key]),
-      h.span(
-        [h.Class(`jira-status ${jiraTone(ticket.status)}`)],
-        [ticket.status],
-      ),
+      ...(isStatusShown
+        ? [
+            h.span(
+              [h.Class(`jira-status ${jiraTone(ticket.status)}`)],
+              [ticket.status],
+            ),
+          ]
+        : []),
       h.span([h.Class('muted')], [ticket.assignee]),
     ],
   )
