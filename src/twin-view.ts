@@ -24,9 +24,9 @@ import {
 } from './domain'
 import { idLink, linkifyIds } from './id-link'
 import {
+  altiumLogo,
   ansysLogo,
   jiraChip,
-  kicadLogo,
   ltspiceLogo,
   toolHead,
 } from './integration-view'
@@ -758,7 +758,7 @@ const analysisSummary = (): ReadonlyArray<
       label: `Ansys ${ansysPass}/${analysisRows.length}`,
       tab: 'Thermal',
     },
-    { label: 'KiCad schematic', tab: 'Schematic' },
+    { label: 'Altium schematic', tab: 'Schematic' },
   ]
 }
 
@@ -2051,7 +2051,7 @@ const schematicViewer = (model: Model, h: H): Html => {
       imageCanvas(
         'schematic-image',
         `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
-        `KiCad schematic, ${board.name}, ${sheet}`,
+        `Altium schematic, ${board.name}, ${sheet}`,
         h,
       ),
     ],
@@ -2067,7 +2067,7 @@ const schematicTab = (model: Model, h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
-      toolHead(kicadLogo(h), [`${revBStem}.kicad_sch`], h),
+      toolHead(altiumLogo(h), [`${revBStem}.SchDoc`], h),
       schematicViewer(model, h),
       h.table(
         [h.Class('table board-review-table')],
@@ -2109,10 +2109,10 @@ const modelTab = (h: H): Html => {
   return h.div(
     [h.Class('board-review-body')],
     [
-      toolHead(kicadLogo(h), [`${revBStem}.kicad_pcb`], h),
+      toolHead(altiumLogo(h), [`${revBStem}.PcbDoc`], h),
       board([
         h.Class('board-review-canvas board-review-assembly'),
-        h.AriaLabel('3D model of the KiCad power board, Rev A and Rev B'),
+        h.AriaLabel('3D model of the Altium power board, Rev A and Rev B'),
       ]),
       h.p(
         [h.Class('muted small')],

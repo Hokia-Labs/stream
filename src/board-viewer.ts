@@ -33,7 +33,7 @@ export class StreamBoard extends HTMLElement {
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
     root.innerHTML =
-      '<style>:host{display:block;position:relative;overflow:hidden;background:#eef1f6}canvas{display:block;width:100%;height:100%;outline:none;opacity:0;transition:opacity .7s cubic-bezier(.2,.7,.2,1)}:host([data-ready]) canvas{opacity:1}p{margin:0;position:absolute;inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;pointer-events:none}:host([data-ready]) p{display:none}</style><p>Loading KiCad assemblies…</p>'
+      '<style>:host{display:block;position:relative;overflow:hidden;background:#eef1f6}canvas{display:block;width:100%;height:100%;outline:none;opacity:0;transition:opacity .7s cubic-bezier(.2,.7,.2,1)}:host([data-ready]) canvas{opacity:1}p{margin:0;position:absolute;inset:0;display:grid;place-items:center;font:500 13px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:#4b5563;pointer-events:none}:host([data-ready]) p{display:none}</style><p>Loading Altium assemblies…</p>'
     try {
       this.#renderer = new WebGLRenderer({ antialias: true })
     } catch {
@@ -111,7 +111,7 @@ export class StreamBoard extends HTMLElement {
     } catch {
       this.shadowRoot
         ?.querySelector('p')
-        ?.replaceChildren('Could not load the KiCad assemblies.')
+        ?.replaceChildren('Could not load the Altium assemblies.')
       return
     }
     const box = new Box3().setFromObject(boards)

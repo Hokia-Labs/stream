@@ -582,18 +582,18 @@ export const do254Figures: ReadonlyArray<Do254Figure> = [
     file: 'figures/schematic-buck-power-rev-a.png',
     url: '/schematics/rev-a/page-05.png',
     caption:
-      'Buck power sheet, Rev A (KiCad export). Q401–Q404 are replaced in Rev B.',
+      'Buck power sheet, Rev A (Altium export). Q401–Q404 are replaced in Rev B.',
   },
   {
     file: 'figures/schematic-buck-power-rev-b.png',
     url: '/schematics/rev-b/page-05.png',
-    caption: 'Buck power sheet, Rev B (KiCad export). Q401–Q404 changed.',
+    caption: 'Buck power sheet, Rev B (Altium export). Q401–Q404 changed.',
   },
   {
     file: 'figures/board-assemblies.webp',
     url: '/figures/board-assemblies.webp',
     caption:
-      'KiCad 3D assemblies, Rev A (left) and Rev B (right). The changed Rev B power stage is highlighted.',
+      'Altium 3D assemblies, Rev A (left) and Rev B (right). The changed Rev B power stage is highlighted.',
   },
   {
     file: 'figures/thermal-rev-a.webp',

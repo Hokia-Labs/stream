@@ -1023,7 +1023,7 @@ const upgradedAvionics: CatalogItem = {
   id: 'MW-AVN-2700',
   revision: 'A',
   slot: 'Cockpit',
-  title: 'Cockpit avionics module',
+  title: 'P40 avionics module',
   status: 'Released',
   released: '2026-09-18',
   value: 2.7,
@@ -1172,7 +1172,7 @@ const partFiles = (
     },
     ...(item.slot === 'Power'
       ? [
-          { key: 'ecad', type: 'KiCad Project', name: `${stem}.kicad_pro` },
+          { key: 'ecad', type: 'Altium Project', name: `${stem}.PrjPcb` },
           { key: 'sch', type: 'PDF', name: `${stem}_schematic.pdf` },
           { key: 'spice', type: 'LTspice Schematic', name: `${stem}_bus.asc` },
           { key: 'cae', type: 'CAE Analysis', name: `${stem}_thermal.wbpz` },

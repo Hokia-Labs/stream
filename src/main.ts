@@ -3079,7 +3079,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         record(
           model.clockMs,
           writeRequirements(model, swapTwinAvionics(requirements)),
-          `Cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
+          `P40 avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
         ),
         `New avionics swapped in. ${avionicsRequirementIds.length} requirements revised; the power agent is drafting a redesign.`,
       )
