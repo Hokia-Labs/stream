@@ -2667,8 +2667,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     ClickedTwinPart: ({ part }) => ({
       model: modifyFields(model, {
-        twinFocus: () =>
-          part === 'Cockpit avionics' ? 'Cockpit avionics' : 'Aft bay',
+        twinFocus: () => (part === 'Cockpit' ? 'Cockpit' : 'Aft bay'),
       }),
     }),
     ClickedSwapTwinAvionics: () => {

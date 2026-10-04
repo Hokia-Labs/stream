@@ -669,7 +669,7 @@ export const twinPage = (model: Model, h: H): Html => {
                     [
                       segmented(
                         'Camera',
-                        ['Airframe', 'Aft bay', 'Cockpit avionics'] as const,
+                        ['Airframe', 'Aft bay', 'Cockpit'] as const,
                         model.twinFocus,
                         focus => Message.SelectedTwinFocus({ focus }),
                         h,

@@ -81,11 +81,7 @@ export const ReviewDecision = Schema.Struct({
 })
 export type ReviewDecision = typeof ReviewDecision.Type
 
-export const TwinFocus = Schema.Literals([
-  'Airframe',
-  'Aft bay',
-  'Cockpit avionics',
-])
+export const TwinFocus = Schema.Literals(['Airframe', 'Aft bay', 'Cockpit'])
 export type TwinFocus = typeof TwinFocus.Type
 export const TwinOverlay = Schema.Literals(['Shaded', 'Thermal'])
 export type TwinOverlay = typeof TwinOverlay.Type

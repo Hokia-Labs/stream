@@ -30,7 +30,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 
 import { avionicsChange, busDemandKw, capacityKw } from './twin'
 
-type Focus = 'Airframe' | 'Aft bay' | 'Cockpit avionics'
+type Focus = 'Airframe' | 'Aft bay' | 'Cockpit'
 type Overlay = 'Shaded' | 'Thermal'
 type Revision = 'A' | 'B'
 type Condition = 'Normal' | 'Module failed'
@@ -208,9 +208,7 @@ export class StreamTwin extends HTMLElement {
 
   set twinFocus(value: unknown) {
     if (
-      (value === 'Airframe' ||
-        value === 'Aft bay' ||
-        value === 'Cockpit avionics') &&
+      (value === 'Airframe' || value === 'Aft bay' || value === 'Cockpit') &&
       value !== this.#focus
     ) {
       this.#focus = value
@@ -295,9 +293,7 @@ export class StreamTwin extends HTMLElement {
     this.#cockpitLabel = document.createElement('div')
     this.#cockpitLabel.className = 'label amber'
     this.#label.addEventListener('click', () => this.#pick('Power supply'))
-    this.#cockpitLabel.addEventListener('click', () =>
-      this.#pick('Cockpit avionics'),
-    )
+    this.#cockpitLabel.addEventListener('click', () => this.#pick('Cockpit'))
     this.#status = document.createElement('div')
     this.#status.className = 'status'
     this.#status.textContent = 'Loading F-35 model…'
@@ -376,7 +372,7 @@ export class StreamTwin extends HTMLElement {
         this.#applyFocus()
         if (this.#status) {
           this.#status.textContent =
-            'Drag to orbit · scroll to zoom · click the cockpit avionics or the aft power assembly to fly there'
+            'Drag to orbit · scroll to zoom · click the cockpit or the aft power assembly to fly there'
         }
         return undefined
       })
@@ -433,7 +429,7 @@ export class StreamTwin extends HTMLElement {
       targets.push(this.#airframe)
     }
     if (raycaster.intersectObject(this.#cockpit).length > 0) {
-      this.#pick('Cockpit avionics')
+      this.#pick('Cockpit')
       return
     }
     const hit = raycaster.intersectObjects(targets, true)[0]
@@ -459,7 +455,7 @@ export class StreamTwin extends HTMLElement {
   }
 
   #preset(): Preset {
-    if (this.#focus !== 'Cockpit avionics') {
+    if (this.#focus !== 'Cockpit') {
       return presets[this.#focus]
     }
     const target = this.#cockpitPosition.clone().lerp(psuCenter, 0.18)
