@@ -1378,17 +1378,18 @@ const approvalDiff = (model: Model, approval: Approval, h: H): Html => {
   const changed = snapshot
     ? rows.filter(row => row.before !== row.after).length
     : 0
+  if (!snapshot) {
+    return h.empty
+  }
   return h.details(
     [h.Class('approval-diff')],
     [
       h.summary(
         [],
         [
-          !snapshot
-            ? 'Current artifact · no run snapshot recorded'
-            : changed === 0
-              ? 'Compare with run snapshot · unchanged'
-              : `Compare with run snapshot · ${changed} changed`,
+          changed === 0
+            ? 'Compare with run snapshot · unchanged'
+            : `Compare with run snapshot · ${changed} changed`,
         ],
       ),
       h.table(
@@ -1501,7 +1502,7 @@ const reviewBar = (
         [h.Class('muted small-text')],
         [
           Array.isArrayEmpty(staged)
-            ? 'Approve or dismiss findings, then submit them together.'
+            ? ''
             : `${staged.length} of ${ids.length} decided`,
         ],
       ),
@@ -1602,16 +1603,18 @@ const approvals = (
                           : undefined,
                         h,
                       ),
-                      h.span([], ['·']),
-                      metaLink(
-                        approval.runId,
-                        model.workspace.runs.some(
-                          run => run.id === approval.runId,
-                        )
-                          ? Message.SelectedRun({ id: approval.runId })
-                          : undefined,
-                        h,
-                      ),
+                      ...(model.workspace.runs.some(
+                        run => run.id === approval.runId,
+                      )
+                        ? [
+                            h.span([], ['·']),
+                            metaLink(
+                              approval.runId,
+                              Message.SelectedRun({ id: approval.runId }),
+                              h,
+                            ),
+                          ]
+                        : []),
                     ],
                   ),
                   impactStrip(model, approval, h),
@@ -1822,10 +1825,6 @@ const inboxPage = (model: Model, h: H): Html => {
                   h.span([h.Class('count-pill')], [String(pending.length)]),
                 ],
               ),
-              h.span(
-                [h.Class('muted small-text')],
-                ['Nothing merges without approval'],
-              ),
             ],
           ),
           approvals(model, pending, h),
@@ -1979,7 +1978,7 @@ const requirementsPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Requirements',
-        'Intent linked to design, verification, and the people responsible.',
+        '',
         h.div(
           [h.Class('heading-actions')],
           [
@@ -2354,28 +2353,12 @@ const requirementsPage = (model: Model, h: H): Html => {
                     h,
                   ),
                 )
-            : h.p(
-                [h.Class('table-footer mono')],
-                [
-                  `${items.length} of ${model.workspace.requirements.length} rows · ${model.groupBy === 'None' ? 'ungrouped' : `grouped by ${model.groupBy.toLowerCase()}`}${selectedIds.length > 0 ? ` · ${selectedIds.length} selected` : ''}`,
-                ],
-              ),
-          model.artifactView === 'Table'
-            ? h.p(
-                [h.Class('shortcut-hint')],
-                [
-                  h.kbd([], ['J']),
-                  h.kbd([], ['K']),
-                  ' move',
-                  h.kbd([], ['X']),
-                  ' select',
-                  h.kbd([], ['E']),
-                  ' edit',
-                  h.kbd([], ['⌘K']),
-                  ' commands',
-                ],
-              )
-            : h.empty,
+            : selectedIds.length > 0
+              ? h.p(
+                  [h.Class('table-footer mono')],
+                  [`${selectedIds.length} selected`],
+                )
+              : h.empty,
         ],
       ),
     ],
@@ -2454,14 +2437,6 @@ const pausePoints = (model: Model, h: H): Html =>
             [h.span([h.Class('breakpoint-dot')]), `0${wave + 1} ${name}`],
           ),
         ),
-      h.span(
-        [h.Class('muted small-text')],
-        [
-          model.executionMode === 'Simulation'
-            ? 'Applies to new simulation runs.'
-            : 'Simulation only. Live runs use Hold next stage.',
-        ],
-      ),
     ],
   )
 const runHistory = (model: Model, h: H): Html =>
@@ -2513,35 +2488,31 @@ const graphPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Systems graph',
-        'Select an artifact to trace downstream impact and inspect its dependencies.',
-        button(
-          'New artifact',
-          Message.ClickedNewRequirement(),
-          'primary',
-          h,
-          'plus',
+        '',
+        h.div(
+          [h.Class('heading-actions')],
+          [
+            button(
+              'Analyze impact',
+              Message.ClickedLaunch(),
+              'outline',
+              h,
+              'agent',
+            ),
+            button(
+              'New artifact',
+              Message.ClickedNewRequirement(),
+              'primary',
+              h,
+              'plus',
+            ),
+          ],
         ),
         h,
       ),
       h.section(
         [h.Class('panel full-graph-panel')],
         [
-          h.div(
-            [h.Class('panel-heading')],
-            [
-              h.div(
-                [h.Class('inline-heading')],
-                [h.h2([], ['Atlas systems graph'])],
-              ),
-              button(
-                'Analyze impact',
-                Message.ClickedLaunch(),
-                'outline small',
-                h,
-                'agent',
-              ),
-            ],
-          ),
           graphToolbar(model, scene, h),
           model.graphView === 'Matrix'
             ? traceMatrix(model, scene, h)
@@ -2653,7 +2624,7 @@ const fleetPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Agent fleet',
-        'Each agent has a role, instructions, and a stage. Agents in the same stage run in parallel.',
+        '',
         button('Create agent', Message.ClickedNewAgent(), 'primary', h, 'plus'),
         h,
       ),
@@ -2661,14 +2632,6 @@ const fleetPage = (model: Model, h: H): Html => {
         [h.Class('fleet-toolbar')],
         [
           search(model, 'Search agents…', h),
-          h.span(
-            [h.Class('sample-pill')],
-            [
-              model.executionMode === 'Simulation'
-                ? 'SIMULATED EXECUTION'
-                : 'PI DURABLE · EXPERIMENTAL',
-            ],
-          ),
           button(
             'Run enabled agents',
             Message.ClickedLaunch(),
@@ -3700,7 +3663,7 @@ const runsPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Runs',
-        'Each run snapshots the workspace, executes stage by stage, and ends in human review.',
+        '',
         button('New fleet run', Message.ClickedLaunch(), 'primary', h, 'play'),
         h,
       ),
@@ -3785,7 +3748,6 @@ const runsPage = (model: Model, h: H): Html => {
             : h.section(
                 [h.Class('panel first-run')],
                 [
-                  ghostLayout('run', h),
                   h.h2([], ['Start a fleet run']),
                   h.p(
                     [],
@@ -3809,13 +3771,7 @@ const runsPage = (model: Model, h: H): Html => {
         [
           h.div(
             [h.Class('panel-heading')],
-            [
-              h.h2([], ['Workspace audit trail']),
-              h.span(
-                [h.Class('muted small-text')],
-                ['Local, reviewable history'],
-              ),
-            ],
+            [h.h2([], ['Workspace audit trail'])],
           ),
           ...model.workspace.events
             .slice(0, 8)

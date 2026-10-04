@@ -21,7 +21,7 @@ export const branchesPage = (model: Model, h: HtmlBuilder<Message>): Html =>
     [
       pageHeading(
         'Branches',
-        'Each proposed change lives on a branch. Compare diffs, check impact, and merge into Base when reviewed.',
+        '',
         h.button(
           [
             h.Type('button'),
@@ -31,12 +31,6 @@ export const branchesPage = (model: Model, h: HtmlBuilder<Message>): Html =>
           [plusIcon(h), 'New branch'],
         ),
         h,
-      ),
-      h.div(
-        [h.Class('simulation-notice')],
-        [
-          'Branches isolate edits locally. Baseline conflicts and pending reviews block merges. This preview has one local reviewer; production identity and permissions are not enforced.',
-        ],
       ),
       h.div(
         [h.Class('branch-list')],
