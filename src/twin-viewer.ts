@@ -458,10 +458,10 @@ export class StreamTwin extends HTMLElement {
     if (this.#focus !== 'Cockpit') {
       return presets[this.#focus]
     }
-    const target = this.#cockpitPosition.clone().lerp(psuCenter, 0.18)
+    const target = this.#cockpitPosition.clone()
     return {
       target,
-      position: target.clone().add(new Vector3(1.15, 0.7, -1.35)),
+      position: target.clone().add(new Vector3(1.0, 0.65, -1.5)),
     }
   }
 
