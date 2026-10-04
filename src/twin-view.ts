@@ -892,7 +892,6 @@ export const twinPage = (model: Model, h: H): Html => {
                           Message.SelectedTwinCondition({ condition }),
                         h,
                       ),
-                      h.span([h.Class('chip mono')], [`MPA Rev ${revision}`]),
                     ],
                   ),
                   twin([
