@@ -8618,3 +8618,28 @@ p.launch-estimate {
   background: var(--muted);
   transform: translateY(-1px);
 }
+.twin-derived {
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.twin-derived-head {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.twin-derived ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.twin-derived li {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 2px 12px;
+}
+.twin-derived li > :last-child {
+  grid-column: 2;
+}

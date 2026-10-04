@@ -69,6 +69,7 @@ import { pageShortcuts, paletteItems } from './palette'
 import {
   avionicsRequirementIds,
   catalogBlocker,
+  derivedArtifacts,
   hasTwinScenario,
   installTwinRevision,
   isAvionicsUpgraded,
@@ -788,15 +789,14 @@ const SaveTwinReports = Command.define('SaveTwinReports', {
 const DraftTwinReports = Command.define('DraftTwinReports', {
   args: {
     requirements: Schema.Array(Requirement),
-    reviewed: Schema.Array(TwinReviewItem),
   },
   messages: [Message.DraftedTwinReports],
-  execute: ({ requirements, reviewed }) =>
+  execute: ({ requirements }) =>
     Effect.sync(() => {
       const date = new Date().toISOString().slice(0, 10)
       return Message.DraftedTwinReports({
         files: [
-          ...twinPackageFiles(requirements, date, reviewed),
+          ...twinPackageFiles(requirements, date),
           ...do254Files(requirements, date),
         ].map(file => ({
           name: file.name,
@@ -808,9 +808,12 @@ const DraftTwinReports = Command.define('DraftTwinReports', {
 })
 
 const BuildTwinPackage = Command.define('BuildTwinPackage', {
-  args: { files: Schema.Array(TwinReport) },
+  args: {
+    files: Schema.Array(TwinReport),
+    reviewed: Schema.Array(TwinReviewItem),
+  },
   messages: [Message.GeneratedTwinPackage, Message.FailedTwinPackage],
-  execute: ({ files }) =>
+  execute: ({ files, reviewed }) =>
     Effect.tryPromise(async () => {
       const now = new Date()
       const encoder = new TextEncoder()
@@ -832,7 +835,10 @@ const BuildTwinPackage = Command.define('BuildTwinPackage', {
           {
             generatedBy: 'Stream',
             generatedAt: now.toISOString(),
-            note: 'Sign-off required before release.',
+            signedOff: reviewed.map(item => ({
+              discipline: signoffTitle(item),
+              by: 'Dakota Edwards',
+            })),
             files: hashes,
           },
           null,
@@ -2945,7 +2951,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         modifyFields(model, { twinProposal: () => 'Pending' }),
         record(
           model.workspace,
-          `Power agent proposed MPA Rev B (${proposalPartChanges.length} part changes) · awaiting ${proposalReviewer.role.toLowerCase()} approval`,
+          `Power agent proposed MPA Rev B (${proposalPartChanges.length} part changes, ${derivedArtifacts.length} derived requirements) · awaiting ${proposalReviewer.role.toLowerCase()} approval`,
         ),
       )
     },
@@ -3121,7 +3127,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         Message.ClickedTraceTwinArtifact({ id: 'REQ-AVN-01' }),
       ),
     ToggledTwinReview: ({ item }) => {
-      if (twinRevision(workingRequirements(model)) !== 'B') {
+      if (
+        twinRevision(workingRequirements(model)) !== 'B' ||
+        model.twinReports.length === 0
+      ) {
         return { model }
       }
       const summary = `${signoffTitle(item)} ${model.twinReviewed.includes(item) ? 'sign-off revoked' : 'signed off'}`
@@ -3144,10 +3153,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           'Place the new hardware in the systems model first.',
         )
       }
-      if (model.twinReviewed.length < TwinReviewItem.literals.length) {
+      if (model.twinCheck !== 'Done') {
         return notify(
           model,
-          'Review the requirement changes, thermal, and mechanical results before packaging.',
+          'Run the requirement check on Rev B before drafting DO-254 reports.',
         )
       }
       if (model.isGeneratingTwinPackage) {
@@ -3155,9 +3164,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       }
       return {
         model: modifyFields(model, { isGeneratingTwinPackage: () => true }),
-        commands: [
-          DraftTwinReports({ requirements, reviewed: model.twinReviewed }),
-        ],
+        commands: [DraftTwinReports({ requirements })],
       }
     },
     DraftedTwinReports: ({ files }) => {
@@ -3237,11 +3244,18 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       }
     },
     ClickedDownloadTwinPackage: () =>
-      model.twinReports.length === 0 || model.isGeneratingTwinPackage
+      model.twinReports.length === 0 ||
+      model.isGeneratingTwinPackage ||
+      model.twinReviewed.length < TwinReviewItem.literals.length
         ? { model }
         : {
             model: modifyFields(model, { isGeneratingTwinPackage: () => true }),
-            commands: [BuildTwinPackage({ files: model.twinReports })],
+            commands: [
+              BuildTwinPackage({
+                files: model.twinReports,
+                reviewed: model.twinReviewed,
+              }),
+            ],
           },
     GeneratedTwinPackage: ({ name, digest, bytes, files }) =>
       persist(

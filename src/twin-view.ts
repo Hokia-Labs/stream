@@ -49,6 +49,7 @@ import {
   catalogBlocker,
   catalogImpact,
   catalogSpecLabels,
+  derivedArtifacts,
   hasTwinScenario,
   installedPart,
   isAvionicsUpgraded,
@@ -263,7 +264,11 @@ const signoffFooter = (
           )
         : h.span(
             [h.Class('twin-signoff-status')],
-            [isEnabled ? prompt : 'Place Rev B before signing off.'],
+            [
+              isEnabled
+                ? prompt
+                : 'Draft the DO-254 reports before signing off.',
+            ],
           ),
       signoffButton(model, item, isEnabled, h),
     ],
@@ -299,6 +304,7 @@ const signoffGate = (
   h: H,
 ): Html => {
   const remaining = twinSignoffs.length - model.twinReviewed.length
+  const canSign = isRevB && model.twinReports.length > 0
   return h.section(
     [h.Class('panel twin-wide'), h.AriaLabel('Engineering sign-off')],
     [
@@ -361,14 +367,14 @@ const signoffGate = (
                       model.twinReviewed.includes(signoff.item)
                         ? signatory(h)
                         : h.span(
-                            [h.Class(isRevB ? 'amber-text' : 'muted')],
+                            [h.Class(canSign ? 'amber-text' : 'muted')],
                             ['Pending'],
                           ),
                     ],
                   ),
                   h.td(
                     [h.Class('twin-signoff-action')],
-                    [signoffButton(model, signoff.item, isRevB, h)],
+                    [signoffButton(model, signoff.item, canSign, h)],
                   ),
                 ],
               ),
@@ -379,9 +385,11 @@ const signoffGate = (
       h.p(
         [h.Class('muted small-text twin-signoff-note')],
         [
-          remaining === 0
-            ? 'All disciplines signed. DO-254 drafting is available, and sign-offs are recorded in the change record.'
-            : `DO-254 drafting is available once all three disciplines sign off. ${remaining} remaining.`,
+          !canSign
+            ? 'Each discipline signs off on the drafted DO-254 reports. Draft them first.'
+            : remaining === 0
+              ? 'All disciplines signed. The DO-254 package can be downloaded and sent, with sign-offs recorded in its manifest.'
+              : `Sign off on the drafted DO-254 reports. ${remaining} remaining before the package can be released.`,
         ],
       ),
     ],
@@ -808,6 +816,47 @@ const proposalPanel = (
               ),
             ),
             h.div(
+              [h.Class('twin-derived')],
+              [
+                h.p(
+                  [h.Class('twin-derived-head')],
+                  [
+                    h.strong(
+                      [],
+                      [`Derived requirements · ${derivedArtifacts.length}`],
+                    ),
+                    h.span(
+                      [h.Class('muted')],
+                      [
+                        isRevB
+                          ? ' · added to DOORS, needs review'
+                          : ' · raised by the Rev B design, added to DOORS on approval',
+                      ],
+                    ),
+                  ],
+                ),
+                h.ul(
+                  [],
+                  derivedArtifacts.map(artifact =>
+                    h.keyed('li')(
+                      artifact.id,
+                      [],
+                      [
+                        isRevB
+                          ? idLink(model, artifact.id, h, 'mono')
+                          : h.span([h.Class('mono')], [artifact.id]),
+                        h.span([], [artifact.revB]),
+                        h.span(
+                          [h.Class('muted small-text')],
+                          [`From ${artifact.derivedFrom ?? 'Rev B design'}`],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            h.div(
               [h.Class(`twin-approver ${isRevB ? 'ok' : ''}`)],
               isRevB
                 ? [
@@ -1128,7 +1177,14 @@ const requirementChangesPanel = (model: Model, h: H): Html => {
                       h.td([], [change.artifact.subsystem]),
                       h.td(
                         [h.Class('twin-before')],
-                        linkifyIds(model, change.before, h),
+                        change.before === ''
+                          ? [
+                              h.span(
+                                [h.Class('badge neutral')],
+                                ['New · derived'],
+                              ),
+                            ]
+                          : linkifyIds(model, change.before, h),
                       ),
                       h.td(
                         [h.Class('twin-after')],
@@ -1174,7 +1230,7 @@ const requirementChangesPanel = (model: Model, h: H): Html => {
         model,
         'Requirements',
         `Reviewed the ${changes.length} requirement changes above?`,
-        isRevB,
+        isRevB && model.twinReports.length > 0,
         h,
       ),
     ],
@@ -1184,6 +1240,7 @@ const requirementChangesPanel = (model: Model, h: H): Html => {
 const do254Panel = (model: Model, h: H): Html => {
   const isRevB = twinRevision(model.workspace.requirements) === 'B'
   const isReviewed = model.twinReviewed.length === twinSignoffs.length
+  const isVerified = isRevB && model.twinCheck === 'Done'
   const pkg = model.maybeTwinPackage
   const hasReports = model.twinReports.length > 0
   return h.section(
@@ -1203,11 +1260,35 @@ const do254Panel = (model: Model, h: H): Html => {
                   h.div(
                     [h.Class('twin-package-actions')],
                     [
+                      isReviewed
+                        ? h.empty
+                        : h.span(
+                            [h.Class('muted small-text')],
+                            [
+                              `Sign-off required before release · ${model.twinReviewed.length} of ${twinSignoffs.length} signed`,
+                            ],
+                          ),
+                      isReviewed
+                        ? h.empty
+                        : h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('button outline'),
+                              h.OnClick(
+                                Message.SelectedTwinPanelTab({
+                                  tab: 'Sign-off',
+                                }),
+                              ),
+                            ],
+                            ['Open sign-off'],
+                          ),
                       h.button(
                         [
                           h.Type('button'),
                           h.Class('button primary'),
-                          h.Disabled(model.isGeneratingTwinPackage),
+                          h.Disabled(
+                            !isReviewed || model.isGeneratingTwinPackage,
+                          ),
                           h.OnClick(Message.ClickedDownloadTwinPackage()),
                         ],
                         [
@@ -1226,18 +1307,16 @@ const do254Panel = (model: Model, h: H): Html => {
                   h.p(
                     [h.Class('muted small-text')],
                     [
-                      isRevB && isReviewed
+                      isVerified
                         ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, analysis results, and a SHA-256 manifest as one zip.'
-                        : 'Available after Rev B is placed and all three sign-offs are in.',
+                        : 'Available once Rev B passes the requirement check. Sign-offs follow on the drafted reports.',
                     ],
                   ),
                   h.button(
                     [
                       h.Type('button'),
                       h.Class('button primary'),
-                      h.Disabled(
-                        !isRevB || !isReviewed || model.isGeneratingTwinPackage,
-                      ),
+                      h.Disabled(!isVerified || model.isGeneratingTwinPackage),
                       h.OnClick(Message.ClickedGenerateTwinPackage()),
                     ],
                     [
@@ -1345,13 +1424,7 @@ const nextAction = (model: Model): TwinAction => {
       ? twinAction('Checking…', Message.ClickedRunTwinCheck(), true)
       : twinAction('Check requirements', Message.ClickedRunTwinCheck())
   }
-  if (model.twinReviewed.length < twinSignoffs.length) {
-    return twinAction(
-      'Open sign-off',
-      Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
-    )
-  }
-  if (Option.isNone(model.maybeTwinPackage) && model.twinReports.length === 0) {
+  if (model.twinReports.length === 0) {
     return twinAction(
       model.isGeneratingTwinPackage
         ? 'Drafting reports…'
@@ -1360,10 +1433,32 @@ const nextAction = (model: Model): TwinAction => {
       model.isGeneratingTwinPackage,
     )
   }
-  return twinAction(
-    'Open DO-254 package',
-    Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
-  )
+  if (model.twinReviewed.length < twinSignoffs.length) {
+    return twinAction(
+      'Open sign-off',
+      Message.SelectedTwinPanelTab({ tab: 'Sign-off' }),
+    )
+  }
+  return Option.match(model.maybeTwinPackage, {
+    onNone: () =>
+      twinAction(
+        model.isGeneratingTwinPackage
+          ? 'Packaging…'
+          : 'Download DO-254 package',
+        Message.ClickedDownloadTwinPackage(),
+        model.isGeneratingTwinPackage,
+      ),
+    onSome: item =>
+      item.isSent
+        ? twinAction(
+            'Open DO-254 package',
+            Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
+          )
+        : twinAction(
+            'Mark as sent to customer',
+            Message.ClickedMarkTwinPackageSent(),
+          ),
+  })
 }
 
 const changeStatus = (
@@ -1389,8 +1484,10 @@ const changeStatus = (
         ? { label: 'Package sent', tone: 'positive' }
         : { label: 'Package ready', tone: 'positive' },
     onNone: () =>
-      model.twinReviewed.length === twinSignoffs.length
-        ? { label: 'Signed off', tone: 'positive' }
+      model.twinReports.length > 0
+        ? model.twinReviewed.length === twinSignoffs.length
+          ? { label: 'Signed off', tone: 'positive' }
+          : { label: 'In sign-off', tone: 'warning' }
         : model.twinCheck === 'Done'
           ? { label: 'Verified', tone: 'positive' }
           : { label: 'Approved', tone: 'positive' },
@@ -1516,6 +1613,14 @@ const lifecycle = (model: Model, h: H): Html => {
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
     },
     {
+      label: 'Derived reqs',
+      meta:
+        isRevB || proposal === 'Pending' || proposal === 'Rejected'
+          ? `${derivedArtifacts.length} from Rev B design`
+          : 'From the design',
+      isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
+    },
+    {
       label: 'EE approval',
       meta:
         proposal === 'Rejected' && !isRevB ? 'Rejected' : proposalReviewer.name,
@@ -1530,21 +1635,16 @@ const lifecycle = (model: Model, h: H): Html => {
       isDone: isRevB && model.twinCheck === 'Done',
     },
     {
-      label: 'Signed off',
-      meta: `${model.twinReviewed.length}/${twinSignoffs.length} disciplines`,
-      isDone: isRevB && model.twinReviewed.length === twinSignoffs.length,
+      label: 'DO-254',
+      meta: model.twinReports.length > 0 ? 'Reports drafted' : 'Data package',
+      isDone: isRevB && model.twinReports.length > 0,
     },
     {
-      label: 'DO-254',
-      meta: Option.match(model.maybeTwinPackage, {
-        onNone: () =>
-          model.twinReports.length > 0 ? 'Reports drafted' : 'Data package',
-        onSome: item => (item.isSent ? 'Sent' : 'Packaged'),
-      }),
-      isDone: Option.match(model.maybeTwinPackage, {
-        onNone: () => false,
-        onSome: item => item.isSent,
-      }),
+      label: 'Sign-off',
+      meta: Option.exists(model.maybeTwinPackage, item => item.isSent)
+        ? 'Sent to customer'
+        : `${model.twinReviewed.length}/${twinSignoffs.length} disciplines`,
+      isDone: Option.exists(model.maybeTwinPackage, item => item.isSent),
     },
   ]
   const current = stages.findIndex(stage => !stage.isDone)
@@ -1610,7 +1710,9 @@ const statusCards = (model: Model, h: H): Html => {
   const checks = requirementChecks('B')
   const passed = checks.filter(check => check.isPass).length
   const signed = model.twinReviewed.length
-  const revised = `${avionicsRequirementIds.length} requirements revised`
+  const revised = hasProposal
+    ? `${avionicsRequirementIds.length} revised · ${derivedArtifacts.length} derived`
+    : `${avionicsRequirementIds.length} requirements revised`
   return h.div(
     [h.Class('twin-status-list'), h.AriaLabel('Change status')],
     [
@@ -1658,8 +1760,13 @@ const statusCards = (model: Model, h: H): Html => {
           : proposal === 'Rejected'
             ? statusCard('bad', 'Rejected', `By ${proposalReviewer.name}`, h)
             : statusCard('idle', 'EE approval', 'Not requested yet', h),
-      !isRevB
-        ? statusCard('idle', 'Sign-off', 'Opens once Rev B is approved', h)
+      !isRevB || model.twinReports.length === 0
+        ? statusCard(
+            'idle',
+            'Sign-off',
+            'Opens once the DO-254 reports are drafted',
+            h,
+          )
         : statusCard(
             signed === twinSignoffs.length ? 'ok' : 'active',
             'Sign-off',

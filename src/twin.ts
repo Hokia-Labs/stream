@@ -18,6 +18,7 @@ export type TwinArtifact = Readonly<{
   revA: string
   revB: string
   statusB: Requirement['status']
+  derivedFrom?: string
 }>
 
 export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
@@ -131,7 +132,49 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
   },
 ]
 
-const twinIds = new Set(twinArtifacts.map(item => item.id))
+export const derivedArtifacts: ReadonlyArray<TwinArtifact> = [
+  {
+    id: 'DRV-PSU-01',
+    title: 'Converter module current sharing',
+    kind: 'Requirement',
+    owner: 'Sarah Chen',
+    subsystem: 'Electrical power',
+    verification: 'Test',
+    links: ['DES-PSU', 'TST-PSU'],
+    revA: '',
+    revB: 'With five converter modules in parallel, each module shall carry within ±10% of the mean module current at bus loads above 20% of rated output.',
+    statusB: 'Needs review',
+    derivedFrom: 'Converter modules 4 → 5',
+  },
+  {
+    id: 'DRV-PSU-02',
+    title: 'Cockpit feeder SSPC trip coordination',
+    kind: 'Requirement',
+    owner: 'Sarah Chen',
+    subsystem: 'Electrical power',
+    verification: 'Test',
+    links: ['DES-PSU', 'TST-PSU'],
+    revA: '',
+    revB: 'The 75 A cockpit feeder SSPC shall not trip on a 3.5 kW, 200 ms avionics load step and shall clear a bolted feeder fault within 10 ms.',
+    statusB: 'Needs review',
+    derivedFrom: 'Cockpit feeder SSPC 25 A → 75 A',
+  },
+]
+
+const allTwinArtifacts = twinArtifacts.concat(derivedArtifacts)
+
+const derivedIds = new Set(derivedArtifacts.map(item => item.id))
+
+export const isDerivedArtifact = (id: string): boolean => derivedIds.has(id)
+
+export const presentDerived = (
+  requirements: ReadonlyArray<Requirement>,
+): ReadonlyArray<TwinArtifact> =>
+  derivedArtifacts.filter(artifact =>
+    requirements.some(item => item.id === artifact.id),
+  )
+
+const twinIds = new Set(allTwinArtifacts.map(item => item.id))
 
 export const isTwinArtifact = (id: string): boolean => twinIds.has(id)
 
@@ -166,19 +209,42 @@ export const seedTwinArtifacts = (): ReadonlyArray<Requirement> =>
 export const installTwinRevision = (
   requirements: ReadonlyArray<Requirement>,
   revision: TwinRevision,
-): ReadonlyArray<Requirement> =>
-  requirements.map(item => {
+): ReadonlyArray<Requirement> => {
+  const updated = requirements.flatMap(item => {
+    if (revision === 'A' && derivedIds.has(item.id)) {
+      return []
+    }
     const artifact = twinArtifacts.find(candidate => candidate.id === item.id)
     if (!artifact || item.description === textFor(artifact, revision)) {
-      return item
+      return [item]
     }
-    return {
-      ...item,
-      description: textFor(artifact, revision),
-      status: revision === 'A' ? 'Verified' : artifact.statusB,
-      revision: item.revision + 1,
-    }
+    return [
+      {
+        ...item,
+        description: textFor(artifact, revision),
+        status: revision === 'A' ? 'Verified' : artifact.statusB,
+        revision: item.revision + 1,
+      },
+    ]
   })
+  if (revision === 'A') {
+    return updated
+  }
+  return updated.concat(
+    derivedArtifacts
+      .filter(artifact => !updated.some(item => item.id === artifact.id))
+      .map(artifact => ({
+        id: artifact.id,
+        title: artifact.title,
+        description: artifact.revB,
+        kind: artifact.kind,
+        status: artifact.statusB,
+        owner: artifact.owner,
+        links: artifact.links,
+        revision: 1,
+      })),
+  )
+}
 
 export type TwinChange = Readonly<{
   artifact: TwinArtifact
@@ -191,7 +257,7 @@ export type TwinChange = Readonly<{
 export const twinChanges = (
   requirements: ReadonlyArray<Requirement>,
 ): ReadonlyArray<TwinChange> =>
-  twinArtifacts.flatMap(artifact => {
+  allTwinArtifacts.flatMap(artifact => {
     const current = requirements.find(item => item.id === artifact.id)
     return current && current.description !== artifact.revA
       ? [
@@ -491,7 +557,7 @@ const downstreamTests = (
     return []
   }
   seen.add(id)
-  const artifact = twinArtifacts.find(item => item.id === id)
+  const artifact = allTwinArtifacts.find(item => item.id === id)
   if (!artifact) {
     return []
   }
@@ -528,7 +594,7 @@ const checkRow = (
   limit,
   isPass,
   verification:
-    twinArtifacts.find(item => item.id === id)?.verification ?? 'Analysis',
+    allTwinArtifacts.find(item => item.id === id)?.verification ?? 'Analysis',
   tests: downstreamTests(id),
 })
 
@@ -561,7 +627,28 @@ export const requirementChecks = (
       )
     })
   const rows = budget.concat(mechanical)
-  return avionicsRequirementIds.flatMap(id => rows.filter(row => row.id === id))
+  const derived =
+    revision === 'B'
+      ? [
+          checkRow(
+            'DRV-PSU-01',
+            'Worst module current share',
+            '±6.2 %',
+            '≤ ±10 %',
+            true,
+          ),
+          checkRow(
+            'DRV-PSU-02',
+            'SSPC peak on 3.5 kW, 200 ms step',
+            '73 A',
+            '< 90 A trip',
+            true,
+          ),
+        ]
+      : []
+  return avionicsRequirementIds
+    .flatMap(id => rows.filter(row => row.id === id))
+    .concat(derived)
 }
 
 export const budgetMargin = (row: BudgetRow, revision: TwinRevision): number =>
@@ -628,7 +715,10 @@ export const hrdDocument = (
   const current = (id: string): Requirement | undefined =>
     requirements.find(item => item.id === id)
   const changes = twinChanges(requirements)
-  const rows = twinArtifacts.filter(item => item.kind === 'Requirement')
+  const derived = presentDerived(requirements)
+  const rows = twinArtifacts
+    .filter(item => item.kind === 'Requirement')
+    .concat(derived)
   const line = (artifact: TwinArtifact): string => {
     const item = current(artifact.id)
     return `| ${artifact.id} | ${portionText(artifactPortion(artifact))} ${cell(item?.description ?? artifact.revA)} | ${artifact.verification} | r${item?.revision ?? 1} · ${item?.status ?? 'Verified'} |`
@@ -713,8 +803,12 @@ export const hrdDocument = (
     '| --- | --- | --- | --- | --- |',
     ...rows.map(
       item =>
-        `| SYS-EPS | ${item.id} | ${item.links.filter(id => !id.startsWith('TST-')).join(', ') || '—'} | ${item.links.filter(id => id.startsWith('TST-')).join(', ') || item.verification} | ${item.subsystem} |`,
+        `| ${item.derivedFrom ? 'Derived' : 'SYS-EPS'} | ${item.id} | ${item.links.filter(id => !id.startsWith('TST-')).join(', ') || '—'} | ${item.links.filter(id => id.startsWith('TST-')).join(', ') || item.verification} | ${item.subsystem} |`,
     ),
+    '',
+    derived.length > 0
+      ? `(U) Derived requirements: ${derived.map(item => `${item.id} (${item.derivedFrom})`).join('; ')}. They arise from the Rev B design, have no parent system requirement, and are fed back to the system safety assessment.`
+      : '(U) No derived requirements.',
     '',
     '## 10. Analysis summary',
     '',
@@ -733,7 +827,7 @@ export const hrdDocument = (
     changes.length > 0 ? '| --- | --- | --- | --- |' : '',
     ...changes.map(
       change =>
-        `| ${change.artifact.id} | ${change.artifact.subsystem} | ${cell(change.before)} | ${cell(change.after)} |`,
+        `| ${change.artifact.id} | ${change.artifact.subsystem} | ${change.before ? cell(change.before) : 'New · derived'} | ${cell(change.after)} |`,
     ),
     '',
     '## 12. Review & sign-off',
@@ -755,7 +849,7 @@ export const traceabilityCsv = (
 ): string =>
   [
     ['ID', 'Title', 'Kind', 'Subsystem', 'Status', 'Revision', 'Links', 'Text'],
-    ...twinArtifacts.map(artifact => {
+    ...twinArtifacts.concat(presentDerived(requirements)).map(artifact => {
       const item = requirements.find(candidate => candidate.id === artifact.id)
       return [
         artifact.id,
@@ -803,7 +897,6 @@ export type PackageFile = Readonly<{ name: string; content: string }>
 export const twinPackageFiles = (
   requirements: ReadonlyArray<Requirement>,
   date: string,
-  reviewed: ReadonlyArray<string>,
 ): ReadonlyArray<PackageFile> => {
   const name = hrdName(twinRevision(requirements))
   return [
@@ -816,8 +909,7 @@ export const twinPackageFiles = (
         {
           document: name,
           date,
-          reviewedBy: 'Dakota Edwards',
-          reviewed,
+          preparedBy: 'Dakota Edwards',
           changes: twinChanges(requirements).map(change => ({
             id: change.artifact.id,
             subsystem: change.artifact.subsystem,

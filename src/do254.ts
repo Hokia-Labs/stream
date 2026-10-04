@@ -7,6 +7,7 @@ import {
   affectedSubsystems,
   analysisRows,
   limitLabel,
+  presentDerived,
   twinArtifacts,
   twinChanges,
   twinRevision,
@@ -139,18 +140,29 @@ const verificationResult = (
           ? 'Open · TST-PSU not yet run on Rev B'
           : 'Open · first-article inspection of Rev B'
 
-const requirementRows = twinArtifacts.filter(
-  item => item.kind === 'Requirement',
-)
+const requirementRows = (
+  requirements: ReadonlyArray<Requirement>,
+): ReadonlyArray<TwinArtifact> =>
+  twinArtifacts
+    .filter(item => item.kind === 'Requirement')
+    .concat(presentDerived(requirements))
+
+const derivedNote = (requirements: ReadonlyArray<Requirement>): string => {
+  const derived = presentDerived(requirements)
+  return derived.length === 0
+    ? 'No derived requirements are introduced.'
+    : `Rev B introduces ${derived.length} derived requirements (${derived.map(item => item.id).join(', ')}). They have no parent system requirement and are fed back to the system safety assessment.`
+}
 
 const verificationSummary = (
   requirements: ReadonlyArray<Requirement>,
 ): Readonly<{ total: number; complete: number; traced: number }> => ({
-  total: requirementRows.length,
-  complete: requirementRows.filter(
+  total: requirementRows(requirements).length,
+  complete: requirementRows(requirements).filter(
     item => current(requirements, item.id)?.status === 'Verified',
   ).length,
-  traced: requirementRows.filter(item => item.links.length > 0).length,
+  traced: requirementRows(requirements).filter(item => item.links.length > 0)
+    .length,
 })
 
 const procedureFor = (artifact: TwinArtifact): string =>
@@ -183,7 +195,7 @@ export const verificationResultsDocument = (
     '',
     '| ID | Requirement | Method | Procedure | Result |',
     '| --- | --- | --- | --- | --- |',
-    ...requirementRows.map(
+    ...requirementRows(requirements).map(
       artifact =>
         `| ${artifact.id} | ${portionText(artifactPortion(artifact))} ${cell(current(requirements, artifact.id)?.description ?? artifact.revA)} | ${artifact.verification} | ${procedureFor(artifact)} | ${verificationResult(artifact, current(requirements, artifact.id))} |`,
     ),
@@ -212,12 +224,12 @@ export const verificationResultsDocument = (
     '',
     '| System requirement | Hardware requirement | Design / interface | Verification |',
     '| --- | --- | --- | --- |',
-    ...requirementRows.map(
+    ...requirementRows(requirements).map(
       item =>
-        `| SYS-EPS | ${item.id} | ${item.links.filter(id => !id.startsWith('TST-')).join(', ') || '—'} | ${item.links.filter(id => id.startsWith('TST-')).join(', ') || procedureFor(item)} |`,
+        `| ${item.derivedFrom ? 'Derived' : 'SYS-EPS'} | ${item.id} | ${item.links.filter(id => !id.startsWith('TST-')).join(', ') || '—'} | ${item.links.filter(id => id.startsWith('TST-')).join(', ') || procedureFor(item)} |`,
     ),
     '',
-    `(U) ${summary.traced} of ${summary.total} hardware requirements trace up to SYS-EPS and down to design and verification data. ${summary.traced === summary.total ? 'No untraced requirements were found.' : `${summary.total - summary.traced} requirements have no downstream trace.`} No derived requirements are introduced by Rev B.`,
+    `(U) ${summary.traced} of ${summary.total} hardware requirements trace up to SYS-EPS and down to design and verification data. ${summary.traced === summary.total ? 'No untraced requirements were found.' : `${summary.total - summary.traced} requirements have no downstream trace.`} ${derivedNote(requirements)}`,
     '',
     '## 6. Summary',
     '',

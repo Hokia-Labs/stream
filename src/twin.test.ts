@@ -170,7 +170,7 @@ describe('digital twin', () => {
   it('placing Rev B revises requirements and the subsystems they touch', () => {
     const changes = twinChanges(revB.workspace.requirements)
     expect(twinRevision(revB.workspace.requirements)).toBe('B')
-    expect(changes).toHaveLength(8)
+    expect(changes).toHaveLength(10)
     expect(changes.every(change => change.status !== 'Verified')).toBe(true)
     expect(affectedSubsystems(changes).map(item => item.name)).toEqual([
       'Avionics',
@@ -190,16 +190,19 @@ describe('digital twin', () => {
     expect(twinChanges(reverted.workspace.requirements)).toHaveLength(0)
   })
 
-  it('requires all three reviews before packaging', () => {
+  it('drafts DO-254 after verification and releases after sign-off', () => {
     const blocked = update(revB, Message.ClickedGenerateTwinPackage())
     expect(blocked.commands ?? []).toHaveLength(0)
-    const reviewed = (
-      ['Requirements', 'Thermal', 'Mechanical'] as const
-    ).reduce(
-      (model, item) => update(model, Message.ToggledTwinReview({ item })).model,
+    const early = update(
       revB,
-    )
-    const started = update(reviewed, Message.ClickedGenerateTwinPackage())
+      Message.ToggledTwinReview({ item: 'Requirements' }),
+    ).model
+    expect(early.twinReviewed).toHaveLength(0)
+    const verified = update(
+      update(revB, Message.ClickedRunTwinCheck()).model,
+      Message.CompletedTwinCheck(),
+    ).model
+    const started = update(verified, Message.ClickedGenerateTwinPackage())
     expect(started.commands).toHaveLength(1)
     expect(started.model.isGeneratingTwinPackage).toBe(true)
     const drafted = update(
@@ -224,7 +227,14 @@ describe('digital twin', () => {
       content: '# HRD edited',
       isEdited: true,
     })
-    const downloading = update(edited, Message.ClickedDownloadTwinPackage())
+    expect(
+      update(edited, Message.ClickedDownloadTwinPackage()).commands ?? [],
+    ).toHaveLength(0)
+    const signed = (['Requirements', 'Thermal', 'Mechanical'] as const).reduce(
+      (model, item) => update(model, Message.ToggledTwinReview({ item })).model,
+      edited,
+    )
+    const downloading = update(signed, Message.ClickedDownloadTwinPackage())
     expect(downloading.commands).toHaveLength(1)
     const done = update(
       downloading.model,
@@ -256,7 +266,7 @@ describe('digital twin', () => {
     expect(document).toContain('Declassify On: 20511003')
     expect(document.startsWith('**SECRET//NOFORN**')).toBe(true)
     expect(
-      twinPackageFiles(revB.workspace.requirements, '2026-10-03', []).map(
+      twinPackageFiles(revB.workspace.requirements, '2026-10-03').map(
         file => file.name,
       ),
     ).toEqual([

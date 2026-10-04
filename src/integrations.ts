@@ -1,5 +1,6 @@
 import type { Requirement, TwinProposal } from './domain'
 import {
+  isDerivedArtifact,
   loadBudget,
   proposalReviewer,
   twinArtifacts,
@@ -52,9 +53,11 @@ export const doorsSync = (
       return []
     }
     const stream = revisionLetter(item.revision)
-    const doors = twinArtifacts.some(artifact => artifact.id === item.id)
-      ? 'A'
-      : stream
+    const doors = isDerivedArtifact(item.id)
+      ? '—'
+      : twinArtifacts.some(artifact => artifact.id === item.id)
+        ? 'A'
+        : stream
     return [
       {
         id: item.id,
