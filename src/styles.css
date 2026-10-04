@@ -8036,6 +8036,13 @@ button.graph-cluster-head:hover {
   font-size: var(--text-lg);
   font-weight: 600;
 }
+.files-synced {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 .files-subheading .tc-logo {
   height: 26px;
   translate: 0 -8px;
