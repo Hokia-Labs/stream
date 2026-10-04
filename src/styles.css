@@ -7483,21 +7483,6 @@ button.graph-cluster-head:hover {
   margin: 0 0 12px;
   font-size: 13px;
 }
-.twin-predicted {
-  display: grid;
-  gap: 4px;
-  margin: 12px 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-}
-.twin-predicted li {
-  display: grid;
-  grid-template-columns: 220px auto 16px auto;
-  gap: 8px;
-  align-items: center;
-  justify-content: start;
-}
 .twin-approver {
   display: flex;
   align-items: center;
@@ -8621,32 +8606,6 @@ p.launch-estimate {
 .twin-tabs > .twin-tab:last-child {
   margin-left: auto;
 }
-.twin-derived {
-  margin: 12px 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-.twin-derived-head {
-  margin: 0 0 8px;
-  font-size: 12px;
-}
-.twin-derived ul {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12px;
-}
-.twin-derived li {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 2px 12px;
-}
-.twin-derived li > :last-child {
-  grid-column: 2;
-}
-
 .twin-tab .twin-tab-icon {
   width: 15px;
   height: 15px;

@@ -49,7 +49,6 @@ import {
   hasTwinScenario,
   installedPart,
   isAvionicsUpgraded,
-  loadBudget,
   lowMargin,
   proposalPartChanges,
   proposalReviewer,
@@ -679,7 +678,6 @@ const proposalPanel = (
 ): Html => {
   const proposal = model.twinProposal
   const reviewer = `${proposalReviewer.name} · ${proposalReviewer.role}`
-  const rows = loadBudget()
   const head = h.div(
     [h.Class('twin-section-head')],
     [
@@ -746,105 +744,19 @@ const proposalPanel = (
               ],
             ),
             analysisLine(proposal === 'Pending', h),
-            h.table(
-              [h.Class('twin-table twin-proposal-table')],
+            h.p(
+              [h.Class('muted small-text')],
               [
-                h.thead(
-                  [],
-                  [
-                    h.tr(
-                      [],
-                      ['Part', 'Rev A', 'Proposed Rev B', 'Driven by'].map(
-                        label => h.th([], [label]),
-                      ),
-                    ),
-                  ],
-                ),
-                h.tbody(
-                  [],
-                  proposalPartChanges.map(change =>
-                    h.keyed('tr')(
-                      change.part,
-                      [],
-                      [
-                        h.td([], [change.part]),
-                        h.td([h.Class('twin-before')], [change.before]),
-                        h.td([h.Class('twin-after')], [change.after]),
-                        h.td([], [idLink(model, change.trace, h, 'mono')]),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            h.ul(
-              [h.Class('twin-predicted')],
-              [rows[1], rows[3], rows[4]].flatMap(row =>
-                row
-                  ? [
-                      h.keyed('li')(
-                        row.check,
-                        [],
-                        [
-                          h.span([], [row.check]),
-                          h.span(
-                            [h.Class('mono twin-margin bad')],
-                            [
-                              `${row.demand.A.toFixed(2)} / ${row.capacity.A.toFixed(2)} ${row.unit}`,
-                            ],
-                          ),
-                          '→',
-                          h.span(
-                            [h.Class('mono twin-margin ok')],
-                            [
-                              `${row.demand.B.toFixed(2)} / ${row.capacity.B.toFixed(2)} ${row.unit}`,
-                            ],
-                          ),
-                        ],
-                      ),
-                    ]
-                  : [],
-              ),
-            ),
-            h.div(
-              [h.Class('twin-derived')],
-              [
-                h.p(
-                  [h.Class('twin-derived-head')],
-                  [
-                    h.strong(
-                      [],
-                      [`Derived requirements · ${derivedArtifacts.length}`],
-                    ),
-                    h.span(
-                      [h.Class('muted')],
-                      [
-                        isRevB
-                          ? ' · added to DOORS, needs review'
-                          : ' · raised by the Rev B design, added to DOORS on approval',
-                      ],
-                    ),
-                  ],
-                ),
-                h.ul(
-                  [],
-                  derivedArtifacts.map(artifact =>
-                    h.keyed('li')(
-                      artifact.id,
-                      [],
-                      [
-                        isRevB
-                          ? idLink(model, artifact.id, h, 'mono')
-                          : h.span([h.Class('mono')], [artifact.id]),
-                        h.span([], [artifact.revB]),
-                        h.span(
-                          [h.Class('muted small-text')],
-                          [`From ${artifact.derivedFrom ?? 'Rev B design'}`],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                `${proposalPartChanges.length} part changes and ${derivedArtifacts.length} derived requirements (`,
+                ...derivedArtifacts.flatMap((artifact, index) => [
+                  ...(index > 0 ? [', '] : []),
+                  isRevB
+                    ? idLink(model, artifact.id, h, 'mono')
+                    : h.span([h.Class('mono')], [artifact.id]),
+                ]),
+                isRevB
+                  ? '), added to DOORS.'
+                  : '), added to DOORS on approval. The review has the details.',
               ],
             ),
             h.div(
