@@ -28,8 +28,8 @@ export const twinArtifacts: ReadonlyArray<TwinArtifact> = [
     subsystem: 'Electrical power',
     verification: 'Analysis',
     links: ['REQ-PSU-01', 'REQ-PSU-02', 'REQ-PSU-03', 'REQ-AVN-01'],
-    revA: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a synthetic 48 VDC avionics bus through hot-swappable converter modules run N+1.',
-    revB: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a synthetic 48 VDC avionics bus through hot-swappable converter modules run N+1.',
+    revA: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a 48 VDC avionics bus through hot-swappable converter modules run N+1.',
+    revB: 'Two independent 270 VDC aircraft feeds supply a modular power assembly (MPA) that converts to a 48 VDC avionics bus through hot-swappable converter modules run N+1.',
     statusB: 'Verified',
   },
   {
@@ -226,7 +226,7 @@ export type AnalysisRow = Readonly<{
   limit: Readonly<{ kind: 'Max' | 'Min'; value: number }>
 }>
 
-/** Precomputed SAMPLE values, not solver output. */
+/** Precomputed values, not solver output. */
 export const analysisRows: ReadonlyArray<AnalysisRow> = [
   {
     metric: 'N−1 bus capacity',
@@ -310,7 +310,7 @@ export const analysisRows: ReadonlyArray<AnalysisRow> = [
   },
 ]
 
-/** Notional change driver on a synthetic 48 VDC bus. SAMPLE values. */
+/** Notional change driver on a synthetic 48 VDC bus. */
 export const avionicsChange = {
   id: 'ECP-0219',
   title: 'Cockpit avionics upgrade',
@@ -516,7 +516,7 @@ export const hrdDocument = (
     `Declassify On: ${declassifyOn}`,
     '```',
     '',
-    '> (U) Prepared by Stream from the systems model. Analysis values are SAMPLE precomputed data, not ANSYS solver output. Not releasable until the sign-offs in section 12 are complete. Classification markings are notional for demonstration.',
+    '> (U) Prepared by Stream from the systems model. Not releasable until the sign-offs in section 12 are complete. Classification markings are notional for demonstration.',
     '',
     '## 1. Introduction & scope',
     '',
@@ -585,7 +585,7 @@ export const hrdDocument = (
         `| SYS-EPS | ${item.id} | ${item.links.filter(id => !id.startsWith('TST-')).join(', ') || '—'} | ${item.links.filter(id => id.startsWith('TST-')).join(', ') || item.verification} | ${item.subsystem} |`,
     ),
     '',
-    '## 10. Analysis summary (SAMPLE)',
+    '## 10. Analysis summary',
     '',
     '| Metric | Rev A | Rev B | Limit | Rev B result |',
     '| --- | --- | --- | --- | --- |',
@@ -661,7 +661,7 @@ export const analysisCsv = (): string =>
       String(row.revB),
       limitLabel(row),
       withinLimit(row, row.revB) ? 'yes' : 'no',
-      'SAMPLE precomputed',
+      'Precomputed',
     ]),
   ]
     .map(row => row.map(csv).join(','))
@@ -678,7 +678,7 @@ export const twinPackageFiles = (
   return [
     { name: `${name}.md`, content: hrdDocument(requirements, date) },
     { name: 'traceability.csv', content: traceabilityCsv(requirements) },
-    { name: 'analysis-SAMPLE.csv', content: analysisCsv() },
+    { name: 'analysis.csv', content: analysisCsv() },
     {
       name: 'change-record.json',
       content: JSON.stringify(

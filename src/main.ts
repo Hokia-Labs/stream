@@ -750,7 +750,7 @@ const BuildTwinPackage = Command.define('BuildTwinPackage', {
           {
             generatedBy: 'Stream',
             generatedAt: now.toISOString(),
-            note: 'Analysis values are SAMPLE precomputed data. Sign-off required before release.',
+            note: 'Sign-off required before release.',
             files: hashes,
           },
           null,

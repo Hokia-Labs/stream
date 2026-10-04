@@ -659,7 +659,7 @@ const changeDriver = (
       h.p(
         [h.Class('muted small-text')],
         [
-          'SAMPLE values on a synthetic 48 VDC modular architecture fed from 270 VDC. The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
+          'The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
         ],
       ),
     ],
@@ -716,16 +716,10 @@ export const twinPartPicker = (
   return h.div(
     [],
     [
-      h.p([h.Class('eyebrow')], ['TEAMCENTER · SAMPLE ITEMS']),
+      h.p([h.Class('eyebrow')], ['TEAMCENTER']),
       h.h2(
         [h.Id('dialog-title')],
         [`Replace ${slotName(picker.slot).toLowerCase()}`],
-      ),
-      h.p(
-        [h.Class('subtitle')],
-        [
-          'Items from the synthetic 48 V architecture. Part numbers and values are notional.',
-        ],
       ),
       h.div(
         [h.Class('twin-picker')],
@@ -1002,7 +996,7 @@ export const twinPage = (model: Model, h: H): Html => {
                     [
                       h.span([], ['40 °C']),
                       h.span([h.Class('twin-ramp')], []),
-                      h.span([], ['95 °C · SAMPLE']),
+                      h.span([], ['95 °C']),
                     ],
                   ),
                   h.p(
@@ -1175,10 +1169,6 @@ export const twinPage = (model: Model, h: H): Html => {
                         [h.Class('twin-heading')],
                         ['Thermal & mechanical analysis'],
                       ),
-                      h.span(
-                        [h.Class('chip mono')],
-                        ['SAMPLE · precomputed, not ANSYS output'],
-                      ),
                     ],
                   ),
                   h.table(
@@ -1308,7 +1298,7 @@ export const twinPage = (model: Model, h: H): Html => {
                                 [h.Class('muted small-text')],
                                 [
                                   isRevB && isReviewed
-                                    ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, SAMPLE analysis, and a SHA-256 manifest as one zip.'
+                                    ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, analysis results, and a SHA-256 manifest as one zip.'
                                     : 'Available after Rev B is placed and all three sign-offs are in.',
                                 ],
                               ),

@@ -419,13 +419,7 @@ const workspaceMenu = (model: Model, h: H): Html =>
                 ],
                 [
                   h.span([h.Class('program-dot')]),
-                  h.div(
-                    [],
-                    [
-                      h.strong([], ['Atlas launch program']),
-                      h.span([], ['Sample engineering program']),
-                    ],
-                  ),
+                  h.div([], [h.strong([], ['Atlas launch program'])]),
                   icon('check', h),
                 ],
               ),
@@ -1443,7 +1437,6 @@ const overview = (model: Model, h: H): Html => {
           h.div(
             [h.Class('program-banner-right')],
             [
-              h.span([h.Class('sample-pill')], ['SAMPLE WORKSPACE']),
               h.span(
                 [h.Class('banner-status')],
                 [

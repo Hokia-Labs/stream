@@ -171,7 +171,7 @@ describe('digital twin', () => {
       expect(document).toContain(heading)
     }
     expect(document).toContain('12.0 kW continuous')
-    expect(document).toContain('SAMPLE')
+    expect(document).not.toContain('SAMPLE')
     expect(document).toContain('Declassify On: 20511003')
     expect(document.startsWith('**SECRET//NOFORN**')).toBe(true)
     expect(
@@ -181,7 +181,7 @@ describe('digital twin', () => {
     ).toEqual([
       'HRD-PSU-001-RevB.md',
       'traceability.csv',
-      'analysis-SAMPLE.csv',
+      'analysis.csv',
       'change-record.json',
     ])
   })
