@@ -97,7 +97,7 @@ const mock = input => {
   const id = /\b(?:REQ|SYS|DES|INT|TST|RSK|FUN|FN)-[A-Z0-9-]+\b/.exec(prompt)?.[0];
   const artifact = tool ? JSON.parse(tool.content) : undefined;
   const delta = tool || !id
-    ? { content: 'Local mock model (no inference). ' + (artifact?.title ? 'Read ' + (artifact.id ?? id) + ' "' + artifact.title + '" from the run snapshot. ' : '') + 'Findings are placeholders; save a Cloudflare token on Integrations for real Workers AI. Human review required.' }
+    ? { content: 'Local mock model (no inference). ' + (artifact?.title ? 'Read ' + (artifact.id ?? id) + ' "' + artifact.title + '" from the run snapshot. ' : '') + 'Findings are placeholders; save a Cloudflare token in Settings for real Workers AI. Human review required.' }
     : { tool_calls: [{ index: 0, id: 'artifact-read', type: 'function', function: { name: 'get_artifact', arguments: JSON.stringify({ id }) } }] };
   const events = [
     { choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] },
@@ -270,7 +270,7 @@ const main = async (): Promise<void> => {
         model +
         ' via AI Gateway "' +
         gateway +
-        '"; mock replies until a Cloudflare token is saved on Integrations.',
+        '"; mock replies until a Cloudflare token is saved in Settings (your name → Settings).',
       'Unlock in the app with username "stream" and password: ' + token,
       '',
     ].join('\n'),
