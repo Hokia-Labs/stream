@@ -82,6 +82,7 @@ import {
 import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
+import { installedPart, twinArtifacts, twinChanges } from './twin'
 import { boardReview, twinPage, twinPartPicker } from './twin-view'
 
 type H = HtmlBuilder<Message>
@@ -207,7 +208,7 @@ const sidebarInbox = (model: Model, h: H): Html => {
   return h.button(
     [
       h.Type('button'),
-      h.Class('nav-item inbox-item'),
+      h.Class(`nav-item inbox-item ${model.page === 'Inbox' ? 'active' : ''}`),
       h.Title('Inbox'),
       h.OnClick(Message.SelectedInbox()),
     ],
@@ -246,7 +247,7 @@ export const setupSteps = (
   {
     label: 'Review a finding',
     done: model.workspace.approvals.some(item => item.status !== 'Pending'),
-    message: Message.SelectedPage({ page: 'Overview' }),
+    message: Message.SelectedInbox(),
   },
 ]
 const setupChecklist = (model: Model, h: H): Html => {
@@ -1758,261 +1759,132 @@ const approvals = (
   )
 }
 
+const teamcenterSyncedAt = '2026-10-03 14:02Z'
 const overview = (model: Model, h: H): Html => {
-  const active = model.workspace.agents.filter(agent => agent.enabled)
-  const pending = model.workspace.approvals.filter(
-    item => item.status === 'Pending',
-  )
-  const covered = model.workspace.requirements.filter(
-    item =>
-      item.kind === 'Requirement' &&
-      downstream(model.workspace.requirements, item.id).some(id =>
-        model.workspace.requirements.some(
-          test => test.id === id && test.kind === 'Test',
-        ),
-      ),
-  )
-  const total = model.workspace.requirements.filter(
-    item => item.kind === 'Requirement',
-  ).length
-  const stats = [
-    {
-      label: 'Connected artifacts',
-      value: String(model.workspace.requirements.length).padStart(2, '0'),
-      icon: 'graph',
-      detail: `${model.workspace.requirements.reduce((count, item) => count + item.links.length, 0)} dependency links`,
-      positive: true,
-    },
-    {
-      label: 'Enabled agents',
-      value: String(active.length).padStart(2, '0'),
-      icon: 'agent',
-      detail: 'Ready to work in parallel',
-      positive: true,
-    },
-    {
-      label: 'Requirements coverage',
-      value: `${total ? Math.round((covered.length / total) * 100) : 0}%`,
-      icon: 'shield',
-      detail: `${covered.length} of ${total} linked to tests`,
-      positive: true,
-    },
-    {
-      label: 'Awaiting your review',
-      value: String(pending.length).padStart(2, '0'),
-      icon: 'clock',
-      detail: 'Pending human decisions',
-      positive: false,
-    },
-  ]
+  const requirements = model.workspace.requirements
+  const changes = twinChanges(requirements)
+  const parts = (['Cockpit', 'Power'] as const).map(slot => {
+    const source = installedPart([], slot)
+    const local = installedPart(requirements, slot)
+    return {
+      key: slot,
+      item: `${slot} assembly`,
+      teamcenter: `${source.id} Rev ${source.revision}`,
+      stream: `${local.id} Rev ${local.revision}`,
+      synced: source.id === local.id,
+    }
+  })
+  const proposal =
+    model.twinProposal === 'Pending'
+      ? [
+          {
+            key: 'proposal',
+            item: 'Power assembly proposal',
+            teamcenter: '—',
+            stream: 'Rev B · awaiting EE approval',
+            synced: false,
+          },
+        ]
+      : []
+  const artifacts = {
+    key: 'artifacts',
+    item: 'Requirements and design artifacts',
+    teamcenter: `${twinArtifacts.length} released`,
+    stream:
+      changes.length > 0
+        ? `${changes.length} revised in Stream`
+        : `${twinArtifacts.length} mirrored`,
+    synced: changes.length === 0,
+  }
+  const rows = [...parts, ...proposal, artifacts]
+  const pending = rows.filter(row => !row.synced).length
   return h.div(
     [],
     [
-      pageHeading(
-        'Overview',
-        'Artifacts, agent coverage, and decisions waiting on the active branch.',
-        button(
-          'Run agent fleet',
-          Message.ClickedLaunch(),
-          'primary',
-          h,
-          'play',
-        ),
-        h,
-      ),
-      h.div(
-        [h.Class('program-banner')],
+      pageHeading('Overview', '', h.empty, h),
+      h.section(
+        [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter sync')],
         [
           h.div(
-            [h.Class('program-banner-title')],
+            [h.Class('panel-heading')],
             [
-              h.span([h.Class('program-symbol')], [icon('box', h)]),
               h.div(
                 [],
                 [
-                  h.strong([], ['Atlas launch program']),
-                  h.span([], ['Autonomous systems · Engineering validation']),
+                  h.h2([], ['Teamcenter sync']),
+                  h.p(
+                    [],
+                    [`Source of truth · last sync ${teamcenterSyncedAt}`],
+                  ),
                 ],
               ),
-            ],
-          ),
-          h.div(
-            [h.Class('program-banner-right')],
-            [
               h.span(
-                [h.Class('banner-status')],
+                [h.Class(`sync-status ${pending > 0 ? 'pending' : 'ok'}`)],
                 [
-                  h.span([h.Class(`live-dot ${bannerStatus(model).tone}`)]),
-                  bannerStatus(model).label,
+                  h.span([h.Class('live-dot')]),
+                  pending > 0 ? `${pending} pending check-in` : 'In sync',
                 ],
               ),
             ],
           ),
-        ],
-      ),
-      h.div(
-        [h.Class('stats-grid')],
-        stats.map(stat =>
-          h.keyed('article')(
-            stat.label,
-            [h.Class('stat-card')],
+          h.table(
+            [h.Class('sync-table')],
             [
-              h.div([h.Class('stat-label')], [stat.label]),
-              h.div([h.Class('stat-value')], [stat.value]),
-              h.p(
-                [h.Class(`stat-detail ${stat.positive ? '' : 'amber-text'}`)],
-                [icon(stat.positive ? 'check' : 'clock', h), stat.detail],
-              ),
-            ],
-          ),
-        ),
-      ),
-      h.div(
-        [h.Class('overview-grid')],
-        [
-          h.section(
-            [h.Class('panel graph-panel')],
-            [
-              h.div(
-                [h.Class('panel-heading')],
+              h.thead(
+                [],
                 [
-                  h.div(
+                  h.tr(
+                    [],
+                    ['Item', 'Teamcenter', 'Stream', 'Status'].map(label =>
+                      h.th([], [label]),
+                    ),
+                  ),
+                ],
+              ),
+              h.tbody(
+                [],
+                rows.map(row =>
+                  h.keyed('tr')(
+                    row.key,
                     [],
                     [
-                      h.h2([], ['Systems graph']),
-                      h.p([], ['Dependency order, left to right.']),
-                    ],
-                  ),
-                  button(
-                    'Explore graph',
-                    Message.SelectedPage({ page: 'Systems graph' }),
-                    'text-button',
-                    h,
-                    'arrow',
-                  ),
-                ],
-              ),
-              graph(model, true, h),
-              h.div(
-                [h.Class('graph-footer')],
-                [
-                  h.div(
-                    [h.Class('legend')],
-                    [
-                      h.span(
-                        [],
-                        [h.span([h.Class('legend-dot mint')]), 'Requirements'],
-                      ),
-                      h.span(
-                        [],
-                        [h.span([h.Class('legend-dot blue')]), 'Design'],
-                      ),
-                      h.span(
+                      h.td([], [row.item]),
+                      h.td([h.Class('mono')], [row.teamcenter]),
+                      h.td([h.Class('mono')], [row.stream]),
+                      h.td(
                         [],
                         [
-                          h.span([h.Class('legend-dot violet')]),
-                          'Verification',
+                          h.span(
+                            [
+                              h.Class(
+                                `sync-state ${row.synced ? 'ok' : 'pending'}`,
+                              ),
+                            ],
+                            [row.synced ? 'In sync' : 'Check-in pending'],
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  h.span([], ['Click any artifact to inspect']),
-                ],
-              ),
-            ],
-          ),
-          h.section(
-            [h.Class('panel fleet-panel')],
-            [
-              h.div(
-                [h.Class('panel-heading')],
-                [
-                  h.div(
-                    [],
-                    [
-                      h.h2([], ['Agent fleet']),
-                      h.p(
-                        [],
-                        ['Enabled agents run in parallel within a stage.'],
-                      ),
-                    ],
-                  ),
-                  h.span([h.Class('fleet-number')], [String(active.length)]),
-                ],
-              ),
-              h.div(
-                [h.Class('fleet-list')],
-                model.workspace.agents
-                  .slice(0, 5)
-                  .map(agent =>
-                    h.keyed('button')(
-                      agent.id,
-                      [
-                        h.Type('button'),
-                        h.Class('fleet-row'),
-                        h.OnClick(Message.ClickedEditAgent({ id: agent.id })),
-                      ],
-                      [
-                        h.span(
-                          [h.Class(`agent-icon ${agent.color}`)],
-                          [
-                            icon(
-                              agent.id === 'safety'
-                                ? 'shield'
-                                : agent.id === 'coverage'
-                                  ? 'test'
-                                  : agent.id === 'budget'
-                                    ? 'layers'
-                                    : agent.id === 'docs'
-                                      ? 'file'
-                                      : 'agent',
-                              h,
-                            ),
-                          ],
-                        ),
-                        h.div(
-                          [],
-                          [
-                            h.strong([], [agent.name]),
-                            h.span([], [agent.category]),
-                          ],
-                        ),
-                        h.span([
-                          h.Class(
-                            `availability-dot ${agent.enabled ? '' : 'off'}`,
-                          ),
-                        ]),
-                        icon('chevron', h),
-                      ],
-                    ),
-                  ),
-              ),
-              h.div(
-                [h.Class('fleet-note')],
-                [
-                  icon('shield', h),
-                  h.p(
-                    [],
-                    [
-                      'Findings are proposals.',
-                      h.strong([], [' Merges need human review.']),
-                    ],
-                  ),
-                ],
-              ),
-              button(
-                'Manage fleet',
-                Message.SelectedPage({ page: 'Agent fleet' }),
-                'fleet-manage',
-                h,
-                'arrow',
+                ),
               ),
             ],
           ),
         ],
       ),
+    ],
+  )
+}
+const inboxPage = (model: Model, h: H): Html => {
+  const pending = model.workspace.approvals.filter(
+    item => item.status === 'Pending',
+  )
+  return h.div(
+    [],
+    [
+      pageHeading('Inbox', '', h.empty, h),
       h.section(
-        [h.Id('overview-inbox'), h.Class('panel attention-panel')],
+        [h.Class('panel attention-panel')],
         [
           h.div(
             [h.Class('panel-heading')],
@@ -2031,16 +1903,6 @@ const overview = (model: Model, h: H): Html => {
             ],
           ),
           approvals(model, pending, h),
-        ],
-      ),
-      h.div(
-        [h.Class('bottom-caption')],
-        [
-          h.span(
-            [],
-            [h.span([h.Class('live-dot')]), 'Workspace saved in this browser'],
-          ),
-          h.span([], ['Foldkit']),
         ],
       ),
     ],
@@ -5628,19 +5490,21 @@ export const view = (sourceModel: Model, h: H): Document => {
               [
                 model.page === 'Overview'
                   ? overview(model, h)
-                  : model.page === 'Digital twin'
-                    ? twinPage(model, h)
-                    : model.page === 'Branches'
-                      ? branchesPage(sourceModel, h)
-                      : model.page === 'Systems graph'
-                        ? graphPage(model, h)
-                        : model.page === 'Requirements'
-                          ? requirementsPage(model, h)
-                          : model.page === 'Agent fleet'
-                            ? fleetPage(model, h)
-                            : model.page === 'Runs'
-                              ? runsPage(model, h)
-                              : integrationsPage(model, h),
+                  : model.page === 'Inbox'
+                    ? inboxPage(model, h)
+                    : model.page === 'Digital twin'
+                      ? twinPage(model, h)
+                      : model.page === 'Branches'
+                        ? branchesPage(sourceModel, h)
+                        : model.page === 'Systems graph'
+                          ? graphPage(model, h)
+                          : model.page === 'Requirements'
+                            ? requirementsPage(model, h)
+                            : model.page === 'Agent fleet'
+                              ? fleetPage(model, h)
+                              : model.page === 'Runs'
+                                ? runsPage(model, h)
+                                : integrationsPage(model, h),
               ],
             ),
           ],
@@ -5688,17 +5552,6 @@ export const view = (sourceModel: Model, h: H): Document => {
   }
 }
 
-const bannerStatus = (
-  model: Model,
-): { readonly label: string; readonly tone: string } =>
-  model.executionMode === 'Simulation'
-    ? { label: 'Simulation · no model calls', tone: 'simulation' }
-    : Option.isSome(model.maybeExecutorError) ||
-        model.cloudflareAiMode === 'Unavailable'
-      ? { label: 'Backend unavailable', tone: 'unavailable' }
-      : Option.isNone(model.maybeExecutorStatus)
-        ? { label: 'Checking backend…', tone: 'simulation' }
-        : { label: 'All systems connected', tone: '' }
 const toast = (model: Model, text: string, isLeaving: boolean, h: H): Html =>
   h.keyed('div')(
     text,

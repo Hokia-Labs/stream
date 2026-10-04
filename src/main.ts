@@ -1138,30 +1138,6 @@ export const ScrollActiveNav = Command.define('ScrollActiveNav', {
     Effect.as(Message.CompletedScrollActiveNav()),
   ),
 })
-const ScrollToInbox = Command.define('ScrollToInbox', {
-  messages: [Message.CompletedScrollToInbox],
-  execute: Effect.promise(
-    () =>
-      new Promise<void>(resolve =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  ).pipe(
-    Effect.andThen(() =>
-      Effect.try(() => {
-        document.getElementById('overview-inbox')?.scrollIntoView({
-          block: 'start',
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
-            .matches
-            ? 'auto'
-            : 'smooth',
-        })
-      }),
-    ),
-    Effect.catch(() => Effect.void),
-    Effect.as(Message.CompletedScrollToInbox()),
-  ),
-})
-
 const FocusFinding = Command.define('FocusFinding', {
   messages: [Message.CompletedFocusFinding],
   execute: Dom.focus('#finding-title', { makeFocusable: true }).pipe(
@@ -1379,14 +1355,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     SelectedInbox: () => ({
       model: modifyFields(model, {
-        page: () => 'Overview',
+        page: () => 'Inbox',
         search: () => '',
         filter: () => 'All artifacts',
         maybeSelectedNode: () => Option.none(),
       }),
-      commands: [ScrollToInbox()],
     }),
-    CompletedScrollToInbox: () => ({ model }),
     CompletedScrollActiveNav: () => ({ model }),
     UpdatedSearch: ({ value }) => ({
       model: modifyFields(model, { search: () => value }),

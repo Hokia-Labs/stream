@@ -3,6 +3,7 @@ import { defineTaggedUnion } from 'foldkit/schema'
 
 export const Page = Schema.Literals([
   'Overview',
+  'Inbox',
   'Digital twin',
   'Systems graph',
   'Requirements',

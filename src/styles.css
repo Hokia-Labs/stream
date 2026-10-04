@@ -7847,3 +7847,44 @@ button.graph-cluster-head:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.sync-panel .panel-heading p {
+  margin: 2px 0 0;
+}
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sync-status.ok {
+  color: var(--success);
+}
+.sync-status.pending {
+  color: var(--warning);
+}
+.sync-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sync-table th,
+.sync-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-top: 1px solid var(--line);
+}
+.sync-table th {
+  font-weight: 500;
+  color: var(--muted);
+}
+.sync-state.ok {
+  color: var(--success);
+}
+.sync-state.pending {
+  color: var(--warning);
+}
+.sync-status.pending .live-dot {
+  background: var(--warning);
+}

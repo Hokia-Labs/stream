@@ -87,7 +87,6 @@ export const Message = defineMessageUnion({
   OpenedArtifact: { id: Schema.String },
   OpenedAgent: { id: Schema.String },
   SelectedInbox: {},
-  CompletedScrollToInbox: {},
   CompletedScrollActiveNav: {},
   SelectedArtifactView: { artifactView: ArtifactView },
   ToggledArtifactGroup: { id: Schema.String },

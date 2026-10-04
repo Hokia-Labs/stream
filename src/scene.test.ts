@@ -179,8 +179,8 @@ describe('workspace UI wiring', () => {
   it('launches and completes a fleet through the actual view handlers', () => {
     scene(
       { update, view },
-      given(ready),
-      click(role('button', { name: 'Run agent fleet' })),
+      given(modifyFields(ready, { page: () => 'Runs' as const })),
+      click(role('button', { name: 'New fleet run' })),
       expect(role('dialog')).toContainText('Local simulation'),
       submit(selector('form')),
       Command.resolveAllExact(
