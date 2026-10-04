@@ -8226,3 +8226,69 @@ p.launch-estimate {
   order: 3;
   font-size: 10px;
 }
+.tc-brand .sync-sep {
+  color: var(--muted);
+}
+.doors-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.ibm-logo {
+  display: block;
+  height: 13px;
+  width: auto;
+}
+.jira-logo {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+.heading-actions {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+.jira-chip,
+.jira-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.jira-chip {
+  padding: 3px 8px 3px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--sheet);
+  font-size: var(--text-xs);
+}
+.twin-section-head .jira-chip {
+  margin-left: auto;
+}
+.jira-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.jira-status {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.jira-status.ok {
+  color: var(--success);
+}
+.jira-status.pending {
+  color: var(--accent);
+}
+.jira-status.closed {
+  color: var(--muted);
+}
+.sync-panel + .sync-panel {
+  margin-top: var(--space-4);
+}

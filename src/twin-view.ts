@@ -26,6 +26,8 @@ import {
   type TwinSlot,
 } from './domain'
 import { idLink, linkifyIds } from './id-link'
+import { jiraChip } from './integration-view'
+import { jiraHandoffs } from './integrations'
 import type { Model } from './main'
 import { Message } from './message'
 import { pageHeading } from './title-block'
@@ -721,6 +723,9 @@ const proposalPanel = (
           : proposal === 'Rejected'
             ? h.span([h.Class('badge danger')], ['Rejected'])
             : h.empty,
+      ...jiraHandoffs(model.workspace.requirements, proposal).map(ticket =>
+        jiraChip(ticket, h),
+      ),
     ],
   )
   const body = !isUpgraded
@@ -2170,6 +2175,9 @@ export const boardReview = (model: Model, tab: BoardReviewTab, h: H): Html =>
                 ['MW-MPA-48 power board: Rev A → Rev B'],
               ),
             ],
+          ),
+          ...jiraHandoffs(model.workspace.requirements, model.twinProposal).map(
+            ticket => jiraChip(ticket, h),
           ),
         ],
       ),

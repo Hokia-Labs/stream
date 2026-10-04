@@ -318,7 +318,6 @@ describe('teamcenterSync', () => {
       'MW-AVN-2700/A',
       'MW-MPA-48-4/A',
       'MW-MPA-48-5/B',
-      'EPS-SPEC/A',
     ])
     expect(pending[0]?.files[0]).toMatchObject({
       teamcenter: 'MW-AVN-0900_C.prt',

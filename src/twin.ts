@@ -1052,9 +1052,6 @@ const partFiles = (
   ]
 }
 
-const revisionLetter = (revision: number): string =>
-  String.fromCharCode(64 + Math.max(1, revision))
-
 export const teamcenterSync = (
   requirements: ReadonlyArray<Requirement>,
   proposal: TwinProposal,
@@ -1099,24 +1096,5 @@ export const teamcenterSync = (
           },
         ]
       : []
-  const specification = {
-    id: 'EPS-SPEC/A',
-    title: 'Electrical power requirements specification',
-    files: twinArtifacts.map(artifact => {
-      const current = requirements.find(item => item.id === artifact.id)
-      const stream = `${artifact.id}/${revisionLetter(current?.revision ?? 1)}`
-      const teamcenter = `${artifact.id}/A`
-      return {
-        name: artifact.title,
-        type: `${artifact.kind} Revision`,
-        teamcenter,
-        stream,
-        state:
-          stream === teamcenter
-            ? ('In sync' as const)
-            : ('Check-in pending' as const),
-      }
-    }),
-  }
-  return [...parts, ...proposed, specification]
+  return [...parts, ...proposed]
 }

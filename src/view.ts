@@ -56,6 +56,14 @@ import {
   runSummary,
   taskAnchor,
 } from './insights'
+import {
+  doorsLogo,
+  doorsPanel,
+  jiraLogo,
+  jiraPanel,
+  syncedWith,
+} from './integration-view'
+import { doorsIdFor, doorsSync, jiraHandoffs } from './integrations'
 import { sidebarMaxWidth, sidebarMinWidth } from './layout'
 import type { Model } from './main'
 import {
@@ -1693,24 +1701,20 @@ const overview = (model: Model, h: H): Html => {
       pageHeading(
         'Files',
         '',
-        h.div(
-          [h.Class('tc-lockup')],
+        syncedWith(
           [
-            h.div(
-              [h.Class('tc-brand')],
-              [
-                h.span([h.Class('muted')], ['Synced with']),
-                h.img([
-                  h.Src('/teamcenter-logo.png'),
-                  h.Alt('Teamcenter'),
-                  h.Class('tc-logo'),
-                ]),
-              ],
-            ),
+            h.img([
+              h.Src('/teamcenter-logo.png'),
+              h.Alt('Teamcenter'),
+              h.Class('tc-logo'),
+            ]),
+            doorsLogo(h),
           ],
+          h,
         ),
         h,
       ),
+      doorsPanel(doorsSync(model.workspace.requirements), h),
       h.section(
         [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
         [
@@ -1800,10 +1804,11 @@ const inboxPage = (model: Model, h: H): Html => {
   const pending = model.workspace.approvals.filter(
     item => item.status === 'Pending',
   )
+  const tickets = jiraHandoffs(model.workspace.requirements, model.twinProposal)
   return h.div(
     [],
     [
-      pageHeading('Inbox', '', h.empty, h),
+      pageHeading('Inbox', '', syncedWith([jiraLogo(h)], h), h),
       h.section(
         [h.Class('panel attention-panel')],
         [
@@ -1826,6 +1831,7 @@ const inboxPage = (model: Model, h: H): Html => {
           approvals(model, pending, h),
         ],
       ),
+      tickets.length > 0 ? jiraPanel(tickets, h) : h.empty,
     ],
   )
 }
@@ -1936,7 +1942,7 @@ const groupedRows =
               [h.Class('group-row')],
               [
                 h.td(
-                  [h.Attribute('colspan', '9')],
+                  [h.Attribute('colspan', '10')],
                   [
                     h.button(
                       [
@@ -1974,12 +1980,18 @@ const requirementsPage = (model: Model, h: H): Html => {
       pageHeading(
         'Requirements',
         'Intent linked to design, verification, and the people responsible.',
-        button(
-          'New artifact',
-          Message.ClickedNewRequirement(),
-          'primary',
-          h,
-          'plus',
+        h.div(
+          [h.Class('heading-actions')],
+          [
+            syncedWith([doorsLogo(h)], h),
+            button(
+              'New artifact',
+              Message.ClickedNewRequirement(),
+              'primary',
+              h,
+              'plus',
+            ),
+          ],
         ),
         h,
       ),
@@ -2164,6 +2176,7 @@ const requirementsPage = (model: Model, h: H): Html => {
                                   ],
                                 ),
                                 sortHeader(model, 'Artifact', 'Artifact', h),
+                                h.th([], ['DOORS ID']),
                                 sortHeader(model, 'Type', 'Type', h),
                                 sortHeader(model, 'Status', 'Status', h),
                                 sortHeader(model, 'Owner', 'Owner', h),
@@ -2232,6 +2245,10 @@ const requirementsPage = (model: Model, h: H): Html => {
                                       ],
                                     ),
                                   ],
+                                ),
+                                h.td(
+                                  [h.Class('mono muted')],
+                                  [doorsIdFor(item) ?? '—'],
                                 ),
                                 h.td(
                                   [],
