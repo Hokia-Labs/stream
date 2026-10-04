@@ -1786,7 +1786,6 @@ const approvals = (
   )
 }
 
-const teamcenterSyncedAt = '2026-10-03 14:02Z'
 const syncTone = (state: string): string =>
   state === 'In sync' ? 'ok' : 'pending'
 const overview = (model: Model, h: H): Html => {
@@ -1794,9 +1793,6 @@ const overview = (model: Model, h: H): Html => {
     model.workspace.requirements,
     model.twinProposal,
   )
-  const pending = groups
-    .flatMap(group => group.files)
-    .filter(file => file.state !== 'In sync').length
   return h.div(
     [],
     [
@@ -1811,20 +1807,10 @@ const overview = (model: Model, h: H): Html => {
               [
                 h.span([h.Class('muted')], ['Synced with']),
                 h.img([
-                  h.Src('/siemens-logo.svg'),
-                  h.Alt('Siemens'),
+                  h.Src('/teamcenter-logo.png'),
+                  h.Alt('Teamcenter'),
                   h.Class('tc-logo'),
                 ]),
-                h.strong([], ['Teamcenter']),
-              ],
-            ),
-            h.span(
-              [h.Class(`sync-status ${pending > 0 ? 'pending' : 'ok'}`)],
-              [
-                h.span([h.Class('live-dot')]),
-                pending > 0
-                  ? `${pending} pending check-in · ${teamcenterSyncedAt}`
-                  : `In sync · ${teamcenterSyncedAt}`,
               ],
             ),
           ],

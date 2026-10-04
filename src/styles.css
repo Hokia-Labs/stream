@@ -7930,10 +7930,9 @@ button.graph-cluster-head:hover {
   margin: 16px 0;
 }
 .tc-lockup {
-  display: grid;
-  align-content: center;
-  justify-items: end;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
   padding: 0 var(--space-6);
 }
 .tc-brand {
@@ -7943,9 +7942,8 @@ button.graph-cluster-head:hover {
   font-size: var(--text-sm);
 }
 .tc-logo {
-  height: 12px;
+  display: block;
+  height: 30px;
   width: auto;
-}
-.tc-brand strong {
-  font-weight: 600;
+  translate: 0 -10px;
 }
