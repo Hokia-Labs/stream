@@ -220,37 +220,6 @@ const signoffButton = (
 const signatory = (h: H): Html =>
   h.span([h.Class('twin-signed')], [svgIcon(checkPath, h), 'Dakota Edwards'])
 
-const signoffFooter = (
-  model: Model,
-  item: TwinReviewItem,
-  prompt: string,
-  isEnabled: boolean,
-  h: H,
-): Html =>
-  h.div(
-    [
-      h.Class(
-        `twin-signoff-footer ${model.twinReviewed.includes(item) ? 'signed' : isEnabled ? 'pending' : ''}`,
-      ),
-    ],
-    [
-      model.twinReviewed.includes(item)
-        ? h.span(
-            [h.Class('twin-signoff-status')],
-            [signatory(h), h.span([], ['signed off'])],
-          )
-        : h.span(
-            [h.Class('twin-signoff-status')],
-            [
-              isEnabled
-                ? prompt
-                : 'Draft the DO-254 reports before signing off.',
-            ],
-          ),
-      signoffButton(model, item, isEnabled, h),
-    ],
-  )
-
 const signoffEvidence = (
   item: TwinReviewItem,
   changeCount: number,
@@ -1251,13 +1220,6 @@ const requirementChangesPanel = (model: Model, h: H): Html => {
               ),
             ],
           ),
-      signoffFooter(
-        model,
-        'Requirements',
-        `Reviewed the ${changes.length} requirement changes above?`,
-        isRevB && model.twinReports.length > 0,
-        h,
-      ),
     ],
   )
 }

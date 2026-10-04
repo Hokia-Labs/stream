@@ -4892,49 +4892,7 @@ body:has(.modal-backdrop) .toast {
 .twin-after {
   color: var(--accent);
 }
-.twin-signoff-footers {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-4);
-}
-.twin-signoff-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--rule);
-  font-size: var(--text-sm);
-}
-.twin-signoff-footer .twin-signoff-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-}
-.twin-signoff-footer.pending,
-.twin-signoff-footer.signed {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid;
-  border-radius: 4px;
-}
-.twin-signoff-footer.pending {
-  background: var(--warning-wash);
-  border-color: color-mix(in oklch, var(--warning) 35%, transparent);
-}
-.twin-signoff-footer.pending .twin-signoff-status {
-  color: var(--warning);
-  font-weight: 550;
-}
-.twin-signoff-footer.signed {
-  background: var(--success-wash);
-  border-color: color-mix(in oklch, var(--success) 35%, transparent);
-}
-.twin-signoff-footer.signed .twin-signoff-status {
-  color: var(--success);
-}
-.twin-signoff-footer.signed .twin-signed {
+.twin-signed {
   color: var(--ink);
 }
 .twin-signed {
