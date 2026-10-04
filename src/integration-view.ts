@@ -23,7 +23,7 @@ const brandLockup = (
   src: string,
   product: string,
   h: H,
-  markClass = 'brand-mark',
+  markClass = 'vendor-mark',
 ): Html =>
   h.span(
     [h.Class('doors-logo'), h.AriaLabel(product)],

@@ -8292,7 +8292,7 @@ p.launch-estimate {
 .sync-panel + .sync-panel {
   margin-top: var(--space-4);
 }
-.brand-mark {
+.vendor-mark {
   display: block;
   height: 13px;
   width: auto;
