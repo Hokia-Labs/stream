@@ -1665,23 +1665,23 @@ const overview = (model: Model, h: H): Html => {
   return h.div(
     [],
     [
-      pageHeading(
-        'Files',
-        '',
-        syncedWith(
-          [
-            h.img([
-              h.Src('/teamcenter-logo.png'),
-              h.Alt('Teamcenter'),
-              h.Class('tc-logo'),
-            ]),
-            doorsLogo(h),
-          ],
-          h,
-        ),
-        h,
+      pageHeading('Files', '', h.empty, h),
+      h.div(
+        [h.Class('files-subheading')],
+        [h.h2([], ['Requirements']), doorsLogo(h)],
       ),
       doorsPanel(doorsSync(model.workspace.requirements), h),
+      h.div(
+        [h.Class('files-subheading')],
+        [
+          h.h2([], ['Datasets']),
+          h.img([
+            h.Src('/teamcenter-logo.png'),
+            h.Alt('Teamcenter'),
+            h.Class('tc-logo'),
+          ]),
+        ],
+      ),
       h.section(
         [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
         [

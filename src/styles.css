@@ -8022,6 +8022,25 @@ button.graph-cluster-head:hover {
   width: auto;
   translate: 0 -10px;
 }
+.files-subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
+}
+.page-heading + .files-subheading {
+  margin-top: 0;
+}
+.files-subheading h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.files-subheading .tc-logo {
+  height: 26px;
+  translate: 0 -8px;
+}
 .launch-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
