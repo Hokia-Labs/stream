@@ -87,6 +87,9 @@ export const TwinOverlay = Schema.Literals(['Shaded', 'Thermal'])
 export type TwinOverlay = typeof TwinOverlay.Type
 export const TwinCondition = Schema.Literals(['Normal', 'Module failed'])
 export type TwinCondition = typeof TwinCondition.Type
+
+export const TwinSlot = Schema.Literals(['Cockpit', 'Power'])
+export type TwinSlot = typeof TwinSlot.Type
 export const TwinRevision = Schema.Literals(['A', 'B'])
 export type TwinRevision = typeof TwinRevision.Type
 export const TwinReviewItem = Schema.Literals([
@@ -256,6 +259,7 @@ export const Modal = defineTaggedUnion({
   WorkspaceImporter: { jsonText: Schema.String },
   CommandPalette: { query: Schema.String, index: Schema.Number },
   Shortcuts: {},
+  PartPicker: { slot: TwinSlot, selectedId: Schema.String },
 })
 export type Modal = typeof Modal.Type
 

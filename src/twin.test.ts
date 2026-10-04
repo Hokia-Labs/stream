@@ -15,6 +15,7 @@ import {
   avionicsChange,
   budgetMargin,
   hrdDocument,
+  isAvionicsUpgraded,
   loadBudget,
   twinChanges,
   twinPackageFiles,
@@ -29,7 +30,33 @@ const revB = update(
   Message.ClickedInstallTwinRevision({ revision: 'B' }),
 ).model
 
+const pick = (model: Model, slot: 'Cockpit' | 'Power', id: string): Model =>
+  [
+    Message.OpenedTwinPartPicker({ slot }),
+    Message.SelectedTwinCatalogItem({ id }),
+    Message.ClickedInstallTwinPart(),
+  ].reduce((current, message) => update(current, message).model, model)
+
 describe('digital twin', () => {
+  it('installs released parts picked from the Teamcenter catalog', () => {
+    expect(
+      twinRevision(pick(loaded, 'Power', 'MW-MPA-48-5').workspace.requirements),
+    ).toBe('A')
+    const swapped = pick(loaded, 'Cockpit', 'MW-AVN-2700')
+    expect(isAvionicsUpgraded(swapped.workspace.requirements)).toBe(true)
+    expect(
+      twinRevision(
+        pick(swapped, 'Power', 'MW-MPA-48-6').workspace.requirements,
+      ),
+    ).toBe('A')
+    const upgraded = pick(swapped, 'Power', 'MW-MPA-48-5')
+    expect(twinRevision(upgraded.workspace.requirements)).toBe('B')
+    const restored = pick(upgraded, 'Power', 'MW-MPA-48-4').workspace
+      .requirements
+    expect(twinRevision(restored)).toBe('A')
+    expect(isAvionicsUpgraded(restored)).toBe(true)
+  })
+
   it('shows the avionics change exceeds Rev A margins and fits Rev B', () => {
     const rows = loadBudget()
     expect(rows.some(row => budgetMargin(row, 'A') < 0)).toBe(true)

@@ -66,7 +66,7 @@ import {
 import { Message } from './message'
 import { paletteItems } from './palette'
 import { pageHeading } from './title-block'
-import { twinPage } from './twin-view'
+import { twinPage, twinPartPicker } from './twin-view'
 
 type H = HtmlBuilder<Message>
 const paths: Readonly<Record<string, string>> = {
@@ -4286,6 +4286,7 @@ const launchPreview = (
 
 const modalContent = (model: Model, h: H): Html =>
   Modal.match(model.modal, {
+    PartPicker: picker => twinPartPicker(model, picker, h),
     ArtifactFields: () =>
       h.div(
         [],
@@ -5046,7 +5047,9 @@ const modal = (model: Model, h: H, isClosing = false): Html =>
               h.Class(
                 model.modal._tag === 'CommandPalette'
                   ? 'modal palette-modal'
-                  : 'modal',
+                  : model.modal._tag === 'PartPicker'
+                    ? 'modal twin-picker-modal'
+                    : 'modal',
               ),
               ...(isClosing
                 ? [h.AriaHidden(true)]

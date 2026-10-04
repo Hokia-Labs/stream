@@ -21,6 +21,7 @@ import {
   TwinReport,
   TwinReviewItem,
   TwinRevision,
+  TwinSlot,
   Workspace,
 } from './domain'
 import { ExecutorStatus } from './executor'
@@ -196,6 +197,9 @@ export const Message = defineMessageUnion({
   SelectedTwinCondition: { condition: TwinCondition },
   ClickedTwinPart: { part: Schema.String },
   ClickedSwapTwinAvionics: {},
+  OpenedTwinPartPicker: { slot: TwinSlot },
+  SelectedTwinCatalogItem: { id: Schema.String },
+  ClickedInstallTwinPart: {},
   ClickedInstallTwinRevision: { revision: TwinRevision },
   ToggledTwinReview: { item: TwinReviewItem },
   ClickedGenerateTwinPackage: {},

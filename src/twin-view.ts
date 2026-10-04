@@ -9,6 +9,7 @@ import {
   TwinOverlay,
   type TwinReviewItem,
   TwinRevision,
+  type TwinSlot,
 } from './domain'
 import { idLink, linkifyIds } from './id-link'
 import type { Model } from './main'
@@ -20,13 +21,19 @@ import {
   avionicsChange,
   budgetMargin,
   busDemandKw,
+  catalogBlocker,
+  catalogImpact,
+  catalogSpecLabels,
   failureCases,
   hasTwinScenario,
+  installedPart,
   isAvionicsUpgraded,
   limitLabel,
   loadBudget,
   lowMargin,
   signoffTitle,
+  slotHealth,
+  twinCatalog,
   twinChanges,
   twinRevision,
   twinSignoffs,
@@ -562,6 +569,191 @@ const changeDriver = (model: Model, isRevB: boolean, h: H): Html => {
   )
 }
 
+const slotName = (slot: TwinSlot): string =>
+  slot === 'Cockpit' ? 'Cockpit avionics' : 'Aft power assembly'
+
+const slotCard = (model: Model, slot: TwinSlot, h: H): Html => {
+  const requirements = model.workspace.requirements
+  const part = installedPart(requirements, slot)
+  const health = slotHealth(requirements, slot)
+  return h.div(
+    [h.Class(`twin-slot ${health.tone}`)],
+    [
+      h.div(
+        [h.Class('twin-slot-head')],
+        [
+          h.span([h.Class('twin-slot-name')], [slotName(slot)]),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button outline small'),
+              h.OnClick(Message.OpenedTwinPartPicker({ slot })),
+            ],
+            ['Replace…'],
+          ),
+        ],
+      ),
+      h.p(
+        [h.Class('twin-slot-part')],
+        [h.span([h.Class('mono')], [`${part.id} · Rev ${part.revision}`])],
+      ),
+      h.p([h.Class('twin-slot-title')], [part.title]),
+      h.p([h.Class(`twin-slot-health ${health.tone}`)], [health.text]),
+    ],
+  )
+}
+
+export const twinPartPicker = (
+  model: Model,
+  picker: Readonly<{ slot: TwinSlot; selectedId: string }>,
+  h: H,
+): Html => {
+  const requirements = model.workspace.requirements
+  const installed = installedPart(requirements, picker.slot)
+  const items = twinCatalog.filter(item => item.slot === picker.slot)
+  const selected =
+    items.find(item => item.id === picker.selectedId) ?? installed
+  const blocker = catalogBlocker(requirements, selected)
+  const impact = catalogImpact(requirements, selected)
+  const isSame = selected.id === installed.id
+  return h.div(
+    [],
+    [
+      h.p([h.Class('eyebrow')], ['TEAMCENTER · SAMPLE ITEMS']),
+      h.h2(
+        [h.Id('dialog-title')],
+        [`Replace ${slotName(picker.slot).toLowerCase()}`],
+      ),
+      h.p(
+        [h.Class('subtitle')],
+        [
+          'Items from the synthetic 48 V architecture. Part numbers and values are notional.',
+        ],
+      ),
+      h.div(
+        [h.Class('twin-picker')],
+        [
+          h.div(
+            [
+              h.Class('twin-picker-list'),
+              h.Role('radiogroup'),
+              h.AriaLabel('Teamcenter items'),
+            ],
+            items.map(item =>
+              h.keyed('button')(
+                item.id,
+                [
+                  h.Type('button'),
+                  h.Role('radio'),
+                  h.AriaChecked(item.id === selected.id),
+                  h.Class(
+                    `twin-picker-item ${item.id === selected.id ? 'selected' : ''}`,
+                  ),
+                  h.OnClick(Message.SelectedTwinCatalogItem({ id: item.id })),
+                ],
+                [
+                  h.span(
+                    [h.Class('twin-picker-id mono')],
+                    [`${item.id} · Rev ${item.revision}`],
+                  ),
+                  h.span([h.Class('twin-picker-title')], [item.title]),
+                  h.span(
+                    [h.Class('twin-picker-meta')],
+                    [
+                      h.span(
+                        [
+                          h.Class(
+                            `badge ${item.status === 'Released' ? 'positive' : 'neutral'}`,
+                          ),
+                        ],
+                        [item.status],
+                      ),
+                      item.id === installed.id
+                        ? h.span([h.Class('badge neutral')], ['Installed'])
+                        : h.empty,
+                      h.span([h.Class('muted')], [item.released]),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          h.div(
+            [h.Class('twin-picker-compare')],
+            [
+              h.table(
+                [h.Class('twin-compare')],
+                [
+                  h.thead(
+                    [],
+                    [
+                      h.tr(
+                        [],
+                        [
+                          h.th([], ['']),
+                          h.th([], ['Installed']),
+                          h.th([], [isSame ? 'Selected' : selected.id]),
+                        ],
+                      ),
+                    ],
+                  ),
+                  h.tbody(
+                    [],
+                    catalogSpecLabels[picker.slot].map((label, index) => {
+                      const before = installed.specs[index] ?? '—'
+                      const after = selected.specs[index] ?? '—'
+                      return h.keyed('tr')(
+                        label,
+                        [h.Class(before === after ? '' : 'changed')],
+                        [
+                          h.th([], [label]),
+                          h.td([], [before]),
+                          h.td([], [after]),
+                        ],
+                      )
+                    }),
+                  ),
+                ],
+              ),
+              h.p(
+                [h.Class(`twin-picker-impact ${impact.tone}`)],
+                [
+                  isSame
+                    ? `Now: ${impact.text}`
+                    : `After install: ${impact.text}`,
+                ],
+              ),
+              blocker ? h.p([h.Class('muted small-text')], [blocker]) : h.empty,
+            ],
+          ),
+        ],
+      ),
+      h.div(
+        [h.Class('modal-footer')],
+        [
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button ghost'),
+              h.OnClick(Message.ClosedModal()),
+            ],
+            ['Cancel'],
+          ),
+          h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.Disabled(blocker !== undefined),
+              h.OnClick(Message.ClickedInstallTwinPart()),
+            ],
+            [`Install ${selected.id}`],
+          ),
+        ],
+      ),
+    ],
+  )
+}
+
 export const twinPage = (model: Model, h: H): Html => {
   const twin = twinSpec.withMessage(h)
   const requirements = model.workspace.requirements
@@ -575,27 +767,47 @@ export const twinPage = (model: Model, h: H): Html => {
   const pkg = model.maybeTwinPackage
   const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
-  const steps: ReadonlyArray<Readonly<{ label: string; done: boolean }>> = [
-    { label: 'Check the cockpit avionics change', done: true },
-    { label: 'Swap in the new cockpit avionics module', done: isUpgraded },
-    {
-      label: 'Inspect the aft bay',
-      done: model.twinFocus === 'Aft bay' || isRevB,
-    },
-    { label: 'Place power assembly Rev B in the systems model', done: isRevB },
-    {
-      label: 'Review requirement changes',
-      done: model.twinReviewed.includes('Requirements'),
-    },
-    {
-      label: 'Review thermal & mechanics',
-      done:
-        model.twinReviewed.includes('Thermal') &&
-        model.twinReviewed.includes('Mechanical'),
-    },
-    { label: 'Package the DO-254 data', done: Option.isSome(pkg) },
-    { label: 'Send to customer', done: isSent },
-  ]
+  const next: Readonly<{
+    text: string
+    tone: string
+    slot: TwinSlot | undefined
+    label: string
+  }> = !isUpgraded
+    ? {
+        text: 'ECP-0219 replaces the 0.9 kW cockpit unit with a 2.7 kW module. Pick it from Teamcenter.',
+        tone: '',
+        slot: 'Cockpit',
+        label: 'Choose avionics module',
+      }
+    : !isRevB
+      ? {
+          text: `Rev A has no N−1 margin at ${busDemandKw.toFixed(1)} kW. Pick a larger power assembly.`,
+          tone: 'bad',
+          slot: 'Power',
+          label: 'Choose power assembly',
+        }
+      : !isReviewed
+        ? {
+            text: 'Sign off the requirement, thermal and mechanical reviews below.',
+            tone: '',
+            slot: undefined,
+            label: '',
+          }
+        : !hasReports
+          ? {
+              text: 'All three reviews are signed. Draft the DO-254 reports.',
+              tone: 'ok',
+              slot: undefined,
+              label: '',
+            }
+          : {
+              text: isSent
+                ? 'Package sent to the customer.'
+                : 'Download the DO-254 package and send it to the customer.',
+              tone: 'ok',
+              slot: undefined,
+              label: '',
+            }
   const action = !isLoaded
     ? h.button(
         [
@@ -610,18 +822,18 @@ export const twinPage = (model: Model, h: H): Html => {
           [
             h.Type('button'),
             h.Class('button primary'),
-            h.OnClick(Message.ClickedSwapTwinAvionics()),
+            h.OnClick(Message.OpenedTwinPartPicker({ slot: 'Cockpit' })),
           ],
-          [arrowIcon(h), 'Swap in new avionics module'],
+          [arrowIcon(h), 'Swap in new avionics…'],
         )
       : !isRevB
         ? h.button(
             [
               h.Type('button'),
               h.Class('button primary'),
-              h.OnClick(Message.ClickedInstallTwinRevision({ revision: 'B' })),
+              h.OnClick(Message.OpenedTwinPartPicker({ slot: 'Power' })),
             ],
-            [arrowIcon(h), 'Place power assembly Rev B'],
+            [arrowIcon(h), 'Replace power assembly…'],
           )
         : h.button(
             [
@@ -727,92 +939,42 @@ export const twinPage = (model: Model, h: H): Html => {
               h.aside(
                 [h.Class('panel twin-side')],
                 [
-                  h.h2([h.Class('twin-heading')], ['Change workflow']),
-                  h.ol(
-                    [h.Class('twin-steps')],
-                    steps.map((step, index) =>
-                      h.keyed('li')(
-                        step.label,
-                        [h.Class(step.done ? 'done' : '')],
-                        [
-                          h.span(
-                            [h.Class('twin-step-index mono')],
-                            [step.done ? '✓' : String(index + 1)],
-                          ),
-                          step.label,
-                        ],
-                      ),
-                    ),
-                  ),
-                  h.h2([h.Class('twin-heading')], ['Hardware']),
-                  h.dl(
-                    [h.Class('twin-facts')],
+                  h.div(
+                    [h.Class(`twin-next ${next.tone}`)],
                     [
-                      h.dt([], ['Installed']),
-                      h.dd(
-                        [],
-                        [
-                          requirements.find(item => item.id === 'DES-PSU')
-                            ?.description ?? '',
-                        ],
-                      ),
-                    ],
-                  ),
-                  isRevB
-                    ? h.button(
-                        [
-                          h.Type('button'),
-                          h.Class('button outline small'),
-                          h.OnClick(
-                            Message.ClickedInstallTwinRevision({
-                              revision: 'A',
-                            }),
-                          ),
-                        ],
-                        ['Revert to Rev A'],
-                      )
-                    : !isUpgraded
-                      ? h.button(
-                          [
-                            h.Type('button'),
-                            h.Class('button primary small'),
-                            h.OnClick(Message.ClickedSwapTwinAvionics()),
-                          ],
-                          [arrowIcon(h), 'Swap in new avionics module'],
-                        )
-                      : h.button(
-                          [
-                            h.Type('button'),
-                            h.Class('button primary small'),
-                            h.OnClick(
-                              Message.ClickedInstallTwinRevision({
-                                revision: 'B',
-                              }),
-                            ),
-                          ],
-                          ['Place power assembly Rev B in the systems model'],
-                        ),
-                  h.h2([h.Class('twin-heading')], ['Affected subsystems']),
-                  subsystems.length === 0
-                    ? h.p(
-                        [h.Class('muted small-text')],
-                        ['None yet. The model is at the Rev A baseline.'],
-                      )
-                    : h.ul(
-                        [h.Class('twin-subsystems')],
-                        subsystems.map(item =>
-                          h.keyed('li')(
-                            item.name,
-                            [],
+                      h.p([h.Class('twin-next-label')], ['Next step']),
+                      h.p([h.Class('twin-next-text')], [next.text]),
+                      next.slot
+                        ? h.button(
                             [
-                              h.strong([], [item.name]),
-                              h.span(
-                                [h.Class('mono muted')],
-                                [item.ids.join(' · ')],
+                              h.Type('button'),
+                              h.Class('button primary small'),
+                              h.OnClick(
+                                Message.OpenedTwinPartPicker({
+                                  slot: next.slot,
+                                }),
                               ),
                             ],
-                          ),
-                        ),
+                            [next.label],
+                          )
+                        : h.empty,
+                    ],
+                  ),
+                  h.h2([h.Class('twin-heading')], ['Installed hardware']),
+                  slotCard(model, 'Cockpit', h),
+                  slotCard(model, 'Power', h),
+                  h.h2([h.Class('twin-heading')], ['Changed artifacts']),
+                  changes.length === 0
+                    ? h.p(
+                        [h.Class('muted small-text')],
+                        ['None. Baseline configuration.'],
+                      )
+                    : h.p(
+                        [h.Class('twin-changed')],
+                        changes.flatMap((change, index) => [
+                          ...(index > 0 ? [' · '] : []),
+                          idLink(model, change.artifact.id, h, 'mono'),
+                        ]),
                       ),
                 ],
               ),

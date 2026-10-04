@@ -59,12 +59,15 @@ import {
 import { Message } from './message'
 import { pageShortcuts, paletteItems } from './palette'
 import {
+  catalogBlocker,
   hasTwinScenario,
   installTwinRevision,
   isAvionicsUpgraded,
   seedTwinArtifacts,
   signoffTitle,
+  suggestedPart,
   swapTwinAvionics,
+  twinCatalog,
   twinPackageFiles,
   twinRevision,
 } from './twin'
@@ -1568,6 +1571,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modifyFields(editor, { title: () => value }),
             CommandPalette: () => modal,
             Shortcuts: () => modal,
+            PartPicker: () => modal,
           }),
       }),
     }),
@@ -2680,12 +2684,85 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         return { model }
       }
       return persist(
-        modifyFields(model, { twinFocus: () => 'Airframe' }),
+        modifyFields(model, { twinFocus: () => 'Cockpit' }),
         record(
           writeRequirements(model, swapTwinAvionics(requirements)),
           'ECP-0219 cockpit avionics module swapped in · Ben Juntilla',
         ),
         'New cockpit avionics module swapped in. REQ-AVN-01 revised.',
+      )
+    },
+    OpenedTwinPartPicker: ({ slot }) => ({
+      model: modifyFields(model, {
+        modal: () =>
+          Modal.PartPicker({
+            slot,
+            selectedId: suggestedPart(workingRequirements(model), slot).id,
+          }),
+      }),
+    }),
+    SelectedTwinCatalogItem: ({ id }) => ({
+      model: modifyFields(model, {
+        modal: modal =>
+          modal._tag === 'PartPicker'
+            ? modifyFields(modal, { selectedId: () => id })
+            : modal,
+      }),
+    }),
+    ClickedInstallTwinPart: () => {
+      const picker = model.modal
+      const requirements = workingRequirements(model)
+      const item =
+        picker._tag === 'PartPicker'
+          ? twinCatalog.find(candidate => candidate.id === picker.selectedId)
+          : undefined
+      if (
+        !item ||
+        model.storage === 'Loading' ||
+        catalogBlocker(requirements, item) !== undefined
+      ) {
+        return { model }
+      }
+      const closed = modifyFields(model, { modal: () => Modal.Closed() })
+      if (item.slot === 'Cockpit') {
+        return isAvionicsUpgraded(requirements)
+          ? persist(
+              modifyFields(closed, { twinFocus: () => 'Cockpit' }),
+              record(
+                writeRequirements(
+                  model,
+                  installTwinRevision(requirements, 'A'),
+                ),
+                `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Ben Juntilla`,
+              ),
+              `${item.id} reinstalled. REQ-AVN-01 restored.`,
+            )
+          : updateMessage(closed, Message.ClickedSwapTwinAvionics())
+      }
+      if (twinRevision(requirements) === 'A') {
+        return updateMessage(
+          closed,
+          Message.ClickedInstallTwinRevision({ revision: 'B' }),
+        )
+      }
+      const restored = installTwinRevision(requirements, 'A')
+      return persist(
+        modifyFields(closed, {
+          twinFocus: () => 'Aft bay',
+          twinReviewed: () => [],
+          maybeTwinPackage: () => Option.none(),
+          twinReports: () => [],
+        }),
+        record(
+          writeRequirements(
+            model,
+            isAvionicsUpgraded(requirements)
+              ? swapTwinAvionics(restored)
+              : restored,
+          ),
+          `${item.id} Rev ${item.revision} reinstalled from Teamcenter · Ben Juntilla`,
+        ),
+        `Power assembly ${item.id} reinstalled.`,
       )
     },
     ClickedInstallTwinRevision: ({ revision }) => {

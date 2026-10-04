@@ -1,4 +1,9 @@
-import type { Requirement, TwinReviewItem, TwinRevision } from './domain'
+import type {
+  Requirement,
+  TwinReviewItem,
+  TwinRevision,
+  TwinSlot,
+} from './domain'
 import { artifactPortion, portionText, systemHigh } from './marking'
 
 export type TwinArtifact = Readonly<{
@@ -719,3 +724,179 @@ export const lowMargin = (row: AnalysisRow): boolean =>
     : row.revB - row.limit.value) /
     row.limit.value <
   0.1
+
+export type CatalogItem = Readonly<{
+  id: string
+  revision: string
+  slot: TwinSlot
+  title: string
+  status: 'Released' | 'In work'
+  released: string
+  value: number
+  specs: ReadonlyArray<string>
+}>
+
+export const catalogSpecLabels: Readonly<
+  Record<TwinSlot, ReadonlyArray<string>>
+> = {
+  Cockpit: ['Steady power', 'Peak power', 'Heat rejection', 'Bus current'],
+  Power: [
+    'Converter modules',
+    'All-module capacity',
+    'N−1 capacity',
+    'Heat allocation',
+    'Cockpit feeder',
+  ],
+}
+
+const legacyAvionics: CatalogItem = {
+  id: 'MW-AVN-0900',
+  revision: 'C',
+  slot: 'Cockpit',
+  title: 'Cockpit display processor (legacy)',
+  status: 'Released',
+  released: '2019-04-11',
+  value: 0.9,
+  specs: ['0.9 kW', '1.1 kW / 200 ms', '0.9 kW', '19 A'],
+}
+
+const upgradedAvionics: CatalogItem = {
+  id: 'MW-AVN-2700',
+  revision: 'A',
+  slot: 'Cockpit',
+  title: 'Cockpit avionics module · ECP-0219',
+  status: 'Released',
+  released: '2026-09-18',
+  value: 2.7,
+  specs: ['2.7 kW', '3.5 kW / 200 ms', '2.7 kW', '56 A'],
+}
+
+const assemblyRevA: CatalogItem = {
+  id: 'MW-MPA-48-4',
+  revision: 'A',
+  slot: 'Power',
+  title: 'Modular power assembly, 4-slot',
+  status: 'Released',
+  released: '2021-02-03',
+  value: 4,
+  specs: ['4 × 3.0 kW', '12.0 kW', '9.0 kW', '0.50 kW', '25 A SSPC · 10 AWG'],
+}
+
+const assemblyRevB: CatalogItem = {
+  id: 'MW-MPA-48-5',
+  revision: 'B',
+  slot: 'Power',
+  title: 'Modular power assembly, 5-slot',
+  status: 'Released',
+  released: '2026-09-24',
+  value: 5,
+  specs: ['5 × 3.0 kW', '15.0 kW', '12.0 kW', '0.65 kW', '75 A SSPC · 8 AWG'],
+}
+
+export const twinCatalog: ReadonlyArray<CatalogItem> = [
+  legacyAvionics,
+  upgradedAvionics,
+  {
+    id: 'MW-AVN-3100',
+    revision: '–',
+    slot: 'Cockpit',
+    title: 'Panoramic display processor (prototype)',
+    status: 'In work',
+    released: 'Not released',
+    value: 3.1,
+    specs: ['3.1 kW', '4.2 kW / 200 ms', '3.1 kW', '65 A'],
+  },
+  assemblyRevA,
+  assemblyRevB,
+  {
+    id: 'MW-MPA-48-6',
+    revision: '–',
+    slot: 'Power',
+    title: 'Modular power assembly, 6-slot (concept)',
+    status: 'In work',
+    released: 'Not released',
+    value: 6,
+    specs: ['6 × 3.0 kW', '18.0 kW', '15.0 kW', '0.80 kW', '75 A SSPC · 8 AWG'],
+  },
+]
+
+export const installedPart = (
+  requirements: ReadonlyArray<Requirement>,
+  slot: TwinSlot,
+): CatalogItem =>
+  slot === 'Cockpit'
+    ? isAvionicsUpgraded(requirements)
+      ? upgradedAvionics
+      : legacyAvionics
+    : twinRevision(requirements) === 'B'
+      ? assemblyRevB
+      : assemblyRevA
+
+export const catalogBlocker = (
+  requirements: ReadonlyArray<Requirement>,
+  item: CatalogItem,
+): string | undefined =>
+  item.status !== 'Released'
+    ? 'Not released in Teamcenter. Only released items can be installed.'
+    : item.id === installedPart(requirements, item.slot).id
+      ? 'Already installed.'
+      : item.id === legacyAvionics.id && twinRevision(requirements) === 'B'
+        ? 'Put power assembly Rev A back first.'
+        : item.id === assemblyRevB.id && !isAvionicsUpgraded(requirements)
+          ? 'Rev A carries the current 8.4 kW load. Swap in the new avionics first.'
+          : undefined
+
+export type Health = Readonly<{ text: string; tone: 'ok' | 'low' | 'bad' }>
+
+const marginHealth = (available: number, demand: number): Health => {
+  const margin = (available - demand) / available
+  return {
+    text: `N−1 ${available.toFixed(1)} kW for ${demand.toFixed(1)} kW · ${margin >= 0 ? '+' : ''}${(margin * 100).toFixed(1)}% margin`,
+    tone: margin < 0 ? 'bad' : 'ok',
+  }
+}
+
+const demandWith = (cockpitKw: number): number =>
+  avionicsChange.existingLoadKw - avionicsChange.replacedKw + cockpitKw
+
+export const catalogImpact = (
+  requirements: ReadonlyArray<Requirement>,
+  item: CatalogItem,
+): Health =>
+  item.slot === 'Power'
+    ? marginHealth(
+        (item.value - 1) * avionicsChange.moduleRatingKw,
+        demandWith(installedPart(requirements, 'Cockpit').value),
+      )
+    : marginHealth(
+        (installedPart(requirements, 'Power').value - 1) *
+          avionicsChange.moduleRatingKw,
+        demandWith(item.value),
+      )
+
+export const slotHealth = (
+  requirements: ReadonlyArray<Requirement>,
+  slot: TwinSlot,
+): Health => {
+  const power = catalogImpact(
+    requirements,
+    installedPart(requirements, 'Power'),
+  )
+  if (slot === 'Power') {
+    return power
+  }
+  const cockpit = installedPart(requirements, 'Cockpit')
+  return {
+    text: `${cockpit.specs[0] ?? ''} steady · bus ${demandWith(cockpit.value).toFixed(1)} kW`,
+    tone: power.tone === 'bad' ? 'low' : 'ok',
+  }
+}
+
+export const suggestedPart = (
+  requirements: ReadonlyArray<Requirement>,
+  slot: TwinSlot,
+): CatalogItem =>
+  twinCatalog.find(
+    item =>
+      item.slot === slot && catalogBlocker(requirements, item) === undefined,
+  ) ?? installedPart(requirements, slot)
