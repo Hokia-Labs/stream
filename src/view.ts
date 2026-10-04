@@ -5097,19 +5097,12 @@ const systemStatus = (h: H): Html =>
   h.div(
     [h.Class('system-status mono'), h.Attribute('role', 'status')],
     [
-      h.span(
-        [],
-        [
-          h.span([h.Class('system-status-label')], ['System high']),
-          systemHigh,
-          h.span([h.Class('system-status-sep')], ['·']),
-          h.span([h.Class('system-status-label')], ['Enclave']),
-          enclaveName,
-        ],
-      ),
+      h.span([h.Class('system-status-label')], ['Enclave']),
+      enclaveName,
       h.span(
         [h.Class('system-status-session')],
         [
+          h.span([h.Class('system-status-sep')], ['·']),
           h.span([h.Class('system-status-label')], ['Last login']),
           '2026-10-02 14:03Z',
           h.span([h.Class('system-status-sep')], ['·']),
