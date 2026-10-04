@@ -10,6 +10,7 @@ import {
   GridHelper,
   Group,
   HemisphereLight,
+  Light,
   Material,
   Mesh,
   MeshStandardMaterial,
@@ -328,6 +329,11 @@ export class StreamTwin extends HTMLElement {
     const grid = new GridHelper(12, 48, '#9fb2dd', '#d5dbe6')
     grid.position.y = -0.87
     this.#scene.add(grid)
+    this.#scene.traverse(child => {
+      if (child instanceof Light) {
+        child.layers.enableAll()
+      }
+    })
     this.#buildPsu()
     this.#camera.position.copy(this.#preset().position)
     this.#controls = new OrbitControls(this.#camera, renderer.domElement)
@@ -421,6 +427,7 @@ export class StreamTwin extends HTMLElement {
     )
     const raycaster = new Raycaster()
     raycaster.setFromCamera(pointer, this.#camera)
+    raycaster.layers.enableAll()
     const targets: Array<Object3D> = [this.#psu]
     if (this.#airframe) {
       targets.push(this.#airframe)
@@ -715,7 +722,15 @@ export class StreamTwin extends HTMLElement {
       }
     }
     this.#controls?.update()
+    this.#psu.traverse(child => child.layers.set(1))
+    renderer.autoClear = true
+    this.#camera.layers.set(0)
     renderer.render(this.#scene, this.#camera)
+    renderer.autoClear = false
+    renderer.clearDepth()
+    this.#camera.layers.set(1)
+    renderer.render(this.#scene, this.#camera)
+    this.#camera.layers.set(0)
     this.#place(
       this.#label,
       psuCenter.clone().add(new Vector3(0, rackHeight / 2 + 0.02, 0)),
