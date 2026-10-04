@@ -1247,7 +1247,7 @@ const CopyFinding = Command.define('CopyFinding', {
     ),
 })
 
-const FocusPalette = Command.define('FocusPalette', {
+export const FocusPalette = Command.define('FocusPalette', {
   messages: [Message.CompletedFocusPalette],
   execute: Dom.focus('#palette-input').pipe(
     Effect.catch(() => Effect.void),

@@ -16,6 +16,7 @@ import { describe, it } from 'vitest'
 
 import { seedWorkspace } from './domain'
 import {
+  FocusPalette,
   SaveWorkspace,
   ScrollActiveNav,
   WaitForSimulationWave,
@@ -111,9 +112,9 @@ describe('workspace UI wiring', () => {
       type(label('Branch name'), 'Thermal upgrade'),
       submit(selector('form')),
       Command.resolve(SaveWorkspace, Message.CompletedSaveWorkspace()),
-      click(role('button', { name: 'Systems graph' })),
-      Command.resolve(ScrollActiveNav, Message.CompletedScrollActiveNav()),
-      click(role('button', { name: 'New artifact' })),
+      click(role('button', { name: 'Open command palette' })),
+      Command.resolve(FocusPalette, Message.CompletedFocusPalette()),
+      click(role('option', { name: /New artifact/ })),
       type(label('Title'), 'Thermal subsystem'),
       type(
         label('Description'),
@@ -122,8 +123,6 @@ describe('workspace UI wiring', () => {
       change(role('combobox', { name: 'Artifact type' }), 'System'),
       submit(selector('form')),
       Command.resolve(SaveWorkspace, Message.CompletedSaveWorkspace()),
-      click(role('button', { name: 'Requirements' })),
-      Command.resolve(ScrollActiveNav, Message.CompletedScrollActiveNav()),
       expect(role('table')).toContainText('Thermal subsystem'),
       change(role('combobox', { name: 'Active branch' }), ''),
       expect(role('table')).not.toContainText('Thermal subsystem'),
@@ -163,9 +162,11 @@ describe('workspace UI wiring', () => {
     scene(
       { update, view },
       given(ready),
-      click(role('button', { name: 'Systems graph' })),
+      click(role('button', { name: 'Requirements' })),
       Command.resolve(ScrollActiveNav, Message.CompletedScrollActiveNav()),
-      click(role('button', { name: 'New artifact' })),
+      click(role('button', { name: 'Open command palette' })),
+      Command.resolve(FocusPalette, Message.CompletedFocusPalette()),
+      click(role('option', { name: /New artifact/ })),
       type(label('Title'), 'Payload integration'),
       type(
         label('Description'),
@@ -173,8 +174,6 @@ describe('workspace UI wiring', () => {
       ),
       submit(selector('form')),
       Command.resolve(SaveWorkspace, Message.CompletedSaveWorkspace()),
-      click(role('button', { name: 'Requirements' })),
-      Command.resolve(ScrollActiveNav, Message.CompletedScrollActiveNav()),
       expect(role('table')).toContainText('Payload integration'),
       expect(role('dialog')).not.toExist(),
     )

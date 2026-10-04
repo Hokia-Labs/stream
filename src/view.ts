@@ -2393,39 +2393,14 @@ const pausePoints = (model: Model, h: H): Html =>
         ),
     ],
   )
-const runHistory = (model: Model, h: H): Html =>
-  h.div(
-    [h.Class('run-history'), h.AriaLabel('Run history')],
-    [
-      h.span([h.Class('mono muted small-text')], ['RUNS']),
-      ...model.workspace.runs
-        .slice(0, 8)
-        .map(run =>
-          h.keyed('button')(
-            run.id,
-            [
-              h.Type('button'),
-              h.Class(
-                `run-chip ${run.status.toLowerCase()} ${run.tasks.some(task => task.status === 'Failed') ? 'has-failed' : ''}`,
-              ),
-              h.Title(`${run.id} · ${run.title} · ${run.status}`),
-              h.OnClick(Message.SelectedRun({ id: run.id })),
-            ],
-            [h.span([h.Class('status-dot')]), run.id],
-          ),
-        ),
-      Array.isReadonlyArrayEmpty(model.workspace.runs)
-        ? h.span([h.Class('muted small-text')], ['No runs yet'])
-        : h.empty,
-    ],
-  )
 const shortcutRows: ReadonlyArray<readonly [ReadonlyArray<string>, string]> = [
   [['⌘', 'K'], 'Open command palette'],
   [['?'], 'Show keyboard shortcuts'],
   [['['], 'Collapse or expand sidebar'],
-  [['G', 'F'], 'Go to Files'],
-  [['G', 'S'], 'Go to Systems graph'],
   [['G', 'R'], 'Go to Requirements'],
+  [['G', 'D'], 'Go to Datasets'],
+  [['G', 'T'], 'Go to Digital twin'],
+  [['G', 'S'], 'Go to Systems graph'],
   [['G', 'B'], 'Go to Branches'],
   [['G', 'A'], 'Go to Agent fleet'],
   [['G', 'N'], 'Go to Runs'],
@@ -2440,30 +2415,7 @@ const graphPage = (model: Model, h: H): Html => {
   return h.div(
     [h.Class('graph-page')],
     [
-      pageHeading(
-        'Systems graph',
-        '',
-        h.div(
-          [h.Class('heading-actions')],
-          [
-            button(
-              'Analyze impact',
-              Message.ClickedLaunch(),
-              'outline',
-              h,
-              'agent',
-            ),
-            button(
-              'New artifact',
-              Message.ClickedNewRequirement(),
-              'primary',
-              h,
-              'plus',
-            ),
-          ],
-        ),
-        h,
-      ),
+      pageHeading('Systems graph', '', h.empty, h),
       h.section(
         [h.Class('panel full-graph-panel')],
         [
@@ -2493,19 +2445,6 @@ const graphPage = (model: Model, h: H): Html => {
                   graphMinimap(model, scene, h),
                 ],
               ),
-          h.div(
-            [h.Class('graph-footer')],
-            [
-              runHistory(model, h),
-              pausePoints(model, h),
-              button(
-                'Clear selection',
-                Message.ClosedInspector(),
-                'ghost small',
-                h,
-              ),
-            ],
-          ),
         ],
       ),
     ],
