@@ -1330,6 +1330,41 @@ const SmoothTwinTabSwitch = Command.define('SmoothTwinTabSwitch', {
   }).pipe(Effect.as(Message.CompletedSmoothTwinTabSwitch())),
 })
 
+const BoardReviewResize = Command.define('BoardReviewResize', {
+  messages: [Message.CompletedBoardReviewResize],
+  execute: Effect.promise(async () => {
+    const modal = document.querySelector<HTMLElement>('.board-review-modal')
+    if (!modal) {
+      return
+    }
+    const from = modal.offsetHeight
+    modal.style.height = `${from}px`
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    modal.style.height = ''
+    const to = modal.offsetHeight
+    const isReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    if (to === from || isReducedMotion) {
+      return
+    }
+    modal.style.height = `${from}px`
+    void modal.offsetHeight
+    modal.style.transition = 'height 240ms cubic-bezier(0.2, 0.7, 0.2, 1)'
+    modal.style.height = `${to}px`
+    await new Promise<void>(resolve => {
+      const done = () => {
+        modal.removeEventListener('transitionend', done)
+        resolve()
+      }
+      modal.addEventListener('transitionend', done)
+      setTimeout(done, 400)
+    })
+    modal.style.transition = ''
+    modal.style.height = ''
+  }).pipe(Effect.as(Message.CompletedBoardReviewResize())),
+})
+
 const ScrollTwinSignoff = Command.define('ScrollTwinSignoff', {
   messages: [Message.CompletedScrollTwinSignoff],
   execute: Dom.scrollIntoViewAfterPaint('#twin-signoff', {
@@ -3231,6 +3266,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       model.modal._tag !== 'BoardReview'
         ? { model }
         : {
+            commands: model.modal.tab === tab ? [] : [BoardReviewResize()],
             model: modifyFields(model, {
               modal: () => Modal.BoardReview({ tab }),
             }),
@@ -3757,6 +3793,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     },
     CompletedScrollTwinSignoff: () => ({ model }),
     CompletedSmoothTwinTabSwitch: () => ({ model }),
+    CompletedBoardReviewResize: () => ({ model }),
     PressedPageShortcut: ({ page }) =>
       update(model, Message.SelectedPage({ page })),
     PressedArtifactShortcut: ({ action }) => {
