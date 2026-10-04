@@ -6682,8 +6682,7 @@ button:disabled,
 /* Classification marking banner (Gov tenant) */
 .has-marking {
   --marking-h: 22px;
-  --status-h: 20px;
-  --top-h: calc(var(--marking-h) + var(--status-h));
+  --top-h: var(--marking-h);
   padding-top: var(--top-h);
   padding-bottom: var(--marking-h);
 }
@@ -6757,15 +6756,12 @@ button:disabled,
   animation: none;
 }
 ::view-transition-group(marking-top),
-::view-transition-group(system-status),
 ::view-transition-group(marking-bottom) {
   z-index: 1000;
   animation: none;
 }
 ::view-transition-old(marking-top),
 ::view-transition-new(marking-top),
-::view-transition-old(system-status),
-::view-transition-new(system-status),
 ::view-transition-old(marking-bottom),
 ::view-transition-new(marking-bottom) {
   animation: none;
@@ -6832,39 +6828,6 @@ button:disabled,
 }
 .sidebar .tree-title .portion-mark {
   display: none;
-}
-
-.system-status {
-  position: fixed;
-  top: var(--marking-h);
-  right: 0;
-  left: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--status-h);
-  padding: 0 14px;
-  background: #1b1f27;
-  color: #e8eaee;
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  view-transition-name: system-status;
-}
-.system-status-label {
-  margin-right: 6px;
-  color: #b9bfc9;
-}
-.system-status-sep {
-  margin: 0 10px;
-  color: #9aa1ad;
-}
-@media (max-width: 600px) {
-  .system-status-session {
-    display: none;
-  }
 }
 
 .workspace-avatar.has-logo {
