@@ -1597,6 +1597,10 @@ const lifecycle = (model: Model, h: H): Html => {
   const passed = checks.filter(check => check.isPass).length
   const hasProposal =
     isRevB || proposal === 'Pending' || proposal === 'Rejected'
+  const reviewMessage =
+    (proposal === 'Pending' && !isRevB) || isApprovedReview(model)
+      ? Message.OpenedBoardReview()
+      : Message.SelectedTwinPanelTab({ tab: 'Change' })
   const stages: ReadonlyArray<
     Readonly<{
       label: string
@@ -1623,7 +1627,7 @@ const lifecycle = (model: Model, h: H): Html => {
             .join(' · ')}`
         : undefined,
       isDone: isRevB || proposal === 'Pending' || proposal === 'Rejected',
-      message: Message.SelectedTwinPanelTab({ tab: 'Change' }),
+      message: reviewMessage,
     },
     {
       label: 'Derived reqs',
@@ -1642,10 +1646,7 @@ const lifecycle = (model: Model, h: H): Html => {
       meta:
         proposal === 'Rejected' && !isRevB ? 'Rejected' : proposalReviewer.name,
       isDone: isRevB,
-      message:
-        (proposal === 'Pending' && !isRevB) || isApprovedReview(model)
-          ? Message.OpenedBoardReview()
-          : Message.SelectedTwinPanelTab({ tab: 'Change' }),
+      message: reviewMessage,
     },
     {
       label: 'Verified',
