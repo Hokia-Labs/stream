@@ -1933,7 +1933,7 @@ export const twinPage = (model: Model, h: H): Html => {
         ],
       ),
       panelTabs(model, h),
-      detailPanel(model, h),
+      h.div([h.Class('twin-detail')], [detailPanel(model, h)]),
     ],
   )
 }

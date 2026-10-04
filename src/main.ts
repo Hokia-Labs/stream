@@ -1276,6 +1276,60 @@ const CopyFinding = Command.define('CopyFinding', {
     ),
 })
 
+const scrollParent = (node: HTMLElement): HTMLElement => {
+  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+    const { overflowY } = getComputedStyle(parent)
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return parent
+    }
+  }
+  return document.scrollingElement instanceof HTMLElement
+    ? document.scrollingElement
+    : document.documentElement
+}
+
+const SmoothTwinTabSwitch = Command.define('SmoothTwinTabSwitch', {
+  messages: [Message.CompletedSmoothTwinTabSwitch],
+  execute: Effect.promise(async () => {
+    const detail = document.querySelector<HTMLElement>('.twin-detail')
+    if (!detail) {
+      return
+    }
+    const scroller = scrollParent(detail)
+    detail.style.minHeight = `${detail.offsetHeight}px`
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    const content = detail.firstElementChild
+    const naturalHeight =
+      scroller.scrollHeight -
+      detail.offsetHeight +
+      (content instanceof HTMLElement ? content.offsetHeight : 0)
+    const target = Math.min(
+      scroller.scrollTop,
+      naturalHeight - scroller.clientHeight,
+    )
+    if (target >= scroller.scrollTop) {
+      detail.style.minHeight = ''
+      return
+    }
+    const isReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    await new Promise<void>(resolve => {
+      const done = () => {
+        scroller.removeEventListener('scrollend', done)
+        resolve()
+      }
+      scroller.addEventListener('scrollend', done)
+      setTimeout(done, 800)
+      scroller.scrollTo({
+        top: target,
+        behavior: isReducedMotion ? 'instant' : 'smooth',
+      })
+    })
+    detail.style.minHeight = ''
+  }).pipe(Effect.as(Message.CompletedSmoothTwinTabSwitch())),
+})
+
 const ScrollTwinSignoff = Command.define('ScrollTwinSignoff', {
   messages: [Message.CompletedScrollTwinSignoff],
   execute: Dom.scrollIntoViewAfterPaint('#twin-signoff', {
@@ -2927,6 +2981,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       model: modifyFields(model, { twinFocus: () => focus }),
     }),
     SelectedTwinPanelTab: ({ tab }) => ({
+      commands: tab === model.twinPanelTab ? [] : [SmoothTwinTabSwitch()],
       model: modifyFields(model, {
         twinPanelTab: () => tab,
         seenRequirementsLabel: seen =>
@@ -3698,12 +3753,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         model,
         Message.SelectedTwinPanelTab({ tab: 'DO-254' }),
       )
-      return {
-        ...result,
-        commands: [...(result.commands ?? []), ScrollTwinSignoff()],
-      }
+      return { model: result.model, commands: [ScrollTwinSignoff()] }
     },
     CompletedScrollTwinSignoff: () => ({ model }),
+    CompletedSmoothTwinTabSwitch: () => ({ model }),
     PressedPageShortcut: ({ page }) =>
       update(model, Message.SelectedPage({ page })),
     PressedArtifactShortcut: ({ action }) => {

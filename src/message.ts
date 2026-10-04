@@ -209,6 +209,7 @@ export const Message = defineMessageUnion({
   CompletedFocusPalette: {},
   ClickedTwinSignoffStep: {},
   CompletedScrollTwinSignoff: {},
+  CompletedSmoothTwinTabSwitch: {},
   PressedPageShortcut: { page: Page },
   PressedArtifactShortcut: {
     action: Schema.Literals(['Next', 'Previous', 'Toggle', 'Edit']),
