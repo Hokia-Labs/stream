@@ -132,7 +132,14 @@ export const artifactReaderView = (
           h.div(
             [h.Class('reader-metadata')],
             [
-              h.span([h.Class('mono')], [item.id]),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('meta-link mono'),
+                  h.OnClick(Message.SelectedNode({ id: item.id })),
+                ],
+                [item.id],
+              ),
               h.span([], [item.kind]),
               h.span([], [item.status]),
               h.span([], [item.owner]),

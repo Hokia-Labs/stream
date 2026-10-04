@@ -9,6 +9,7 @@ import {
   type TwinReviewItem,
   TwinRevision,
 } from './domain'
+import { idLink, linkifyIds } from './id-link'
 import type { Model } from './main'
 import { Message } from './message'
 import { pageHeading } from './title-block'
@@ -635,9 +636,11 @@ export const twinPage = (model: Model, h: H): Html => {
                                   h.td(
                                     [],
                                     [
-                                      h.span(
-                                        [h.Class('mono small-text')],
-                                        [change.artifact.id],
+                                      idLink(
+                                        model,
+                                        change.artifact.id,
+                                        h,
+                                        'mono small-text',
                                       ),
                                       h.div([], [change.artifact.title]),
                                     ],
@@ -645,9 +648,12 @@ export const twinPage = (model: Model, h: H): Html => {
                                   h.td([], [change.artifact.subsystem]),
                                   h.td(
                                     [h.Class('twin-before')],
-                                    [change.before],
+                                    linkifyIds(model, change.before, h),
                                   ),
-                                  h.td([h.Class('twin-after')], [change.after]),
+                                  h.td(
+                                    [h.Class('twin-after')],
+                                    linkifyIds(model, change.after, h),
+                                  ),
                                   h.td(
                                     [],
                                     [

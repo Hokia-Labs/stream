@@ -27,6 +27,7 @@ import {
   validCloudflareAccountId,
   validCloudflareToken,
 } from './domain'
+import { idLink, linkifyIds } from './id-link'
 import {
   type Level,
   agentWave,
@@ -1074,7 +1075,7 @@ const approvalDiff = (model: Model, approval: Approval, h: H): Html => {
                 [],
                 [
                   h.th([], ['Field']),
-                  h.th([], [`At ${approval.runId}`]),
+                  h.th([], ['At ', idLink(model, approval.runId, h)]),
                   h.th([], ['Now']),
                 ],
               ),
@@ -1250,7 +1251,7 @@ const approvals = (
                         },
                         h,
                       )
-                    : h.p([], [approval.detail]),
+                    : h.p([], linkifyIds(model, approval.detail, h)),
                   h.div(
                     [h.Class('row-meta')],
                     [
@@ -2805,7 +2806,7 @@ const findingPanel = (
     task?.session._tag === 'Pi' ? `Pi session ${task.session.id}` : '',
   ]
     .filter(part => part.length > 0)
-    .join(' · ')
+    .flatMap((part, index) => [index > 0 ? ' · ' : '', idLink(model, part, h)])
   return h.aside(
     [
       h.Id('finding-drawer'),
@@ -2884,7 +2885,7 @@ const findingPanel = (
               h.h2([h.Id('finding-title')], [summary.title || agentName]),
             ],
           ),
-          h.p([h.Class('finding-drawer-meta mono')], [meta]),
+          h.p([h.Class('finding-drawer-meta mono')], meta),
         ],
       ),
       h.div(
@@ -3399,7 +3400,7 @@ const runDetail = (model: Model, run: Run, h: H): Html => {
             [
               h.p(
                 [h.Class('mono muted small-text')],
-                [run.id, ' · ', run.targetId],
+                [run.id, ' · ', idLink(model, run.targetId, h)],
               ),
               h.h2([], [run.title]),
             ],
@@ -3715,7 +3716,7 @@ const runsPage = (model: Model, h: H): Html => {
                 [h.Class('audit-row')],
                 [
                   h.span([h.Class('audit-dot')]),
-                  h.p([], [event]),
+                  h.p([], linkifyIds(model, event, h)),
                   h.span(
                     [h.Class('mono muted small-text')],
                     [`#${model.workspace.events.length - index}`],
@@ -4025,7 +4026,7 @@ const integrationsPage = (model: Model, h: H): Html => {
               ),
               h.p([h.Class('eyebrow')], [item.type]),
               h.h2([], [item.name]),
-              h.p([], [item.description]),
+              h.p([], linkifyIds(model, item.description, h)),
               h.button(
                 [
                   h.Type('button'),
@@ -4115,7 +4116,10 @@ const inspector = (model: Model, h: H, isClosing = false): Html =>
           ),
           h.h2([], [portionTag(artifactPortion(item), h), ' ', item.title]),
           badge(item.status, h),
-          h.p([h.Class('inspector-description')], [item.description]),
+          h.p(
+            [h.Class('inspector-description')],
+            linkifyIds(model, item.description, h),
+          ),
           h.dl(
             [h.Class('inspector-meta')],
             [

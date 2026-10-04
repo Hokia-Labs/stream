@@ -1,6 +1,7 @@
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { branchChanges, branchConflicts } from './branches'
+import { idLink, linkifyIds } from './id-link'
 import type { Model } from './main'
 import { Message } from './message'
 import { pageHeading } from './title-block'
@@ -172,7 +173,7 @@ export const branchesPage = (model: Model, h: HtmlBuilder<Message>): Html =>
                               h.summary(
                                 [],
                                 [
-                                  h.span([h.Class('mono')], [item.id]),
+                                  idLink(model, item.id, h, 'mono'),
                                   ' · ',
                                   item.title,
                                   conflicts.some(
@@ -219,7 +220,10 @@ export const branchesPage = (model: Model, h: HtmlBuilder<Message>): Html =>
                                     [
                                       h.p([h.Class('eyebrow')], ['PROPOSED']),
                                       h.strong([], [item.title]),
-                                      h.p([], [item.description]),
+                                      h.p(
+                                        [],
+                                        linkifyIds(model, item.description, h),
+                                      ),
                                       h.p(
                                         [h.Class('small-text mono')],
                                         [
