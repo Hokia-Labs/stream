@@ -34,13 +34,11 @@ import {
   analysisRows,
   avionicsChange,
   avionicsRequirementIds,
-  budgetMargin,
   busDemandKw,
   capacityKw,
   catalogBlocker,
   catalogImpact,
   catalogSpecLabels,
-  failureCases,
   hasTwinScenario,
   installedPart,
   isAvionicsUpgraded,
@@ -407,16 +405,6 @@ const plusIcon = (h: HtmlBuilder<Message>): Html =>
 const percent = (value: number): string =>
   `${value >= 0 ? '+' : '−'}${Math.abs(value * 100).toFixed(1)}%`
 
-const marginCell = (margin: number, h: H): Html =>
-  h.span(
-    [
-      h.Class(
-        `mono twin-margin ${margin < 0 ? 'bad' : margin < avionicsChange.requiredMargin ? 'low' : 'ok'}`,
-      ),
-    ],
-    [percent(margin)],
-  )
-
 const kw = (value: number): string => value.toFixed(2)
 
 const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
@@ -439,13 +427,7 @@ const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
       h.div(
         [h.Class('twin-capacity-labels')],
         [
-          h.span(
-            [],
-            [
-              h.strong([], [`${kw(demand)} kW`]),
-              isUpgraded ? ' demand with new avionics' : ' demand today',
-            ],
-          ),
+          h.span([], [h.strong([], [`${kw(demand)} kW`]), ' bus demand']),
           h.span(
             [h.Class(`twin-margin ${isShort ? 'bad' : 'ok'}`)],
             [
@@ -485,10 +467,7 @@ const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
         [h.Class('twin-capacity-scale mono')],
         [
           h.span([], ['0']),
-          h.span(
-            [],
-            [`Rev ${revision} with one module failed: ${kw(capacity)} kW`],
-          ),
+          h.span([], [`N−1 capacity · Rev ${revision}: ${kw(capacity)} kW`]),
           h.span([], [`${kw(scale)} kW`]),
         ],
       ),
@@ -496,189 +475,15 @@ const capacityBar = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
   )
 }
 
-const changeDriver = (
-  model: Model,
-  isRevB: boolean,
-  isUpgraded: boolean,
-  h: H,
-): Html => {
-  const rows = loadBudget()
+const changeDriver = (isRevB: boolean, isUpgraded: boolean, h: H): Html => {
   return h.section(
-    [h.Class('panel twin-wide'), h.AriaLabel('Change driver')],
+    [h.Class('panel twin-wide'), h.AriaLabel('Power budget')],
     [
       h.div(
         [h.Class('twin-section-head')],
-        [
-          h.h2(
-            [h.Class('twin-heading')],
-            [`Why the power assembly is changing · ${avionicsChange.id}`],
-          ),
-          h.span(
-            [
-              h.Class(
-                `small-text ${isRevB || !isUpgraded ? 'twin-margin ok' : 'twin-margin bad'}`,
-              ),
-            ],
-            [
-              isRevB
-                ? 'Rev B carries the new avionics with a module failed'
-                : isUpgraded
-                  ? 'Rev A can’t carry the new avionics if a module fails'
-                  : 'Rev A has margin with one module failed',
-            ],
-          ),
-        ],
+        [h.h2([h.Class('twin-heading')], ['Power budget'])],
       ),
       capacityBar(isRevB, isUpgraded, h),
-      h.details(
-        [h.Class('twin-details')],
-        [
-          h.summary([], ['Engineering details']),
-          h.p(
-            [h.Class('twin-driver-summary')],
-            [
-              h.strong([], [`${avionicsChange.title}. `]),
-              avionicsChange.summary,
-            ],
-          ),
-          h.div(
-            [h.Class('twin-driver')],
-            [
-              h.div(
-                [],
-                [
-                  h.h3([h.Class('twin-subheading')], ['New module load sheet']),
-                  h.dl(
-                    [h.Class('twin-facts')],
-                    avionicsChange.loadSheet.flatMap(([label, value]) => [
-                      h.dt([], [label]),
-                      h.dd([], [value]),
-                    ]),
-                  ),
-                ],
-              ),
-              h.div(
-                [],
-                [
-                  h.h3(
-                    [h.Class('twin-subheading')],
-                    [
-                      `Budget (demand / limit) at ${kw(busDemandKw)} kW bus load`,
-                    ],
-                  ),
-                  h.table(
-                    [h.Class('twin-table')],
-                    [
-                      h.thead(
-                        [],
-                        [
-                          h.tr(
-                            [],
-                            [
-                              'Check',
-                              'Req.',
-                              'Rev A',
-                              'Margin',
-                              'Rev B',
-                              'Margin',
-                            ].map(label => h.th([], [label])),
-                          ),
-                        ],
-                      ),
-                      h.tbody(
-                        [],
-                        rows.map(row =>
-                          h.keyed('tr')(
-                            row.check,
-                            [],
-                            [
-                              h.td([], [row.check]),
-                              h.td(
-                                [],
-                                [
-                                  idLink(
-                                    model,
-                                    row.traceId,
-                                    h,
-                                    'mono small-text',
-                                  ),
-                                ],
-                              ),
-                              h.td(
-                                [h.Class('mono nowrap')],
-                                [
-                                  `${kw(row.demand.A)} / ${kw(row.capacity.A)} ${row.unit}`,
-                                ],
-                              ),
-                              h.td([], [marginCell(budgetMargin(row, 'A'), h)]),
-                              h.td(
-                                [h.Class('mono nowrap')],
-                                [
-                                  `${kw(row.demand.B)} / ${kw(row.capacity.B)} ${row.unit}`,
-                                ],
-                              ),
-                              h.td([], [marginCell(budgetMargin(row, 'B'), h)]),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  h.p(
-                    [h.Class('muted small-text twin-driver-note')],
-                    [
-                      `Demand = ${avionicsChange.existingLoadKw} − ${avionicsChange.replacedKw} + ${avionicsChange.steadyKw} = ${kw(busDemandKw)} kW. N−1 capacity = (modules − 1) × ${avionicsChange.moduleRatingKw} kW; peak limit = ${avionicsChange.shortTermRating}× N−1. Heat = P × (1/η − 1), η = ${avionicsChange.efficiency}. Drop = I × R, I = ${avionicsChange.steadyKw * 1000} W / ${avionicsChange.busVolts} V. Margin = (limit − demand) / limit; design rule ≥ ${avionicsChange.requiredMargin * 100}%.`,
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          h.h3([h.Class('twin-subheading')], ['Failure cases']),
-          h.table(
-            [h.Class('twin-table twin-failures')],
-            [
-              h.thead(
-                [],
-                [
-                  h.tr(
-                    [],
-                    ['Failure', 'Rev A', 'Rev B'].map(label =>
-                      h.th([], [label]),
-                    ),
-                  ),
-                ],
-              ),
-              h.tbody(
-                [],
-                failureCases.map(item =>
-                  h.keyed('tr')(
-                    item.failure,
-                    [],
-                    [
-                      h.td([], [item.failure]),
-                      h.td(
-                        [h.Class(item.isShortA ? 'twin-margin bad' : '')],
-                        [item.effect.A],
-                      ),
-                      h.td(
-                        [h.Class(item.isShortA ? 'twin-margin ok' : '')],
-                        [item.effect.B],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      h.p(
-        [h.Class('muted small-text')],
-        [
-          'The F-35 is motivation only; nothing here claims F-35 compatibility or qualification.',
-        ],
-      ),
     ],
   )
 }
@@ -1396,7 +1201,7 @@ export const twinPage = (model: Model, h: H): Html => {
                 [h.Class('twin-wide')],
                 [workflowSteps(stage, isUpgraded, h)],
               ),
-              changeDriver(model, isRevB, isUpgraded, h),
+              changeDriver(isRevB, isUpgraded, h),
               proposalPanel(model, isUpgraded, isRevB, h),
               isRevB ? checkPanel(model, h) : h.empty,
               h.section(
