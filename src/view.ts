@@ -5147,7 +5147,7 @@ const systemStatus = (h: H): Html =>
   h.div(
     [h.Class('system-status mono'), h.Attribute('role', 'status')],
     [
-      h.span([h.Class('system-status-label')], ['Enclave']),
+      h.span([h.Class('system-status-label')], ['Network']),
       enclaveName,
       h.span(
         [h.Class('system-status-session')],

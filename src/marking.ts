@@ -3,7 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import type { Requirement } from './domain'
 
 export const systemHigh = 'SECRET//NOFORN'
-export const enclaveName = 'ATLAS-S'
+export const enclaveName = 'MW-SIPR-01'
 
 export type Portion = 'U' | 'CUI' | 'S//NF'
 
