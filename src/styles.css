@@ -7650,6 +7650,9 @@ button.graph-cluster-head:hover {
 .board-review-foot p {
   margin: 0 auto 0 0;
 }
+.board-review-foot > .button {
+  margin-top: 0;
+}
 .board-review-tabs {
   justify-self: start;
 }
@@ -7694,63 +7697,56 @@ button.graph-cluster-head:hover {
 .board-review-assembly {
   height: 440px;
 }
-.schematic-sheet svg {
+.schematic-viewer {
+  margin: 0;
+  border: 1px solid var(--rule);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-2);
+}
+.schematic-viewer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.schematic-boards {
+  display: flex;
+  gap: 12px;
+  padding-right: var(--space-3);
+  border-right: 1px solid var(--rule);
+}
+.schematic-boards .schematic-page {
+  font-size: var(--text-sm);
+}
+.schematic-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+.schematic-page {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  cursor: pointer;
+}
+.schematic-page:hover {
+  color: var(--ink);
+}
+.schematic-page.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.schematic-image {
+  display: block;
   width: 100%;
   height: auto;
-  font-family: 'IBM Plex Mono', monospace;
 }
-.schematic-wire {
-  fill: none;
-  stroke: #475569;
-  stroke-width: 1.5;
-}
-.schematic-block rect {
-  fill: #fff;
-  stroke: #64748b;
-  stroke-width: 1.2;
-}
-.schematic-block.diff-added rect {
-  fill: #dcfce7;
-  stroke: #16a34a;
-  stroke-width: 2;
-}
-.schematic-block.diff-changed rect {
-  fill: #fef3c7;
-  stroke: #d97706;
-  stroke-width: 2;
-}
-.schematic-block.diff-removed rect {
-  fill: #fee2e2;
-  stroke: #dc2626;
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
-}
-.schematic-ref {
-  font-size: 12px;
-  font-weight: 600;
-  fill: #0f172a;
-}
-.schematic-value,
-.schematic-net {
-  font-size: 10.5px;
-  fill: #475569;
-}
-.schematic-legend {
-  display: flex;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.schematic-viewer figcaption {
   font-size: var(--text-xs);
-}
-.schematic-legend li::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  vertical-align: -1px;
-  border: 2px solid currentColor;
+  color: var(--muted);
 }
 .diff-added {
   color: #15803d;

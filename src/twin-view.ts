@@ -4,11 +4,10 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import {
   type DiffState,
-  type SchematicBlock,
   isEngineerDesign,
   pdr,
   pdrItems,
-  schematic,
+  schematicBoards,
   schematicDiff,
   thermalReport,
   thermalResults,
@@ -1916,90 +1915,77 @@ export const twinPage = (model: Model, h: H): Html => {
 
 const diffClass = (state: DiffState): string => `diff-${state.toLowerCase()}`
 
-const schematicBlock = (
-  block: SchematicBlock,
-  x: number,
-  y: number,
-  width: number,
-  h: H,
-): Html =>
-  h.keyed('g')(
-    block.id,
-    [h.Class(`schematic-block ${diffClass(block.state)}`)],
-    [
-      h.rect([
-        h.X(String(x)),
-        h.Y(String(y)),
-        h.Width(String(width)),
-        h.Height('40'),
-      ]),
-      h.text(
-        [h.X(String(x + 8)), h.Y(String(y + 16)), h.Class('schematic-ref')],
-        [block.ref],
-      ),
-      h.text(
-        [h.X(String(x + 8)), h.Y(String(y + 31)), h.Class('schematic-value')],
-        [block.value],
-      ),
-    ],
-  )
-
-const wire = (d: string, h: H): Html =>
-  h.path([h.D(d), h.Class('schematic-wire')])
-
-const schematicSheet = (
-  revision: 'A' | 'B',
-  design: Model['twinDesign'],
-  h: H,
-): Html => {
-  const sheet = schematic(revision, design)
-  const rowGap = 48
-  const top = 40
-  const height = Math.max(
-    top + sheet.modules.length * rowGap + 20,
-    top + sheet.outputs.length * rowGap + 20,
-  )
-  const busX = 300
+const schematicViewer = (model: Model, h: H): Html => {
+  const board = schematicBoards[model.schematicBoard] ?? schematicBoards[0]
+  const page = Math.min(model.schematicPage, board.sheets.length - 1)
+  const sheet = board.sheets[page] ?? ''
   return h.figure(
-    [h.Class('schematic-sheet')],
+    [h.Class('schematic-viewer')],
     [
-      h.figcaption(
-        [],
-        [revision === 'A' ? 'Rev A · released' : 'Rev B · proposed'],
-      ),
-      h.svg(
+      h.div(
+        [h.Class('schematic-viewer-bar')],
         [
-          h.ViewBox(`0 0 560 ${height}`),
-          h.Role('img'),
-          h.AriaLabel(`Power board schematic, Rev ${revision}`),
-        ],
-        [
-          h.text(
-            [h.X('8'), h.Y('20'), h.Class('schematic-net')],
-            ['270 VDC A/B'],
+          h.div(
+            [
+              h.Class('schematic-boards'),
+              h.Role('group'),
+              h.AriaLabel('Board'),
+            ],
+            schematicBoards.map((item, index) =>
+              h.keyed('button')(
+                item.name,
+                [
+                  h.Type('button'),
+                  h.Class(
+                    index === model.schematicBoard
+                      ? 'schematic-page active'
+                      : 'schematic-page',
+                  ),
+                  h.AriaPressed(
+                    index === model.schematicBoard ? 'true' : 'false',
+                  ),
+                  h.OnClick(
+                    Message.SelectedSchematicSheet({ board: index, page: 0 }),
+                  ),
+                ],
+                [item.name],
+              ),
+            ),
           ),
-          h.text(
-            [h.X(String(busX - 30)), h.Y('20'), h.Class('schematic-net')],
-            ['48 V bus'],
+          h.div(
+            [
+              h.Class('schematic-pages'),
+              h.Role('group'),
+              h.AriaLabel('Schematic sheet'),
+            ],
+            board.sheets.map((name, index) =>
+              h.keyed('button')(
+                name,
+                [
+                  h.Type('button'),
+                  h.Class(`schematic-page ${index === page ? 'active' : ''}`),
+                  h.AriaPressed(index === page ? 'true' : 'false'),
+                  h.OnClick(
+                    Message.SelectedSchematicSheet({
+                      board: model.schematicBoard,
+                      page: index,
+                    }),
+                  ),
+                ],
+                [name],
+              ),
+            ),
           ),
-          wire(`M 92 30 V ${height - 16}`, h),
-          wire(`M ${busX} 30 V ${height - 16}`, h),
-          ...sheet.modules.flatMap((block, index) => {
-            const y = top + index * rowGap
-            return [
-              wire(`M 92 ${y + 20} H 120 M 250 ${y + 20} H ${busX}`, h),
-              schematicBlock(block, 120, y, 130, h),
-            ]
-          }),
-          ...sheet.outputs.flatMap((block, index) => {
-            const y = top + index * rowGap
-            return [
-              wire(`M ${busX} ${y + 20} H 330`, h),
-              schematicBlock(block, 330, y, 220, h),
-            ]
-          }),
         ],
       ),
+      h.img([
+        h.Class('schematic-image'),
+        h.Src(
+          `/schematics/${board.dir}/page-${String(page + 1).padStart(2, '0')}.png`,
+        ),
+        h.Alt(`KiCad schematic, ${board.name}, ${sheet}`),
+      ]),
+      h.figcaption([], [`KiCad Rev F · ${board.name} · ${sheet}`]),
     ],
   )
 }
@@ -2023,19 +2009,7 @@ const schematicTab = (model: Model, h: H): Html =>
         ],
         h,
       ),
-      h.div(
-        [h.Class('board-review-pair')],
-        [
-          schematicSheet('A', model.twinDesign, h),
-          schematicSheet('B', model.twinDesign, h),
-        ],
-      ),
-      h.ul(
-        [h.Class('schematic-legend')],
-        (['Added', 'Changed', 'Removed'] as const).map(state =>
-          h.keyed('li')(state, [h.Class(diffClass(state))], [state]),
-        ),
-      ),
+      schematicViewer(model, h),
       h.table(
         [h.Class('table board-review-table')],
         [
@@ -2236,15 +2210,33 @@ const thermalTab = (h: H): Html =>
                 [
                   h.td([], [row.location]),
                   h.td(
-                    [h.Class(row.a > row.limit ? 'diff-removed' : '')],
+                    [
+                      h.Class(
+                        row.a > (row.limit ?? Infinity) ? 'diff-removed' : '',
+                      ),
+                    ],
                     [`${row.a.toFixed(1)} °C`],
                   ),
                   h.td(
-                    [h.Class(row.b > row.limit ? 'diff-removed' : '')],
+                    [
+                      h.Class(
+                        row.b > (row.limit ?? Infinity) ? 'diff-removed' : '',
+                      ),
+                    ],
                     [`${row.b.toFixed(1)} °C`],
                   ),
-                  h.td([], [`≤ ${row.limit} °C`]),
-                  h.td([], [`${(row.limit - row.b).toFixed(1)} °C`]),
+                  h.td(
+                    [],
+                    [row.limit === undefined ? '—' : `≤ ${row.limit} °C`],
+                  ),
+                  h.td(
+                    [],
+                    [
+                      row.limit === undefined
+                        ? '—'
+                        : `${(row.limit - row.b).toFixed(1)} °C`,
+                    ],
+                  ),
                 ],
               ),
             ),

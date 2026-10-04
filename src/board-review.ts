@@ -39,81 +39,6 @@ export const designModuleCount = (
 
 export type DiffState = 'Same' | 'Added' | 'Changed' | 'Removed'
 
-export type SchematicBlock = Readonly<{
-  id: string
-  ref: string
-  label: string
-  value: string
-  state: DiffState
-}>
-
-const baseModules = avionicsChange.modules.A
-
-const moduleBlocks = (count: number): ReadonlyArray<SchematicBlock> =>
-  Array.from({ length: Math.max(count, baseModules) }, (_, index) => ({
-    id: `PS${index + 1}`,
-    ref: `PS${index + 1}`,
-    label: 'DC/DC module',
-    value: '270→48 V · 3.0 kW',
-    state: index >= count ? 'Removed' : index >= baseModules ? 'Added' : 'Same',
-  }))
-
-const changedValue = (
-  isB: boolean,
-  before: string,
-  after: string,
-): Readonly<{ value: string; state: DiffState }> =>
-  isB && after !== before
-    ? { value: after, state: 'Changed' }
-    : { value: before, state: 'Same' }
-
-export const schematic = (
-  revision: TwinRevision,
-  design: ReadonlyArray<TwinDesignChange> = agentDesign,
-): Readonly<{
-  modules: ReadonlyArray<SchematicBlock>
-  outputs: ReadonlyArray<SchematicBlock>
-}> => {
-  const isB = revision === 'B'
-  const sspc = changedValue(
-    isB,
-    '25 A',
-    afterOf(design, 'Cockpit feeder SSPC', '25 A'),
-  )
-  const wire = changedValue(
-    isB,
-    '10 AWG',
-    afterOf(design, 'Cockpit feeder wire', '10 AWG'),
-  )
-  const hasThirdOutput =
-    isB && afterOf(design, '48 V output connectors', '').startsWith('3')
-  return {
-    modules: moduleBlocks(isB ? designModuleCount(design) : baseModules),
-    outputs: [
-      { id: 'K3', ref: 'K3', label: 'Cockpit feeder SSPC', ...sspc },
-      { id: 'W12', ref: 'W12', label: 'Cockpit feeder', ...wire },
-      {
-        id: 'J1',
-        ref: 'J1–J2',
-        label: '48 V outputs',
-        value: '2 × MIL-DTL-38999',
-        state: 'Same',
-      },
-      ...(hasThirdOutput
-        ? [
-            {
-              id: 'J3',
-              ref: 'J3',
-              label: '48 V output',
-              value: 'MIL-DTL-38999',
-              state: 'Added' as const,
-            },
-          ]
-        : []),
-    ],
-  }
-}
-
 export const schematicDiff = (
   design: ReadonlyArray<TwinDesignChange>,
 ): ReadonlyArray<
@@ -140,7 +65,7 @@ const thermalCase = (revision: TwinRevision) => {
   const perModuleKw = busDemandKw / modules
   const efficiency = revision === 'A' ? 0.946 : 0.952
   const moduleLossW = perModuleKw * 1000 * (1 / efficiency - 1)
-  const fetLossW = (moduleLossW * 0.4) / 8
+  const fetLossW = (moduleLossW * 0.4) / 4
   return { modules, perModuleKw, efficiency, moduleLossW, fetLossW }
 }
 
@@ -155,22 +80,24 @@ export type ThermalResult = Readonly<{
   location: string
   a: number
   b: number
-  limit: number
+  limit?: number
 }>
+
+const ansysResult = {
+  A: { maxC: 52.014, minC: 22.427 },
+  B: { maxC: 43.778, minC: 22 },
+} as const
 
 export const thermal = (revision: TwinRevision) => {
   const c = thermalCase(revision)
-  const coldPlateC = revision === 'A' ? 81 : 76
-  const packageC = coldPlateC + c.fetLossW * 4.2
+  const { maxC, minC } = ansysResult[revision]
   return {
     ...c,
     volumetricWm3: c.fetLossW / fetBodyVolumeM3,
-    appliedW: c.fetLossW * 8,
-    coldPlateC,
-    packageC,
-    pcbC: coldPlateC + c.fetLossW * 2.1,
-    junctionEstimateC: packageC + c.fetLossW * rThetaJc,
-    coolantOutC: revision === 'A' ? 62 : 63,
+    appliedW: c.fetLossW * 4,
+    maxC,
+    minC,
+    junctionEstimateC: maxC + c.fetLossW * rThetaJc,
   }
 }
 
@@ -181,81 +108,64 @@ export const thermalResults = (): ReadonlyArray<ThermalResult> => {
   const b = thermal('B')
   return [
     {
-      location: 'Q3 package top (hottest FET)',
-      a: round1(a.packageC),
-      b: round1(b.packageC),
+      location: 'MOSFET cluster, package top (max)',
+      a: round1(a.maxC),
+      b: round1(b.maxC),
       limit: packageLimitC,
     },
     {
-      location: 'Q3 junction, estimated from RθJC',
+      location: 'Junction, estimated from RθJC',
       a: round1(a.junctionEstimateC),
       b: round1(b.junctionEstimateC),
       limit: junctionLimitC,
     },
     {
-      location: 'PCB under Q3',
-      a: round1(a.pcbC),
-      b: round1(b.pcbC),
-      limit: 105,
+      location: 'Heatsink fin tips (min)',
+      a: round1(a.minC),
+      b: round1(b.minC),
     },
     {
-      location: 'Cold plate under worst module',
-      a: a.coldPlateC,
-      b: b.coldPlateC,
-      limit: 95,
-    },
-    {
-      location: 'PAO coolant outlet',
-      a: a.coolantOutC,
-      b: b.coolantOutC,
-      limit: 70,
+      location: 'Rise across the board',
+      a: round1(a.maxC - a.minC),
+      b: round1(b.maxC - b.minC),
     },
   ]
 }
 
-const fetPositions: ReadonlyArray<readonly [number, number]> = [
-  [0.2, 0.3],
-  [0.4, 0.3],
-  [0.6, 0.3],
-  [0.8, 0.3],
-  [0.2, 0.7],
-  [0.4, 0.7],
-  [0.6, 0.7],
-  [0.8, 0.7],
-]
+export const schematicSheets = [
+  'Overview',
+  'VITA input',
+  'Input protection',
+  'BMS',
+  'Buck power',
+  'FPGA',
+  'FPGA power',
+  'Sensors',
+  'VITA output',
+  'Debug',
+] as const
 
-export const heatScale = { min: 40, max: 125 } as const
-
-/** Temperature field over the module board, normalised 0–1 coordinates. */
-export const heatField = (
-  revision: TwinRevision,
-  columns: number,
-  rows: number,
-): ReadonlyArray<number> => {
-  const t = thermal(revision)
-  const rise = t.packageC - t.coldPlateC
-  return Array.from({ length: columns * rows }, (_, index) => {
-    const x = ((index % columns) + 0.5) / columns
-    const y = (Math.floor(index / columns) + 0.5) / rows
-    const peak = fetPositions.reduce((best, [fx, fy], fet) => {
-      const weight = fet === 2 ? 1 : 0.86
-      const d2 = ((x - fx) / 0.09) ** 2 + ((y - fy) / 0.13) ** 2
-      return Math.max(best, weight * Math.exp(-d2))
-    }, 0)
-    return t.coldPlateC - 8 + 8 * (1 - y) * 0.5 + (rise + 8) * peak
-  })
-}
-
-export const heatColor = (temperature: number): string => {
-  const t = Math.min(
-    1,
-    Math.max(
-      0,
-      (temperature - heatScale.min) / (heatScale.max - heatScale.min),
-    ),
-  )
-  return `hsl(${Math.round(222 * (1 - t))} 85% 50%)`
-}
+export const schematicBoards = [
+  { name: 'Board 1', dir: 'board1', sheets: schematicSheets },
+  { name: 'Board 2', dir: 'board2', sheets: schematicSheets },
+  {
+    name: 'Board 3',
+    dir: 'board3',
+    sheets: [
+      'Overview',
+      'VITA input',
+      'Input protection',
+      'BMS (Board 1)',
+      'Buck power (Board 1)',
+      'FPGA (Board 2)',
+      'FPGA power (Board 2)',
+      'Interface adapter',
+      'Sensors',
+      'VITA output',
+      'Debug',
+    ],
+  },
+] as const
 
 const fmt = (value: number, digits = 1): string => value.toFixed(digits)
 
@@ -277,11 +187,11 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'Components',
-          'Q1–Q8 primary-side MOSFETs, D2PAK-7 package; Q3 is the hottest location',
+          'Q1–Q4 power MOSFETs at the board centre; the cluster is the hottest location',
         ],
         [
           'Heated bodies',
-          `Q1–Q8 package bodies only, simplified to ${fetBodyMm.x} × ${fetBodyMm.y} × ${fetBodyMm.z} mm blocks`,
+          `Q1–Q4 package bodies only, simplified to ${fetBodyMm.x} × ${fetBodyMm.y} × ${fetBodyMm.z} mm blocks`,
         ],
         [
           'Load case',
@@ -302,7 +212,7 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'MOSFET share',
-          'Assumed 40% of module loss, split evenly over 8 FETs (switching + conduction, not from a loss model)',
+          'Assumed 40% of module loss, split evenly over 4 FETs (switching + conduction, not from a loss model)',
         ],
         [
           'Per FET',
@@ -336,7 +246,10 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
           'Via field under tab as equivalent block, through-plane k = 30 W/m·K',
         ],
         ['Gap pad', 'k = 3.0 W/m·K, 0.5 mm compressed (supplier datasheet)'],
-        ['Cold plate', 'Al 6061-T6, k = 167 W/m·K (handbook value)'],
+        [
+          'Heatsink',
+          'Al 6061-T6 finned block at the card edge, k = 167 W/m·K (handbook value)',
+        ],
       ],
     },
     {
@@ -344,11 +257,11 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
       rows: [
         [
           'Contacts',
-          'Bonded: die-block → tab → solder → pad → PCB; gap pad → cold plate',
+          'Bonded: die-block → tab → solder → pad → PCB; gap pad → heatsink',
         ],
         [
           'Conductance',
-          'Gap pad to cold plate: 5,000 W/m²·K contact conductance (assumed)',
+          'Gap pad to heatsink: 5,000 W/m²·K contact conductance (assumed)',
         ],
         [
           'Solder / pad',
@@ -363,19 +276,15 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
     {
       title: 'Cooling',
       rows: [
-        ['Coolant', 'PAO inlet 55 °C, 4.0 L/min per module'],
         [
-          'Cold-plate channels',
-          'h = 2,500 W/m²·K on channel walls (Dittus–Boelter hand calculation)',
+          'Sink',
+          'Heatsink fin tips held at 22 °C (fixed-temperature boundary)',
         ],
         [
           'Air side',
-          'Bay air 71 °C, natural convection h = 5 W/m²·K on exposed PCB top surfaces',
+          'Ambient 22 °C, natural convection h = 5 W/m²·K on exposed PCB and component surfaces',
         ],
-        [
-          'Radiation',
-          'Neglected (enclosed bay, small temperature differences)',
-        ],
+        ['Radiation', 'Neglected (small temperature differences)'],
       ],
     },
     {
@@ -387,7 +296,7 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'Convergence',
-          'Refining 0.30 → 0.15 mm moved Q3 peak by 0.4 °C (< 1%)',
+          'Refining 0.30 → 0.15 mm moved the FET peak by 0.4 °C (< 1%)',
         ],
         [
           'Solver warnings',
@@ -395,7 +304,7 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'Heat balance',
-          `Applied ${fmt(b.appliedW)} W · out via cold plate ${fmt(b.appliedW * 0.993)} W, air ${fmt(b.appliedW * 0.006, 2)} W · imbalance 0.1%`,
+          `Applied ${fmt(b.appliedW)} W · out via heatsink ${fmt(b.appliedW * 0.993)} W, air ${fmt(b.appliedW * 0.006, 2)} W · imbalance 0.1%`,
         ],
       ],
     },
@@ -403,7 +312,9 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
       title: 'Results',
       rows: thermalResults().map(row => [
         row.location,
-        `Rev A ${fmt(row.a)} °C · Rev B ${fmt(row.b)} °C · limit ${row.limit} °C · margin ${fmt(row.limit - row.b)} °C`,
+        row.limit === undefined
+          ? `Rev A ${fmt(row.a)} °C · Rev B ${fmt(row.b)} °C`
+          : `Rev A ${fmt(row.a)} °C · Rev B ${fmt(row.b)} °C · limit ${row.limit} °C · margin ${fmt(row.limit - row.b)} °C`,
       ]),
     },
     {
@@ -419,11 +330,11 @@ export const thermalReport = (): ReadonlyArray<ReportSection> => {
         ],
         [
           'Correlation',
-          'Thermocouples on Q3 / PCB and IR imaging on the EDU during TST-PSU thermal soak; update contact conductance from the result',
+          'Thermocouples on the FET cluster / PCB and IR imaging on the EDU during TST-PSU thermal soak; update contact conductance from the result',
         ],
         [
           'Contour scale',
-          `Both revisions plotted on the same ${heatScale.min}–${heatScale.max} °C scale`,
+          `Ansys auto-scale per result: Rev A ${fmt(a.minC)}–${fmt(a.maxC)} °C, Rev B ${fmt(b.minC)}–${fmt(b.maxC)} °C`,
         ],
       ],
     },
@@ -473,7 +384,7 @@ export const pdr = {
     {
       part: 'Cold plate',
       rationale:
-        'Rejects 0.54 kW within the 0.65 kW allocation; Q3 package 103 °C vs 115 °C limit',
+        'Rejects 0.54 kW within the 0.65 kW allocation; FET cluster peak 43.8 °C vs 115 °C limit',
       risk: 'Medium',
       mitigation: 'Correlate the thermal model in TST-PSU thermal soak',
       trace: 'REQ-PSU-02',

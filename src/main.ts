@@ -164,6 +164,8 @@ export const Model = Schema.Struct({
   graphQuery: Schema.String,
   hiddenGraphKinds: Schema.Array(ArtifactKind),
   isMatrixGapsOnly: Schema.Boolean,
+  schematicBoard: Schema.Number,
+  schematicPage: Schema.Number,
   isSetupDismissed: Schema.Boolean,
   sidebarTreeHeight: Schema.Number,
   maybeTreeDrag: Schema.Option(
@@ -249,6 +251,8 @@ export const initialModel: Model = {
   graphQuery: '',
   hiddenGraphKinds: [],
   isMatrixGapsOnly: false,
+  schematicBoard: 0,
+  schematicPage: 0,
   isSetupDismissed: false,
   sidebarTreeHeight: treeDefaultHeight,
   maybeTreeDrag: Option.none(),
@@ -3047,6 +3051,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modal: () => Modal.BoardReview({ tab }),
             }),
           },
+    SelectedSchematicSheet: ({ board, page }) => ({
+      model: modifyFields(model, {
+        schematicBoard: () => board,
+        schematicPage: () => page,
+      }),
+    }),
     SelectedTwinPdrFile: ({ files }) => {
       const [file] = files
       return file ? { model, commands: [ReadTwinPdr({ file })] } : { model }
