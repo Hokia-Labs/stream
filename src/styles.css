@@ -8870,3 +8870,25 @@ p.launch-estimate {
   border-radius: 6px;
   text-align: center;
 }
+
+.table-toolbar .artifact-more {
+  margin-left: auto;
+}
+.table-toolbar .artifact-more-toggle,
+.table-toolbar .artifact-more .twin-more-toggle {
+  height: 36px;
+}
+.artifact-more-menu {
+  min-width: 220px;
+}
+.artifact-more-group {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xs);
+}
+.artifact-more-group select {
+  width: 100%;
+}

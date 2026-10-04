@@ -180,6 +180,7 @@ export const Model = Schema.Struct({
   ),
   isWorkspaceMenuOpen: Schema.Boolean,
   isTwinMenuOpen: Schema.Boolean,
+  isArtifactMenuOpen: Schema.Boolean,
   isUserMenuOpen: Schema.Boolean,
   hasAcknowledgedConsent: Schema.Boolean,
   hasLoadedNavigation: Schema.Boolean,
@@ -267,6 +268,7 @@ export const initialModel: Model = {
   maybeTreeDrag: Option.none(),
   isWorkspaceMenuOpen: false,
   isTwinMenuOpen: false,
+  isArtifactMenuOpen: false,
   isUserMenuOpen: false,
   hasAcknowledgedConsent: false,
   hasLoadedNavigation: false,
@@ -1475,7 +1477,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       }
     },
     ClickedArtifactFields: () => ({
-      model: modifyFields(model, { modal: () => Modal.ArtifactFields() }),
+      model: modifyFields(model, {
+        modal: () => Modal.ArtifactFields(),
+        isArtifactMenuOpen: () => false,
+      }),
     }),
     ToggledArtifactField: ({ field }) => ({
       model: modifyFields(model, {
@@ -1488,6 +1493,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     ClickedImport: () => ({
       model: modifyFields(model, {
         modal: () => Modal.WorkspaceImporter({ jsonText: '' }),
+        isArtifactMenuOpen: () => false,
       }),
     }),
     UpdatedImportJson: ({ jsonText }) => ({
@@ -2691,7 +2697,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       }),
     }),
     ClickedExport: () => ({
-      model,
+      model: modifyFields(model, { isArtifactMenuOpen: () => false }),
       commands: [ExportWorkspace({ workspace: model.workspace })],
     }),
     CompletedExport: () => notify(model, 'Workspace exported as JSON.'),
@@ -2887,6 +2893,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     ToggledTwinMenu: () => ({
       model: modifyFields(model, { isTwinMenuOpen: value => !value }),
+    }),
+    ToggledArtifactMenu: () => ({
+      model: modifyFields(model, { isArtifactMenuOpen: value => !value }),
+    }),
+    ClosedArtifactMenu: () => ({
+      model: modifyFields(model, { isArtifactMenuOpen: () => false }),
     }),
     ClosedTwinMenu: () => ({
       model: modifyFields(model, { isTwinMenuOpen: () => false }),
@@ -4163,6 +4175,34 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 filterMapEvent: event =>
                   event.key === 'Escape'
                     ? Option.some(Message.ClosedWorkspaceMenu())
+                    : Option.none(),
+              }),
+            )
+          : Stream.empty,
+    },
+  ),
+  artifactMenu: entry(
+    { isOpen: Schema.Boolean },
+    {
+      modelToDependencies: model => ({ isOpen: model.isArtifactMenuOpen }),
+      dependenciesToStream: ({ isOpen }) =>
+        isOpen
+          ? Stream.merge(
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'click',
+                filterMapEvent: event =>
+                  event.target instanceof Element &&
+                  event.target.closest('.artifact-more')
+                    ? Option.none()
+                    : Option.some(Message.ClosedArtifactMenu()),
+              }),
+              Subscription.fromEventFilterMap({
+                target: document,
+                type: 'keydown',
+                filterMapEvent: event =>
+                  event.key === 'Escape'
+                    ? Option.some(Message.ClosedArtifactMenu())
                     : Option.none(),
               }),
             )

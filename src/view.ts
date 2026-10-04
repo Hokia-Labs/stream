@@ -1805,14 +1805,19 @@ const inboxPage = (model: Model, h: H): Html => {
   )
 }
 
-const search = (model: Model, placeholder: string, h: H): Html =>
+const search = (
+  model: Model,
+  placeholder: string,
+  h: H,
+  label = placeholder,
+): Html =>
   h.div(
     [h.Class('search-input')],
     [
       icon('search', h),
       h.input([
         h.Type('search'),
-        h.AriaLabel(placeholder),
+        h.AriaLabel(label),
         h.Placeholder(placeholder),
         h.Value(model.search),
         h.OnInput(value => Message.UpdatedSearch({ value })),
@@ -1959,7 +1964,12 @@ const requirementsPage = (model: Model, h: H): Html => {
           h.div(
             [h.Class('table-toolbar')],
             [
-              search(model, 'Search artifacts…', h),
+              search(
+                model,
+                `Search ${items.length} artifacts…`,
+                h,
+                'Search artifacts…',
+              ),
               h.select(
                 [
                   h.AriaLabel('Filter artifacts'),
@@ -1974,47 +1984,74 @@ const requirementsPage = (model: Model, h: H): Html => {
                   'Draft',
                 ].map(value => h.option([h.Value(value)], [value])),
               ),
-              h.span(
-                [h.Class('muted small-text nowrap')],
-                [`${items.length} artifacts`],
-              ),
-              h.label(
-                [h.Class('toolbar-select')],
-                [
-                  h.span([h.Class('mono muted')], ['GROUP']),
-                  h.select(
-                    [
-                      h.AriaLabel('Group artifacts'),
-                      h.Value(model.groupBy),
-                      h.OnChange(value =>
-                        Message.SelectedGroupBy({
-                          groupBy:
-                            GroupBy.literals.find(item => item === value) ??
-                            'None',
-                        }),
-                      ),
-                    ],
-                    GroupBy.literals.map(value =>
-                      h.option(
-                        [h.Value(value)],
-                        [value === 'None' ? 'No grouping' : value],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              artifactViewSwitcher(model, h),
               h.div(
-                [h.Class('toolbar-end')],
+                [h.Class('twin-more artifact-more')],
                 [
-                  artifactViewSwitcher(model, h),
-                  button(
-                    'Fields',
-                    Message.ClickedArtifactFields(),
-                    'ghost small',
-                    h,
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button outline twin-more-toggle'),
+                      h.AriaLabel('Table options'),
+                      h.AriaExpanded(model.isArtifactMenuOpen),
+                      h.OnClick(Message.ToggledArtifactMenu()),
+                    ],
+                    ['⋯'],
                   ),
-                  button('Import', Message.ClickedImport(), 'ghost small', h),
-                  button('Export', Message.ClickedExport(), 'ghost small', h),
+                  model.isArtifactMenuOpen
+                    ? h.div(
+                        [h.Class('twin-more-menu artifact-more-menu')],
+                        [
+                          h.label(
+                            [h.Class('artifact-more-group')],
+                            [
+                              h.span([h.Class('muted')], ['Group by']),
+                              h.select(
+                                [
+                                  h.AriaLabel('Group artifacts'),
+                                  h.Value(model.groupBy),
+                                  h.OnChange(value =>
+                                    Message.SelectedGroupBy({
+                                      groupBy:
+                                        GroupBy.literals.find(
+                                          item => item === value,
+                                        ) ?? 'None',
+                                    }),
+                                  ),
+                                ],
+                                GroupBy.literals.map(value =>
+                                  h.option(
+                                    [h.Value(value)],
+                                    [value === 'None' ? 'No grouping' : value],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.OnClick(Message.ClickedArtifactFields()),
+                            ],
+                            ['Fields'],
+                          ),
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.OnClick(Message.ClickedImport()),
+                            ],
+                            ['Import'],
+                          ),
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.OnClick(Message.ClickedExport()),
+                            ],
+                            ['Export'],
+                          ),
+                        ],
+                      )
+                    : h.empty,
                 ],
               ),
             ],
