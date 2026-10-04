@@ -4067,42 +4067,9 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
     model.maybeCloudflareTest,
     test => test.state === 'Testing',
   )
-  return h.section(
-    [h.Class('panel credentials-panel')],
+  return h.div(
+    [h.Class('settings-credentials')],
     [
-      h.div(
-        [h.Class('credentials-heading')],
-        [
-          h.div(
-            [],
-            [
-              h.p([h.Class('eyebrow')], ['Workers AI · this browser only']),
-              h.h2([], ['Cloudflare credentials']),
-            ],
-          ),
-          h.span(
-            [
-              h.Class(
-                `badge ${model.cloudflareAiMode === 'WorkersAI' ? 'positive' : 'neutral'}`,
-              ),
-            ],
-            [cloudflareModeLabel(model)],
-          ),
-        ],
-      ),
-      h.p(
-        [],
-        [
-          'Stored only in this browser (localStorage), never in the workspace or exported packages. The local backend (',
-          h.code([], ['bun run dev:local']),
-          ') keeps it in memory and calls ',
-          Option.match(model.maybeExecutorStatus, {
-            onNone: () => 'Workers AI',
-            onSome: status => status.model,
-          }),
-          ' through your AI Gateway. Without a token, use Simulation.',
-        ],
-      ),
       ...(model.cloudflareAiMode === 'Locked'
         ? [
             h.p(
@@ -4117,7 +4084,7 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
         : []),
       h.form(
         [
-          h.Class('credentials-form'),
+          h.Class('settings-form'),
           h.OnSubmit(Message.SubmittedCloudflareCredentials()),
         ],
         [
@@ -4133,7 +4100,7 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
                 ),
                 h.Autocomplete('off'),
                 h.Spellcheck(false),
-                h.Placeholder('32-character Cloudflare account ID'),
+                h.Placeholder('32-character account ID'),
               ]),
             ],
           ),
@@ -4149,14 +4116,14 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
                 h.Spellcheck(false),
                 h.Placeholder(
                   model.hasStoredCloudflareToken
-                    ? 'Saved in this browser · enter a new token to replace it'
-                    : 'Token with Workers AI and AI Gateway permissions',
+                    ? 'Saved · enter to replace'
+                    : 'Workers AI + AI Gateway',
                 ),
               ]),
             ],
           ),
           h.div(
-            [h.Class('credentials-actions')],
+            [h.Class('settings-actions')],
             [
               h.button(
                 [
@@ -4164,29 +4131,8 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
                   h.Class('button primary'),
                   h.Disabled(!canSave),
                 ],
-                ['Save to this browser'],
+                ['Save'],
               ),
-              canSave
-                ? h.empty
-                : h.span(
-                    [h.Class('credentials-result')],
-                    ['Enter a valid account ID and API token to save.'],
-                  ),
-              ...(model.hasStoredCloudflareToken
-                ? [
-                    button(
-                      'Forget saved token',
-                      Message.ClickedForgetCloudflareCredentials(),
-                      'outline',
-                      h,
-                    ),
-                  ]
-                : []),
-            ],
-          ),
-          h.div(
-            [h.Class('credentials-test')],
-            [
               h.button(
                 [
                   h.Type('button'),
@@ -4196,16 +4142,18 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
                 ],
                 [testing ? 'Testing…' : 'Test connection'],
               ),
+              ...(model.hasStoredCloudflareToken
+                ? [
+                    button(
+                      'Forget token',
+                      Message.ClickedForgetCloudflareCredentials(),
+                      'ghost',
+                      h,
+                    ),
+                  ]
+                : []),
               Option.match(model.maybeCloudflareTest, {
-                onNone: () =>
-                  h.span(
-                    [h.Class('credentials-result')],
-                    [
-                      model.cloudflareTokenDraft
-                        ? 'Tests the token you entered with one short prompt.'
-                        : 'Tests the saved token with one short prompt.',
-                    ],
-                  ),
+                onNone: () => h.empty,
                 onSome: test =>
                   h.span(
                     [
@@ -4214,7 +4162,7 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
                     ],
                     [
                       test.state === 'Testing'
-                        ? 'Sending a test prompt through AI Gateway…'
+                        ? 'Testing…'
                         : `${test.state === 'Passed' ? 'Passed' : 'Failed'}${test.latencyMs ? ` · ${(test.latencyMs / 1000).toFixed(1)} s` : ''} — ${test.detail}`,
                     ],
                   ),
@@ -5115,19 +5063,22 @@ const modalContent = (model: Model, h: H): Html =>
       h.div(
         [h.Class('settings-dialog')],
         [
-          h.p([h.Class('eyebrow')], ['SETTINGS']),
-          h.h2([h.Id('dialog-title')], ['Agent execution']),
-          h.p(
-            [h.Class('subtitle')],
+          h.div(
+            [h.Class('settings-head')],
             [
-              'Workers AI through AI Gateway. Credentials are saved in this browser only.',
+              h.h2([h.Id('dialog-title')], ['Cloudflare Workers AI']),
+              h.span(
+                [
+                  h.Class(
+                    `badge ${model.cloudflareAiMode === 'WorkersAI' ? 'positive' : 'neutral'}`,
+                  ),
+                ],
+                [cloudflareModeLabel(model)],
+              ),
             ],
           ),
+          h.p([h.Class('subtitle')], ['Credentials stay in this browser.']),
           cloudflareCredentialsPanel(model, h),
-          h.div(
-            [h.Class('modal-footer')],
-            [button('Done', Message.ClosedModal(), 'primary', h)],
-          ),
         ],
       ),
   })

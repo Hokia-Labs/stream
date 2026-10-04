@@ -7926,8 +7926,31 @@ button.graph-cluster-head:hover {
   border: 1px solid var(--ink);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.12);
 }
-.settings-dialog .credentials-panel {
-  margin: 16px 0;
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-right: 32px;
+}
+.settings-dialog .subtitle {
+  margin: 6px 0 20px;
+}
+.settings-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.settings-form .form-field input {
+  width: 100%;
+}
+.settings-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 .tc-lockup {
   display: flex;

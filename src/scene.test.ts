@@ -215,9 +215,8 @@ describe('workspace UI wiring', () => {
       given(ready),
       click(role('button', { name: 'Account menu' })),
       click(role('menuitem', { name: 'Settings' })),
-      expect(role('dialog')).toContainText('Cloudflare credentials'),
-      click(role('button', { name: 'Done' })),
-      expect(role('dialog')).not.toExist(),
+      expect(role('dialog')).toContainText('Cloudflare Workers AI'),
+      expect(role('button', { name: 'Test connection' })).toExist(),
     )
   })
 
