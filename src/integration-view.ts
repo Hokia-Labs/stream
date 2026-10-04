@@ -43,7 +43,7 @@ const syncInfo: Readonly<
     tone: 'pending',
     path: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     detail:
-      'Stream has a newer revision than DOORS Next. The edits are held in a change set that has not been pushed back yet.',
+      'Stream has a newer revision than DOORS. The edits are held in a change set that has not been pushed back yet.',
   },
   'Check-in pending': {
     tone: 'pending',
@@ -94,10 +94,10 @@ export const fileIcon = (type: string, h: H): Html =>
 
 export const doorsLogo = (h: H): Html =>
   h.span(
-    [h.Class('doors-logo'), h.AriaLabel('IBM DOORS Next')],
+    [h.Class('doors-logo'), h.AriaLabel('IBM DOORS')],
     [
       h.img([h.Src('/ibm-logo.svg'), h.Alt(''), h.Class('ibm-logo')]),
-      h.span([], ['DOORS Next']),
+      h.span([], ['DOORS']),
     ],
   )
 
@@ -244,7 +244,7 @@ export const jiraPanel = (tickets: ReadonlyArray<JiraTicket>, h: H): Html =>
 export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
   const changed = rows.filter(row => row.state !== 'In sync').length
   return h.section(
-    [h.Class('panel sync-panel'), h.AriaLabel('DOORS Next module')],
+    [h.Class('panel sync-panel'), h.AriaLabel('DOORS module')],
     [
       h.table(
         [h.Class('sync-table')],
@@ -254,7 +254,7 @@ export const doorsPanel = (rows: ReadonlyArray<DoorsRow>, h: H): Html => {
             [
               h.tr(
                 [],
-                ['Requirement', 'Type', 'DOORS Next', 'Stream', 'Status'].map(
+                ['Requirement', 'Type', 'DOORS', 'Stream', 'Status'].map(
                   label => h.th([], [label]),
                 ),
               ),
