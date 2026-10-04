@@ -1953,19 +1953,7 @@ const requirementsPage = (model: Model, h: H): Html => {
       pageHeading(
         'Requirements',
         '',
-        h.div(
-          [h.Class('heading-actions')],
-          [
-            syncedWith([doorsLogo(h)], h),
-            button(
-              'New artifact',
-              Message.ClickedNewRequirement(),
-              'primary',
-              h,
-              'plus',
-            ),
-          ],
-        ),
+        h.div([h.Class('heading-actions')], [syncedWith([doorsLogo(h)], h)]),
         h,
       ),
       h.section(
