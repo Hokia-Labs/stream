@@ -50,7 +50,6 @@ import {
   installedPart,
   isAvionicsUpgraded,
   lowMargin,
-  proposalPartChanges,
   proposalReviewer,
   requirementChecks,
   signoffTitle,
@@ -744,21 +743,6 @@ const proposalPanel = (
               ],
             ),
             analysisLine(proposal === 'Pending', h),
-            h.p(
-              [h.Class('muted small-text')],
-              [
-                `${proposalPartChanges.length} part changes and ${derivedArtifacts.length} derived requirements (`,
-                ...derivedArtifacts.flatMap((artifact, index) => [
-                  ...(index > 0 ? [', '] : []),
-                  isRevB
-                    ? idLink(model, artifact.id, h, 'mono')
-                    : h.span([h.Class('mono')], [artifact.id]),
-                ]),
-                isRevB
-                  ? '), added to DOORS.'
-                  : '), added to DOORS on approval. The review has the details.',
-              ],
-            ),
             h.div(
               [h.Class(`twin-approver ${isRevB ? 'ok' : ''}`)],
               isRevB
