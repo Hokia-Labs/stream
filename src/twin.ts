@@ -403,6 +403,31 @@ export const loadBudget = (): ReadonlyArray<BudgetRow> => {
   ]
 }
 
+const avionicsArtifact = twinArtifacts.find(item => item.id === 'REQ-AVN-01')
+
+export const isAvionicsUpgraded = (
+  requirements: ReadonlyArray<Requirement>,
+): boolean => {
+  const current = requirements.find(item => item.id === 'REQ-AVN-01')
+  return current !== undefined && current.description !== avionicsArtifact?.revA
+}
+
+export const swapTwinAvionics = (
+  requirements: ReadonlyArray<Requirement>,
+): ReadonlyArray<Requirement> =>
+  requirements.map(item =>
+    item.id === 'REQ-AVN-01' &&
+    avionicsArtifact &&
+    item.description !== avionicsArtifact.revB
+      ? {
+          ...item,
+          description: avionicsArtifact.revB,
+          status: avionicsArtifact.statusB,
+          revision: item.revision + 1,
+        }
+      : item,
+  )
+
 export const budgetMargin = (row: BudgetRow, revision: TwinRevision): number =>
   (row.capacity[revision] - row.demand[revision]) / row.capacity[revision]
 

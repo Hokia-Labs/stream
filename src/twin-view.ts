@@ -22,6 +22,7 @@ import {
   busDemandKw,
   failureCases,
   hasTwinScenario,
+  isAvionicsUpgraded,
   limitLabel,
   loadBudget,
   lowMargin,
@@ -41,6 +42,7 @@ const twinSpec = CustomElement.define({
     twinOverlay: TwinOverlay,
     twinRevision: TwinRevision,
     twinCondition: TwinCondition,
+    twinAvionicsUpgraded: Schema.Boolean,
   },
   events: {
     'twin-pick': Schema.Struct({ part: Schema.String }),
@@ -568,12 +570,14 @@ export const twinPage = (model: Model, h: H): Html => {
   const changes = twinChanges(requirements)
   const subsystems = affectedSubsystems(changes)
   const isRevB = revision === 'B'
+  const isUpgraded = isAvionicsUpgraded(requirements)
   const isReviewed = model.twinReviewed.length === 3
   const pkg = model.maybeTwinPackage
   const isSent = Option.exists(pkg, item => item.isSent)
   const hasReports = model.twinReports.length > 0
   const steps: ReadonlyArray<Readonly<{ label: string; done: boolean }>> = [
     { label: 'Check the cockpit avionics change', done: true },
+    { label: 'Swap in the new cockpit avionics module', done: isUpgraded },
     {
       label: 'Inspect the aft bay',
       done: model.twinFocus === 'Aft bay' || isRevB,
@@ -601,39 +605,48 @@ export const twinPage = (model: Model, h: H): Html => {
         ],
         [plusIcon(h), 'Load F-35 power scenario'],
       )
-    : !isRevB
+    : !isUpgraded
       ? h.button(
           [
             h.Type('button'),
             h.Class('button primary'),
-            h.OnClick(Message.ClickedInstallTwinRevision({ revision: 'B' })),
+            h.OnClick(Message.ClickedSwapTwinAvionics()),
           ],
-          [arrowIcon(h), 'Place power assembly Rev B'],
+          [arrowIcon(h), 'Swap in new avionics module'],
         )
-      : h.button(
-          [
-            h.Type('button'),
-            h.Class('button primary'),
-            h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
-            h.Title(
-              isReviewed
-                ? 'Draft DO-254 reports'
-                : 'Sign off all three reviews to draft',
-            ),
-            h.OnClick(
-              hasReports
-                ? Message.ClickedDownloadTwinPackage()
-                : Message.ClickedGenerateTwinPackage(),
-            ),
-          ],
-          [
-            model.isGeneratingTwinPackage
-              ? 'Packaging…'
-              : hasReports
-                ? 'Download DO-254 package'
-                : 'Draft DO-254 reports',
-          ],
-        )
+      : !isRevB
+        ? h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.OnClick(Message.ClickedInstallTwinRevision({ revision: 'B' })),
+            ],
+            [arrowIcon(h), 'Place power assembly Rev B'],
+          )
+        : h.button(
+            [
+              h.Type('button'),
+              h.Class('button primary'),
+              h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
+              h.Title(
+                isReviewed
+                  ? 'Draft DO-254 reports'
+                  : 'Sign off all three reviews to draft',
+              ),
+              h.OnClick(
+                hasReports
+                  ? Message.ClickedDownloadTwinPackage()
+                  : Message.ClickedGenerateTwinPackage(),
+              ),
+            ],
+            [
+              model.isGeneratingTwinPackage
+                ? 'Packaging…'
+                : hasReports
+                  ? 'Download DO-254 package'
+                  : 'Draft DO-254 reports',
+            ],
+          )
   return h.div(
     [h.Class('twin-page')],
     [
@@ -688,6 +701,7 @@ export const twinPage = (model: Model, h: H): Html => {
                     twin.TwinOverlay(model.twinOverlay),
                     twin.TwinRevision(revision),
                     twin.TwinCondition(model.twinCondition),
+                    twin.TwinAvionicsUpgraded(isUpgraded),
                     twin.OnTwinPick(detail =>
                       Message.ClickedTwinPart({ part: detail.part }),
                     ),
@@ -757,18 +771,27 @@ export const twinPage = (model: Model, h: H): Html => {
                         ],
                         ['Revert to Rev A'],
                       )
-                    : h.button(
-                        [
-                          h.Type('button'),
-                          h.Class('button primary small'),
-                          h.OnClick(
-                            Message.ClickedInstallTwinRevision({
-                              revision: 'B',
-                            }),
-                          ),
-                        ],
-                        ['Place power assembly Rev B in the systems model'],
-                      ),
+                    : !isUpgraded
+                      ? h.button(
+                          [
+                            h.Type('button'),
+                            h.Class('button primary small'),
+                            h.OnClick(Message.ClickedSwapTwinAvionics()),
+                          ],
+                          [arrowIcon(h), 'Swap in new avionics module'],
+                        )
+                      : h.button(
+                          [
+                            h.Type('button'),
+                            h.Class('button primary small'),
+                            h.OnClick(
+                              Message.ClickedInstallTwinRevision({
+                                revision: 'B',
+                              }),
+                            ),
+                          ],
+                          ['Place power assembly Rev B in the systems model'],
+                        ),
                   h.h2([h.Class('twin-heading')], ['Affected subsystems']),
                   subsystems.length === 0
                     ? h.p(

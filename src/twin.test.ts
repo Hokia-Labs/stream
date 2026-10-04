@@ -52,6 +52,13 @@ describe('digital twin', () => {
     ).toHaveLength(loaded.workspace.requirements.length)
   })
 
+  it('swaps in the new avionics module before Rev B', () => {
+    const swapped = update(loaded, Message.ClickedSwapTwinAvionics()).model
+    const changes = twinChanges(swapped.workspace.requirements)
+    expect(changes.map(change => change.artifact.id)).toEqual(['REQ-AVN-01'])
+    expect(twinRevision(swapped.workspace.requirements)).toBe('A')
+  })
+
   it('placing Rev B revises requirements and the subsystems they touch', () => {
     const changes = twinChanges(revB.workspace.requirements)
     expect(twinRevision(revB.workspace.requirements)).toBe('B')

@@ -71,18 +71,25 @@ const slotX = (index: number, count: number): number =>
 
 const failedCount = (condition: Condition): number =>
   condition === 'Module failed' ? 1 : 0
-const utilization = (revision: Revision, condition: Condition): number =>
-  busDemandKw / capacityKw(revision, failedCount(condition))
+const utilization = (
+  revision: Revision,
+  condition: Condition,
+  demand: number,
+): number => demand / capacityKw(revision, failedCount(condition))
 const moduleTemperature = (load: number): number => 50 + 35 * load
 
 const green = new Color('#16a34a')
 const amber = new Color('#d97706')
 const red = new Color('#dc2626')
 
-const powerColor = (revision: Revision, condition: Condition): Color =>
-  utilization(revision, condition) > 1
+const powerColor = (
+  revision: Revision,
+  condition: Condition,
+  demand: number,
+): Color =>
+  utilization(revision, condition, demand) > 1
     ? red
-    : busDemandKw > capacityKw(revision, 1)
+    : demand > capacityKw(revision, 1)
       ? amber
       : green
 
@@ -166,6 +173,9 @@ export class StreamTwin extends HTMLElement {
   #airframe: Group | undefined
   #psu = new Group()
   #condition: Condition = 'Normal'
+  #upgraded = false
+  #dropPending = false
+  #dropStart: number | undefined
   #rack = new Group()
   #modules: Array<Mesh<BoxGeometry, MeshStandardMaterial>> = []
   #slideStart: number | undefined
@@ -244,6 +254,21 @@ export class StreamTwin extends HTMLElement {
   get twinCondition(): Condition {
     return this.#condition
   }
+  set twinAvionicsUpgraded(value: unknown) {
+    if (typeof value === 'boolean' && value !== this.#upgraded) {
+      this.#upgraded = value
+      this.#dropPending = value
+      this.#dropStart = undefined
+      this.#paint()
+    }
+  }
+  get twinAvionicsUpgraded(): boolean {
+    return this.#upgraded
+  }
+
+  #demand(): number {
+    return this.#upgraded ? busDemandKw : avionicsChange.existingLoadKw
+  }
 
   connectedCallback(): void {
     for (const key of [
@@ -251,6 +276,7 @@ export class StreamTwin extends HTMLElement {
       'twinOverlay',
       'twinRevision',
       'twinCondition',
+      'twinAvionicsUpgraded',
     ] as const) {
       if (Object.hasOwn(this, key)) {
         const value: unknown = Reflect.get(this, key)
@@ -560,7 +586,7 @@ export class StreamTwin extends HTMLElement {
   #paint(): void {
     const isThermal = this.#overlay === 'Thermal'
     const failed = failedCount(this.#condition)
-    const load = utilization(this.#revision, this.#condition)
+    const load = utilization(this.#revision, this.#condition, this.#demand())
     for (const [index, mesh] of this.#modules.entries()) {
       const isFailed = index < failed
       mesh.material.color = isFailed
@@ -575,7 +601,13 @@ export class StreamTwin extends HTMLElement {
         : new Color('#000000')
       mesh.material.needsUpdate = true
     }
-    const color = powerColor(this.#revision, this.#condition)
+    const color = powerColor(this.#revision, this.#condition, this.#demand())
+    this.#cockpit.material.color = new Color(
+      this.#upgraded ? '#f59e0b' : '#64748b',
+    )
+    this.#cockpit.material.emissive = new Color(
+      this.#upgraded ? '#f59e0b' : '#1e293b',
+    )
     for (const item of [this.#feeder, ...this.#pulses]) {
       if (item) {
         item.material.color = color.clone()
@@ -630,15 +662,31 @@ export class StreamTwin extends HTMLElement {
     const pulse =
       this.#focus === 'Aft bay' ? 1 : 1 + Math.sin(time / 380) * 0.05
     this.#psu.scale.setScalar(pulse)
-    this.#cockpit.material.emissiveIntensity =
-      0.45 + Math.sin(time / 260) * 0.35
-    const load = utilization(this.#revision, this.#condition)
+    if (this.#dropPending) {
+      this.#dropPending = false
+      this.#dropStart = time
+    }
+    const drop =
+      this.#dropStart === undefined
+        ? 1
+        : easeInOut(Math.min(1, (time - this.#dropStart) / 1100))
+    if (drop >= 1) {
+      this.#dropStart = undefined
+    }
+    this.#cockpit.position
+      .copy(this.#cockpitPosition)
+      .add(new Vector3(0, (1 - drop) * 0.6, 0))
+    this.#cockpit.scale.setScalar(this.#upgraded ? 1 : 0.75)
+    this.#cockpit.material.emissiveIntensity = !this.#upgraded
+      ? 0.2
+      : 0.45 + Math.sin(time / 260) * 0.35
+    const load = utilization(this.#revision, this.#condition, this.#demand())
     const curve = this.#curve
     if (curve) {
       for (const [index, item] of this.#pulses.entries()) {
         const speed = load > 1 ? 4200 : 1800
         const t = (time / speed + index / this.#pulses.length) % 1
-        item.position.copy(curve.getPointAt(1 - t))
+        item.position.copy(curve.getPointAt(t))
         item.material.opacity =
           load > 1 ? 0.35 + 0.6 * Math.abs(Math.sin(time / 90 + index)) : 0.95
       }
@@ -658,21 +706,25 @@ export class StreamTwin extends HTMLElement {
       const failed = failedCount(this.#condition)
       const available = capacityKw(this.#revision, failed)
       const isShort = load > 1
-      const tone = powerColor(this.#revision, this.#condition)
+      const demand = this.#demand()
+      const tone = powerColor(this.#revision, this.#condition, demand)
       label.className = `label ${tone === red ? 'red' : tone === amber ? 'amber' : 'green'}`
       const verdict = isShort
-        ? ` · SHORT ${(busDemandKw - available).toFixed(1)} kW`
-        : failed === 0 && busDemandKw > capacityKw(this.#revision, 1)
+        ? ` · SHORT ${(demand - available).toFixed(1)} kW`
+        : failed === 0 && demand > capacityKw(this.#revision, 1)
           ? ' · no N−1 margin'
           : ' · OK'
       const temperature =
         this.#overlay === 'Thermal'
           ? ` · ${Math.round(moduleTemperature(load))} °C`
           : ''
-      label.textContent = `MPA Rev ${this.#revision} · ${count - failed}/${count} modules · ${available.toFixed(1)} kW for ${busDemandKw.toFixed(1)} kW${verdict}${temperature}`
+      label.textContent = `MPA Rev ${this.#revision} · ${count - failed}/${count} modules · ${available.toFixed(1)} kW for ${demand.toFixed(1)} kW${verdict}${temperature}`
     }
     if (this.#cockpitLabel) {
-      this.#cockpitLabel.textContent = `${avionicsChange.id} · cockpit avionics +${(avionicsChange.steadyKw - avionicsChange.replacedKw).toFixed(1)} kW`
+      this.#cockpitLabel.className = `label ${this.#upgraded ? 'amber' : ''}`
+      this.#cockpitLabel.textContent = this.#upgraded
+        ? `${avionicsChange.id} · new cockpit avionics ${avionicsChange.steadyKw} kW (+${(avionicsChange.steadyKw - avionicsChange.replacedKw).toFixed(1)})`
+        : `Cockpit avionics · ${avionicsChange.replacedKw} kW`
     }
   }
 

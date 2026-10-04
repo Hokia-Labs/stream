@@ -61,8 +61,10 @@ import { pageShortcuts, paletteItems } from './palette'
 import {
   hasTwinScenario,
   installTwinRevision,
+  isAvionicsUpgraded,
   seedTwinArtifacts,
   signoffTitle,
+  swapTwinAvionics,
   twinPackageFiles,
   twinRevision,
 } from './twin'
@@ -2666,6 +2668,24 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     ClickedTwinPart: () => ({
       model: modifyFields(model, { twinFocus: () => 'Aft bay' }),
     }),
+    ClickedSwapTwinAvionics: () => {
+      const requirements = workingRequirements(model)
+      if (
+        !hasTwinScenario(requirements) ||
+        model.storage === 'Loading' ||
+        isAvionicsUpgraded(requirements)
+      ) {
+        return { model }
+      }
+      return persist(
+        modifyFields(model, { twinFocus: () => 'Airframe' }),
+        record(
+          writeRequirements(model, swapTwinAvionics(requirements)),
+          'ECP-0219 cockpit avionics module swapped in · Ben Juntilla',
+        ),
+        'New cockpit avionics module swapped in. REQ-AVN-01 revised.',
+      )
+    },
     ClickedInstallTwinRevision: ({ revision }) => {
       const requirements = workingRequirements(model)
       if (

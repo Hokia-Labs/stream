@@ -195,6 +195,7 @@ export const Message = defineMessageUnion({
   SelectedTwinOverlay: { overlay: TwinOverlay },
   SelectedTwinCondition: { condition: TwinCondition },
   ClickedTwinPart: { part: Schema.String },
+  ClickedSwapTwinAvionics: {},
   ClickedInstallTwinRevision: { revision: TwinRevision },
   ToggledTwinReview: { item: TwinReviewItem },
   ClickedGenerateTwinPackage: {},
