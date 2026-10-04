@@ -2,11 +2,7 @@ import { Array, Option, Order } from 'effect'
 import type { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { modifyFields } from 'foldkit/struct'
 
-import {
-  groupArtifacts,
-  matchesSavedView,
-  visibleArtifacts,
-} from './artifact-order'
+import { groupArtifacts, visibleArtifacts } from './artifact-order'
 import {
   artifactReaderView,
   artifactTree,
@@ -44,7 +40,12 @@ import {
   runSummary,
   taskAnchor,
 } from './insights'
-import { sidebarMaxWidth, sidebarMinWidth } from './layout'
+import {
+  sidebarMaxWidth,
+  sidebarMinWidth,
+  treeMaxHeight,
+  treeMinHeight,
+} from './layout'
 import type { Model } from './main'
 import {
   type Severity,
@@ -205,76 +206,6 @@ const sidebarInbox = (model: Model, h: H): Html => {
     ],
   )
 }
-const sidebarViews = (model: Model, h: H): Html =>
-  h.div(
-    [h.Class('sidebar-views')],
-    [
-      h.button(
-        [
-          h.Type('button'),
-          h.Class('nav-label nav-toggle'),
-          h.AriaExpanded(!model.isViewsCollapsed),
-          h.OnClick(Message.ToggledViewsSection()),
-        ],
-        [
-          icon('chevron', h),
-          'VIEWS',
-          h.span(
-            [h.Class('tiny-label')],
-            [String(model.workspace.views.length)],
-          ),
-        ],
-      ),
-      model.isViewsCollapsed
-        ? h.empty
-        : h.ul(
-            [h.Class('view-list')],
-            [
-              ...model.workspace.views.map(view =>
-                h.keyed('li')(
-                  view.id,
-                  [h.Class('view-row')],
-                  [
-                    h.button(
-                      [
-                        h.Type('button'),
-                        h.Class(
-                          `view-link ${model.page === 'Requirements' && matchesSavedView(model, view) ? 'active' : ''}`,
-                        ),
-                        h.OnClick(Message.SelectedSavedView({ id: view.id })),
-                      ],
-                      [h.span([h.Class('view-dot')]), view.name],
-                    ),
-                    h.button(
-                      [
-                        h.Type('button'),
-                        h.Class('view-delete'),
-                        h.AriaLabel(`Delete view ${view.name}`),
-                        h.OnClick(Message.ClickedDeleteView({ id: view.id })),
-                      ],
-                      ['×'],
-                    ),
-                  ],
-                ),
-              ),
-              h.keyed('li')(
-                'save-view',
-                [],
-                [
-                  h.button(
-                    [
-                      h.Type('button'),
-                      h.Class('view-link add'),
-                      h.OnClick(Message.ClickedSaveView()),
-                    ],
-                    [icon('plus', h), 'Save current view'],
-                  ),
-                ],
-              ),
-            ],
-          ),
-    ],
-  )
 export const setupSteps = (
   model: Model,
 ): ReadonlyArray<
@@ -300,17 +231,12 @@ export const setupSteps = (
     done: model.workspace.approvals.some(item => item.status !== 'Pending'),
     message: Message.SelectedPage({ page: 'Overview' }),
   },
-  {
-    label: 'Save a view',
-    done: model.workspace.views.length > 0,
-    message: Message.ClickedSaveView(),
-  },
 ]
 const setupChecklist = (model: Model, h: H): Html => {
   const steps = setupSteps(model)
   const done = steps.filter(step => step.done).length
   const percent = Math.round((done / steps.length) * 100)
-  return percent === 100
+  return percent === 100 || model.isSetupDismissed
     ? h.empty
     : h.div(
         [h.Class('setup-checklist'), h.AriaLabel('Setup checklist')],
@@ -319,7 +245,22 @@ const setupChecklist = (model: Model, h: H): Html => {
             [h.Class('setup-head')],
             [
               h.span([h.Class('nav-label')], ['SETUP']),
-              h.span([h.Class('mono small-text')], [`${percent}%`]),
+              h.span(
+                [h.Class('setup-head-end')],
+                [
+                  h.span([h.Class('mono small-text')], [`${percent}%`]),
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('setup-dismiss'),
+                      h.AriaLabel('Dismiss setup checklist'),
+                      h.Title('Dismiss'),
+                      h.OnClick(Message.DismissedSetup()),
+                    ],
+                    ['×'],
+                  ),
+                ],
+              ),
             ],
           ),
           h.div(
@@ -351,6 +292,27 @@ const setupChecklist = (model: Model, h: H): Html => {
         ],
       )
 }
+const sidebarTreeResizer = (model: Model, h: H): Html =>
+  h.div([
+    h.Class(
+      `sidebar-tree-resizer ${Option.isSome(model.maybeTreeDrag) ? 'active' : ''}`,
+    ),
+    h.Role('separator'),
+    h.AriaOrientation('horizontal'),
+    h.AriaLabel('Resize artifact tree'),
+    h.AriaValuemin(treeMinHeight),
+    h.AriaValuemax(treeMaxHeight),
+    h.AriaValuenow(model.sidebarTreeHeight),
+    h.Tabindex(0),
+    h.Title('Drag to resize · double-click to reset'),
+    h.OnPointerDown((_pointerType, mouseButton) =>
+      mouseButton === 0
+        ? Option.some(Message.PressedTreeHandle())
+        : Option.none(),
+    ),
+    h.OnDoubleClick(Message.ResetTreeHeight()),
+    h.OnKeyDown(key => Message.PressedTreeHandleKey({ key })),
+  ])
 const sidebarResizer = (model: Model, h: H): Html =>
   model.isSidebarCollapsed
     ? h.empty
@@ -528,7 +490,6 @@ const sidebar = (model: Model, h: H): Html =>
             ),
           ),
           sidebarInbox(model, h),
-          sidebarViews(model, h),
           setupChecklist(model, h),
         ],
       ),
@@ -537,8 +498,15 @@ const sidebar = (model: Model, h: H): Html =>
         [
           model.page === 'Requirements' || model.page === 'Systems graph'
             ? h.div(
-                [h.Class('sidebar-projects')],
                 [
+                  h.Class('sidebar-projects'),
+                  h.Attribute(
+                    'style',
+                    `--tree-h: ${model.sidebarTreeHeight}px`,
+                  ),
+                ],
+                [
+                  sidebarTreeResizer(model, h),
                   model.page === 'Requirements' ||
                   model.page === 'Systems graph'
                     ? h.select(
@@ -1774,12 +1742,6 @@ const requirementsPage = (model: Model, h: H): Html => {
               h.div(
                 [h.Class('toolbar-end')],
                 [
-                  button(
-                    'Save view',
-                    Message.ClickedSaveView(),
-                    'ghost small',
-                    h,
-                  ),
                   artifactViewSwitcher(model, h),
                   button(
                     'Fields',
@@ -4380,49 +4342,6 @@ const modalContent = (model: Model, h: H): Html =>
         ],
       )
     },
-    ViewEditor: editor =>
-      h.form(
-        [h.OnSubmit(Message.SubmittedView())],
-        [
-          h.p([h.Class('eyebrow')], ['SAVED VIEW']),
-          h.h2([h.Id('dialog-title')], ['Save current view']),
-          h.p(
-            [h.Class('subtitle')],
-            [
-              'Saves the filter, search, grouping, and sort. It appears under Views in the sidebar.',
-            ],
-          ),
-          field(
-            'View name',
-            editor.name,
-            value => Message.UpdatedViewName({ value }),
-            h,
-          ),
-          h.div(
-            [h.Class('chip-row')],
-            [
-              chip('Filter', model.filter, h),
-              chip('Group', model.groupBy, h),
-              chip(
-                'Sort',
-                Option.getOrElse(model.maybeSortKey, (): string => 'None'),
-                h,
-              ),
-              model.search ? chip('Search', model.search, h) : h.empty,
-            ],
-          ),
-          h.div(
-            [h.Class('modal-footer')],
-            [
-              button('Cancel', Message.ClosedModal(), 'ghost', h),
-              h.button(
-                [h.Type('submit'), h.Class('button primary')],
-                ['Save view'],
-              ),
-            ],
-          ),
-        ],
-      ),
     Shortcuts: () =>
       h.div(
         [],
@@ -5131,7 +5050,7 @@ export const view = (sourceModel: Model, h: H): Document => {
     body: h.div(
       [
         h.Class(
-          `app-shell ${model.isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${model.isResizingSidebar ? 'is-resizing' : ''} ${currentOrg.tenant === 'Gov' ? 'has-marking' : ''}`,
+          `app-shell ${model.isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${model.isResizingSidebar ? 'is-resizing' : ''} ${Option.isSome(model.maybeTreeDrag) ? 'is-resizing-tree' : ''} ${currentOrg.tenant === 'Gov' ? 'has-marking' : ''}`,
         ),
         h.Attribute('style', `--sidebar-width: ${model.sidebarWidth}px`),
       ],

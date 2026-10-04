@@ -2,11 +2,7 @@ import { Option } from 'effect'
 import { modifyFields } from 'foldkit/struct'
 import { describe, expect, it } from 'vitest'
 
-import {
-  groupArtifacts,
-  matchesSavedView,
-  visibleArtifacts,
-} from './artifact-order'
+import { groupArtifacts, visibleArtifacts } from './artifact-order'
 import { Modal } from './domain'
 import {
   impactCounts,
@@ -317,42 +313,26 @@ describe('display, views, and reruns', () => {
     ).not.toContain(key)
   })
 
-  it('saves, applies, and deletes a view', () => {
-    const filtered = update(
-      update(ready, Message.SelectedGroupBy({ groupBy: 'Owner' })).model,
-      Message.SelectedFilter({ value: 'Needs review' }),
-    ).model
-    const opened = update(filtered, Message.ClickedSaveView()).model
-    expect(opened.modal._tag).toBe('ViewEditor')
-    const named = update(
-      opened,
-      Message.UpdatedViewName({ value: 'Open reviews' }),
-    ).model
-    const saved = update(named, Message.SubmittedView()).model
-    const view = saved.workspace.views.find(
-      item => item.name === 'Open reviews',
+  it('dismisses the setup checklist', () => {
+    expect(update(ready, Message.DismissedSetup()).model.isSetupDismissed).toBe(
+      true,
     )
-    if (!view) {
-      throw new Error('Expected the saved view')
-    }
-    expect(view.groupBy).toBe('Owner')
-    expect(view.filter).toBe('Needs review')
-    const reset = modifyFields(saved, {
-      filter: () => 'All artifacts',
-      groupBy: () => 'None',
-    })
-    const applied = update(
-      reset,
-      Message.SelectedSavedView({ id: view.id }),
-    ).model
-    expect(applied.page).toBe('Requirements')
-    expect(applied.filter).toBe('Needs review')
-    expect(applied.groupBy).toBe('Owner')
-    expect(matchesSavedView(applied, view)).toBe(true)
+  })
+
+  it('resizes the sidebar tree by dragging and keys', () => {
+    const pressed = update(ready, Message.PressedTreeHandle()).model
+    const started = update(pressed, Message.MovedTreeHandle({ y: 500 })).model
+    const dragged = update(started, Message.MovedTreeHandle({ y: 400 })).model
+    expect(dragged.sidebarTreeHeight).toBe(ready.sidebarTreeHeight + 100)
+    const released = update(dragged, Message.ReleasedTreeHandle()).model
     expect(
-      update(applied, Message.ClickedDeleteView({ id: view.id })).model
-        .workspace.views,
-    ).not.toContainEqual(view)
+      update(released, Message.MovedTreeHandle({ y: 0 })).model
+        .sidebarTreeHeight,
+    ).toBe(dragged.sidebarTreeHeight)
+    expect(
+      update(released, Message.PressedTreeHandleKey({ key: 'Home' })).model
+        .sidebarTreeHeight,
+    ).toBe(96)
   })
 
   it('assigns an owner to selected artifacts', () => {

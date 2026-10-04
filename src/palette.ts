@@ -125,14 +125,6 @@ export const paletteItems = (
       hint: '',
       message: Message.SelectedRun({ id: run.id }),
     })),
-    ...model.workspace.views.map((view): PaletteItem => ({
-      id: `view-${view.id}`,
-      group: 'Recent',
-      label: view.name,
-      path: 'Views',
-      hint: '',
-      message: Message.SelectedSavedView({ id: view.id }),
-    })),
     ...pageShortcuts.map(({ page, key }): PaletteItem => ({
       id: `page-${page}`,
       group: 'Go to',

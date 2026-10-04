@@ -2,7 +2,7 @@ import { Array, Effect, Option, Order, Schema, Stream } from 'effect'
 import { Command, Dom, type Runtime, Subscription, type Update } from 'foldkit'
 import { modifyFields } from 'foldkit/struct'
 
-import { applySavedView, visibleArtifacts } from './artifact-order'
+import { visibleArtifacts } from './artifact-order'
 import {
   branchChanges,
   branchConflicts,
@@ -43,10 +43,14 @@ import { ExecutorStatus } from './executor'
 import { findingTasks, findingText, launchScopeRequirements } from './insights'
 import {
   clampSidebarWidth,
+  clampTreeHeight,
   sidebarDefaultWidth,
   sidebarMaxWidth,
   sidebarMinWidth,
   sidebarWidthKey,
+  treeDefaultHeight,
+  treeMaxHeight,
+  treeMinHeight,
 } from './layout'
 import { Message } from './message'
 import { pageShortcuts, paletteItems } from './palette'
@@ -123,7 +127,14 @@ export const Model = Schema.Struct({
   collapsedGroups: Schema.Array(Schema.String),
   pauseAfter: Schema.Array(Schema.Number),
   graphPreviewTab: GraphPreviewTab,
-  isViewsCollapsed: Schema.Boolean,
+  isSetupDismissed: Schema.Boolean,
+  sidebarTreeHeight: Schema.Number,
+  maybeTreeDrag: Schema.Option(
+    Schema.Struct({
+      startHeight: Schema.Number,
+      maybeStartY: Schema.Option(Schema.Number),
+    }),
+  ),
   isWorkspaceMenuOpen: Schema.Boolean,
   hasAcknowledgedConsent: Schema.Boolean,
   sidebarWidth: Schema.Number,
@@ -184,7 +195,9 @@ export const initialModel: Model = {
   collapsedGroups: [],
   pauseAfter: [],
   graphPreviewTab: 'Output',
-  isViewsCollapsed: false,
+  isSetupDismissed: false,
+  sidebarTreeHeight: treeDefaultHeight,
+  maybeTreeDrag: Option.none(),
   isWorkspaceMenuOpen: false,
   hasAcknowledgedConsent: false,
   sidebarWidth: 232,
@@ -1354,7 +1367,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             BranchEditor: editor =>
               modifyFields(editor, { title: () => value }),
             CommandPalette: () => modal,
-            ViewEditor: () => Modal.ViewEditor({ name: value }),
             Shortcuts: () => modal,
           }),
       }),
@@ -2273,75 +2285,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             : [...groups, key],
       }),
     }),
-    ClickedSaveView: () => ({
-      model: modifyFields(model, {
-        modal: () => Modal.ViewEditor({ name: '' }),
-      }),
-    }),
-    UpdatedViewName: ({ value }) => ({
-      model: modifyFields(model, {
-        modal: modal =>
-          modal._tag === 'ViewEditor'
-            ? Modal.ViewEditor({ name: value })
-            : modal,
-      }),
-    }),
-    SubmittedView: () => {
-      if (model.modal._tag !== 'ViewEditor' || model.storage === 'Loading') {
-        return { model }
-      }
-      const name = model.modal.name.trim()
-      if (!name) {
-        return notify(model, 'Name the view before saving it.')
-      }
-      const view = {
-        id: `VIEW-${model.workspace.nextId}`,
-        name,
-        filter: model.filter,
-        search: model.search,
-        groupBy: model.groupBy,
-        sort: Option.getOrElse(model.maybeSortKey, (): 'None' => 'None'),
-        direction: model.sortDirection,
-      }
-      return persist(
-        modifyFields(model, { modal: () => Modal.Closed() }),
-        record(
-          modifyFields(model.workspace, {
-            views: views => [...views, view],
-            nextId: next => next + 1,
-          }),
-          `View saved · ${name}`,
-        ),
-        `Saved view "${name}".`,
-      )
-    },
-    SelectedSavedView: ({ id }) => {
-      const view = model.workspace.views.find(item => item.id === id)
-      return view
-        ? {
-            model: modifyFields(applySavedView(model, view), {
-              page: () => 'Requirements',
-              artifactView: () => 'Table',
-              collapsedGroups: () => [],
-              selectedArtifactIds: () => [],
-            }),
-          }
-        : { model }
-    },
-    ClickedDeleteView: ({ id }) => {
-      const view = model.workspace.views.find(item => item.id === id)
-      return view
-        ? persist(
-            model,
-            record(
-              modifyFields(model.workspace, {
-                views: views => views.filter(item => item.id !== id),
-              }),
-              `View removed · ${view.name}`,
-            ),
-          )
-        : { model }
-    },
     SelectedBulkOwner: ({ owner }) => {
       const requirements = workingRequirements(model)
       const ids = new Set(
@@ -2395,8 +2338,66 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     ClosedWorkspaceMenu: () => ({
       model: modifyFields(model, { isWorkspaceMenuOpen: () => false }),
     }),
-    ToggledViewsSection: () => ({
-      model: modifyFields(model, { isViewsCollapsed: value => !value }),
+    DismissedSetup: () => ({
+      model: modifyFields(model, { isSetupDismissed: () => true }),
+    }),
+    PressedTreeHandle: () => ({
+      model: modifyFields(model, {
+        maybeTreeDrag: () =>
+          Option.some({
+            startHeight: model.sidebarTreeHeight,
+            maybeStartY: Option.none(),
+          }),
+      }),
+    }),
+    MovedTreeHandle: ({ y }) =>
+      Option.match(model.maybeTreeDrag, {
+        onNone: () => ({ model }),
+        onSome: drag =>
+          Option.match(drag.maybeStartY, {
+            onNone: () => ({
+              model: modifyFields(model, {
+                maybeTreeDrag: () =>
+                  Option.some({
+                    startHeight: drag.startHeight,
+                    maybeStartY: Option.some(y),
+                  }),
+              }),
+            }),
+            onSome: startY => ({
+              model: modifyFields(model, {
+                sidebarTreeHeight: () =>
+                  clampTreeHeight(drag.startHeight + startY - y),
+              }),
+            }),
+          }),
+      }),
+    ReleasedTreeHandle: () => ({
+      model: modifyFields(model, { maybeTreeDrag: () => Option.none() }),
+    }),
+    PressedTreeHandleKey: ({ key }) => {
+      const height =
+        key === 'ArrowUp'
+          ? model.sidebarTreeHeight + 16
+          : key === 'ArrowDown'
+            ? model.sidebarTreeHeight - 16
+            : key === 'Home'
+              ? treeMinHeight
+              : key === 'End'
+                ? treeMaxHeight
+                : undefined
+      return height === undefined
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              sidebarTreeHeight: () => clampTreeHeight(height),
+            }),
+          }
+    },
+    ResetTreeHeight: () => ({
+      model: modifyFields(model, {
+        sidebarTreeHeight: () => treeDefaultHeight,
+      }),
     }),
     PressedSidebarHandle: () =>
       model.isSidebarCollapsed
@@ -3045,6 +3046,30 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                 target: document,
                 type: 'pointerup',
                 mapEvent: () => Message.ReleasedGraphPan(),
+              }),
+            )
+          : Stream.empty,
+    },
+  ),
+  sidebarTreeResize: entry(
+    { isResizing: Schema.Boolean },
+    {
+      modelToDependencies: model => ({
+        isResizing: Option.isSome(model.maybeTreeDrag),
+      }),
+      dependenciesToStream: ({ isResizing }) =>
+        isResizing
+          ? Stream.merge(
+              Subscription.fromEvent({
+                target: document,
+                type: 'pointermove',
+                mapEvent: event =>
+                  Message.MovedTreeHandle({ y: event.clientY }),
+              }),
+              Subscription.fromEvent({
+                target: document,
+                type: 'pointerup',
+                mapEvent: () => Message.ReleasedTreeHandle(),
               }),
             )
           : Stream.empty,

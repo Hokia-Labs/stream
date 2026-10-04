@@ -5980,6 +5980,7 @@ body:has(.finding-drawer:not([data-state='closing'])) .toast {
 }
 
 .sidebar-bottom .sidebar-projects {
+  position: relative;
   margin: 0;
   padding: 0 0 12px;
   border-top: 0;
@@ -5989,7 +5990,7 @@ body:has(.finding-drawer:not([data-state='closing'])) .toast {
   margin-top: 0;
 }
 .sidebar-bottom .artifact-tree {
-  max-height: min(255px, 32vh);
+  max-height: min(var(--tree-h, 255px), calc(100vh - 320px));
   margin-top: 8px;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -6704,4 +6705,60 @@ button:disabled,
   display: block;
   width: 92%;
   height: auto;
+}
+
+.sidebar-tree-resizer {
+  position: absolute;
+  top: -17px;
+  right: calc(-1 * var(--sidebar-pad, 17px));
+  left: calc(-1 * var(--sidebar-pad, 17px));
+  z-index: 2;
+  height: 9px;
+  cursor: row-resize;
+  touch-action: none;
+}
+.sidebar-tree-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 4px 0 auto;
+  height: 1px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.sidebar-tree-resizer:hover::after,
+.sidebar-tree-resizer.active::after,
+.sidebar-tree-resizer:focus-visible::after {
+  height: 2px;
+  background: var(--accent);
+}
+.sidebar-tree-resizer:focus-visible {
+  outline: none;
+}
+.is-resizing-tree,
+.is-resizing-tree * {
+  cursor: row-resize !important;
+  user-select: none;
+}
+.setup-head-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.setup-dismiss {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.setup-dismiss:hover,
+.setup-dismiss:focus-visible {
+  color: var(--ink);
+  background: var(--surface);
 }

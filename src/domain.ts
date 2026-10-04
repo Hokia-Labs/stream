@@ -240,7 +240,6 @@ export const Modal = defineTaggedUnion({
   ArtifactFields: {},
   WorkspaceImporter: { jsonText: Schema.String },
   CommandPalette: { query: Schema.String, index: Schema.Number },
-  ViewEditor: { name: Schema.String },
   Shortcuts: {},
 })
 export type Modal = typeof Modal.Type

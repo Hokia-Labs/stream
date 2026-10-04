@@ -1,6 +1,6 @@
-import { Array, Option, type Order } from 'effect'
+import { Array, type Order } from 'effect'
 
-import type { GroupBy, Requirement, SavedView, SortKey } from './domain'
+import type { GroupBy, Requirement, SortKey } from './domain'
 import type { Model } from './main'
 
 const statusRank: Readonly<Record<Requirement['status'], number>> = {
@@ -47,23 +47,6 @@ export const visibleArtifacts = (
       : compare(value(right), value(left))
   return Array.sort(items, order)
 }
-
-export const applySavedView = (model: Model, view: SavedView): Model => ({
-  ...model,
-  filter: view.filter,
-  search: view.search,
-  groupBy: view.groupBy,
-  maybeSortKey: view.sort === 'None' ? Option.none() : Option.some(view.sort),
-  sortDirection: view.direction,
-})
-
-export const matchesSavedView = (model: Model, view: SavedView): boolean =>
-  model.filter === view.filter &&
-  model.search === view.search &&
-  model.groupBy === view.groupBy &&
-  Option.getOrElse(model.maybeSortKey, (): SavedView['sort'] => 'None') ===
-    view.sort &&
-  (view.sort === 'None' || model.sortDirection === view.direction)
 
 export type ArtifactGroup = Readonly<{
   key: string
