@@ -14,12 +14,15 @@ import { do254Files } from './do254'
 import type { Agent, Branch, Run } from './domain'
 import {
   ArtifactField,
+  ArtifactKind,
   ArtifactView,
   CloudflareAiMode,
   CloudflareTest,
   Execution,
   ExecutionMode,
   GraphPreviewTab,
+  GraphScope,
+  GraphView,
   GroupBy,
   Modal,
   Page,
@@ -135,6 +138,11 @@ export const Model = Schema.Struct({
   collapsedGroups: Schema.Array(Schema.String),
   pauseAfter: Schema.Array(Schema.Number),
   graphPreviewTab: GraphPreviewTab,
+  graphView: GraphView,
+  graphScope: GraphScope,
+  graphQuery: Schema.String,
+  hiddenGraphKinds: Schema.Array(ArtifactKind),
+  isMatrixGapsOnly: Schema.Boolean,
   isSetupDismissed: Schema.Boolean,
   sidebarTreeHeight: Schema.Number,
   maybeTreeDrag: Schema.Option(
@@ -207,6 +215,11 @@ export const initialModel: Model = {
   collapsedGroups: [],
   pauseAfter: [],
   graphPreviewTab: 'Output',
+  graphView: 'Graph',
+  graphScope: '2 hops',
+  graphQuery: '',
+  hiddenGraphKinds: [],
+  isMatrixGapsOnly: false,
   isSetupDismissed: false,
   sidebarTreeHeight: treeDefaultHeight,
   maybeTreeDrag: Option.none(),
@@ -2529,6 +2542,48 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     SelectedGraphPreviewTab: ({ tab }) => ({
       model: modifyFields(model, { graphPreviewTab: () => tab }),
+    }),
+    SelectedGraphView: ({ view }) => ({
+      model: modifyFields(model, { graphView: () => view }),
+    }),
+    SelectedGraphScope: ({ scope }) =>
+      Option.match(model.maybeSelectedNode, {
+        onNone: () => ({
+          model: modifyFields(model, { graphScope: () => scope }),
+        }),
+        onSome: id => ({
+          model: modifyFields(model, { graphScope: () => scope }),
+          commands: [RevealGraphNode({ id })],
+        }),
+      }),
+    UpdatedGraphQuery: ({ value }) => ({
+      model: modifyFields(model, { graphQuery: () => value }),
+    }),
+    SelectedGraphSearchResult: ({ id }) => ({
+      model: modifyFields(model, {
+        graphQuery: () => '',
+        graphView: () => 'Graph',
+        maybeSelectedNode: () => Option.some(id),
+      }),
+      commands: [RevealGraphNode({ id })],
+    }),
+    ToggledGraphKind: ({ kind }) => ({
+      model: modifyFields(model, {
+        hiddenGraphKinds: kinds =>
+          kinds.includes(kind)
+            ? kinds.filter(other => other !== kind)
+            : kinds.concat(kind),
+      }),
+    }),
+    ToggledMatrixGaps: () => ({
+      model: modifyFields(model, { isMatrixGapsOnly: isOn => !isOn }),
+    }),
+    SelectedMatrixArtifact: ({ id }) => ({
+      model: modifyFields(model, {
+        graphView: () => 'Graph',
+        maybeSelectedNode: () => Option.some(id),
+      }),
+      commands: [RevealGraphNode({ id })],
     }),
     ToggledWorkspaceMenu: () => ({
       model: modifyFields(model, { isWorkspaceMenuOpen: value => !value }),

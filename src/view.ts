@@ -17,6 +17,8 @@ import {
   ArtifactField,
   ExecutionMode,
   GraphPreviewTab,
+  GraphScope,
+  GraphView,
   GroupBy,
   LaunchScope,
   Modal,
@@ -27,6 +29,20 @@ import {
   validCloudflareAccountId,
   validCloudflareToken,
 } from './domain'
+import {
+  type GraphIndex,
+  cardLayout,
+  cardLimit,
+  focusItems,
+  graphIndex,
+  hiddenNeighbours,
+  matrixColumns,
+  matrixRowLimit,
+  matrixRows,
+  overviewLayout,
+  overviewZoom,
+  traceSet,
+} from './graph-scale'
 import { idLink, linkifyIds } from './id-link'
 import {
   type Level,
@@ -765,115 +781,56 @@ const topbar = (model: Model, h: H): Html =>
     ],
   )
 
-const graphPositions = (
-  items: ReadonlyArray<Requirement>,
-  compact: boolean,
-): ReadonlyArray<{ item: Requirement; x: number; y: number }> => {
-  const roots = items.filter(
-    item => !items.some(parent => parent.links.includes(item.id)),
-  )
-  const depth = (id: string, visited: ReadonlyArray<string>): number => {
-    if (visited.includes(id)) {
-      return 0
-    }
-    const parents = items.filter(item => item.links.includes(id))
-    return Array.isArrayEmpty(parents)
-      ? 0
-      : Math.min(
-          compact ? 2 : 3,
-          Math.max(
-            ...parents.map(parent => depth(parent.id, visited.concat(id))),
-          ) + 1,
-        )
-  }
-  const columns = items.map(item => ({
-    item,
-    column: roots.some(root => root.id === item.id) ? 0 : depth(item.id, []),
-  }))
-  const lastColumn = Math.max(0, ...columns.map(entry => entry.column))
-  const placed = Array.range(0, lastColumn).reduce<
-    ReadonlyArray<{ item: Requirement; column: number; row: number }>
-  >((done, column) => {
-    const weight = (item: Requirement): number => {
-      const parents = done.filter(parent => parent.item.links.includes(item.id))
-      return Array.isArrayEmpty(parents)
-        ? Number.MAX_SAFE_INTEGER
-        : parents.reduce((sum, parent) => sum + parent.row, 0) / parents.length
-    }
-    const entries = columns.filter(entry => entry.column === column)
-    const ordered =
-      column === 0
-        ? entries
-        : Array.sortWith(entries, entry => weight(entry.item), Order.Number)
-    return done.concat(
-      ordered.map((entry, row) => ({ item: entry.item, column, row })),
-    )
-  }, [])
-  return placed.map(entry => ({
-    item: entry.item,
-    x: 28 + entry.column * 242,
-    y: 36 + entry.row * 134,
-  }))
+const nodeIcon = (kind: Requirement['kind']): string =>
+  kind === 'Test'
+    ? 'test'
+    : kind === 'Design'
+      ? 'box'
+      : kind === 'Interface'
+        ? 'plug'
+        : 'file'
+interface GraphScene {
+  readonly index: GraphIndex
+  readonly visible: ReadonlyArray<Requirement>
+  readonly related: ReadonlySet<string>
+  readonly selected: string
+  readonly isOverview: boolean
 }
-const lineage = (
-  items: ReadonlyArray<Requirement>,
-  id: string,
-  visited: ReadonlyArray<string>,
-): ReadonlyArray<string> =>
-  items.flatMap(parent =>
-    parent.links.includes(id) && !visited.includes(parent.id)
-      ? [parent.id].concat(lineage(items, parent.id, visited.concat(parent.id)))
-      : [],
-  )
-const graphHeight = (
-  positions: ReadonlyArray<{ y: number }>,
-  compact: boolean,
-): number =>
-  Math.max(compact ? 416 : 490, ...positions.map(position => position.y + 144))
-const graph = (model: Model, compact: boolean, h: H): Html => {
-  const positions = graphPositions(model.workspace.requirements, compact)
-  const width = compact ? 744 : 966
-  const height = graphHeight(positions, compact)
-  const zoom = compact ? 1 : model.graphZoom
+const graphScene = (model: Model, compact: boolean): GraphScene => {
+  const items = model.workspace.requirements
+  const index = graphIndex(items)
   const selected = Option.getOrElse(model.maybeSelectedNode, () => '')
-  const related = selected
-    ? downstream(model.workspace.requirements, selected).concat(
-        lineage(model.workspace.requirements, selected, [selected]),
+  const visible = compact
+    ? items
+    : focusItems(
+        items,
+        index,
         selected,
+        model.graphScope,
+        model.hiddenGraphKinds,
       )
-    : []
-  const latest = model.workspace.runs[0]
-  const runTint = (id: string): string =>
-    !latest || !latest.requirements.some(item => item.id === id)
-      ? ''
-      : latest.tasks.some(task => task.status === 'Failed')
-        ? 'run-failed'
-        : `run-${latest.status.toLowerCase()}`
-  const preview = (id: string): string =>
-    summarizeFinding(
-      latest?.tasks.find(task => task.output.includes(id))?.output ?? '',
-    ).title
-  const edges = positions.flatMap(source =>
-    source.item.links.flatMap(id => {
-      const target = positions.find(position => position.item.id === id)
-      if (!target) {
-        return []
-      }
-      const x1 = source.x + 192,
-        y1 = source.y + 42,
-        x2 = target.x,
-        y2 = target.y + 42
-      const state = !selected
-        ? ''
-        : related.includes(source.item.id) && related.includes(target.item.id)
-          ? 'active'
-          : 'muted'
-      return [
-        `<path class="${state}" d="M${x1} ${y1} C${x1 + 38} ${y1},${x2 - 38} ${y2},${x2} ${y2}" fill="none"/><circle class="${state}" cx="${x2}" cy="${y2}" r="3"/>`,
-      ]
-    }),
-  )
-  return h.div(
+  return {
+    index,
+    visible,
+    related:
+      selected && index.byId.has(selected)
+        ? traceSet(index, selected, Number.POSITIVE_INFINITY)
+        : new Set<string>(),
+    selected,
+    isOverview:
+      visible.length > cardLimit ||
+      (!compact && model.graphZoom <= overviewZoom),
+  }
+}
+const graphFrame = (
+  compact: boolean,
+  width: number,
+  height: number,
+  zoom: number,
+  layers: ReadonlyArray<Html>,
+  h: H,
+): Html =>
+  h.div(
     [h.Class(`graph-scroll ${compact ? 'compact' : ''}`)],
     [
       h.div(
@@ -908,78 +865,523 @@ const graph = (model: Model, compact: boolean, h: H): Html => {
                     transform: `scale(${zoom})`,
                   }),
                 ],
+                layers,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  )
+const traceState = (scene: GraphScene, id: string): string =>
+  `${scene.selected === id ? 'selected' : ''} ${scene.related.has(id) ? 'related' : ''} ${scene.selected && !scene.related.has(id) ? 'dimmed' : ''}`
+const cardGraph = (
+  model: Model,
+  scene: GraphScene,
+  compact: boolean,
+  h: H,
+): Html => {
+  const positions = cardLayout(scene.visible, scene.index, compact ? 2 : 3)
+  const width = compact ? 744 : 966
+  const height = Math.max(
+    compact ? 416 : 490,
+    ...positions.map(position => position.y + 144),
+  )
+  const zoom = compact ? 1 : model.graphZoom
+  const placed = new Map(
+    positions.map(entry => [entry.item.id, entry] as const),
+  )
+  const shown = new Set(placed.keys())
+  const isFiltered = scene.visible.length < model.workspace.requirements.length
+  const latest = model.workspace.runs[0]
+  const runTint = (id: string): string =>
+    !latest || !latest.requirements.some(item => item.id === id)
+      ? ''
+      : latest.tasks.some(task => task.status === 'Failed')
+        ? 'run-failed'
+        : `run-${latest.status.toLowerCase()}`
+  const preview = (id: string): string =>
+    summarizeFinding(
+      latest?.tasks.find(task => task.output.includes(id))?.output ?? '',
+    ).title
+  const edges = positions.flatMap(source =>
+    (scene.index.children.get(source.item.id) ?? []).flatMap(id => {
+      const target = placed.get(id)
+      if (!target) {
+        return []
+      }
+      const x1 = source.x + 192,
+        y1 = source.y + 42,
+        x2 = target.x,
+        y2 = target.y + 42
+      const state = !scene.selected
+        ? ''
+        : scene.related.has(source.item.id) && scene.related.has(id)
+          ? 'active'
+          : 'muted'
+      return [
+        `<path class="${state}" d="M${x1} ${y1} C${x1 + 38} ${y1},${x2 - 38} ${y2},${x2} ${y2}" fill="none"/><circle class="${state}" cx="${x2}" cy="${y2}" r="3"/>`,
+      ]
+    }),
+  )
+  return graphFrame(
+    compact,
+    width,
+    height,
+    zoom,
+    [
+      h.div([
+        h.Class('edge-layer'),
+        h.AriaHidden(true),
+        h.InnerHTML(
+          `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${edges.join('')}</svg>`,
+        ),
+      ]),
+      ...positions.map(({ item, x, y }) =>
+        h.keyed('button')(
+          item.id,
+          [
+            h.Type('button'),
+            h.Class(
+              `graph-node ${traceState(scene, item.id)} ${runTint(item.id)}`,
+            ),
+            h.Style({ left: `${x}px`, top: `${y}px` }),
+            h.OnClick(Message.SelectedNode({ id: item.id })),
+            h.Attribute('data-node-id', item.id),
+            h.AriaLabel(`Inspect ${item.title}`),
+          ],
+          [
+            h.div(
+              [h.Class('node-meta')],
+              [
+                h.span(
+                  [h.Class(`node-icon ${item.kind.toLowerCase()}`)],
+                  [icon(nodeIcon(item.kind), h)],
+                ),
+                h.span([], [item.id]),
+                h.span([
+                  h.Class(
+                    `node-status ${item.status === 'Verified' ? '' : 'amber'}`,
+                  ),
+                ]),
+              ],
+            ),
+            h.strong(
+              [],
+              [portionTag(artifactPortion(item), h), ' ', item.title],
+            ),
+            h.span(
+              [h.Class('node-kind')],
+              [item.kind, h.span([], [`r${item.revision}`])],
+            ),
+            !compact && preview(item.id)
+              ? h.span([h.Class('node-preview mono')], [preview(item.id)])
+              : h.empty,
+          ],
+        ),
+      ),
+      ...(compact || !isFiltered
+        ? []
+        : positions.flatMap(({ item, x, y }) => {
+            const hidden = hiddenNeighbours(scene.index, item.id, shown)
+            return hidden === 0
+              ? []
+              : [
+                  h.keyed('button')(
+                    `${item.id}-more`,
+                    [
+                      h.Type('button'),
+                      h.Class('graph-more mono'),
+                      h.Style({ left: `${x + 112}px`, top: `${y - 9}px` }),
+                      h.Title(
+                        `${hidden} linked artifact${hidden === 1 ? '' : 's'} not shown. Focus ${item.id} to see them.`,
+                      ),
+                      h.AriaLabel(`Show ${hidden} more linked to ${item.id}`),
+                      h.OnClick(Message.SelectedNode({ id: item.id })),
+                    ],
+                    [`+${hidden}`],
+                  ),
+                ]
+          })),
+    ],
+    h,
+  )
+}
+const overviewGraph = (scene: GraphScene, compact: boolean, h: H): Html => {
+  const width = compact ? 744 : 966
+  const layout = overviewLayout(scene.visible, scene.index, width)
+  const height = Math.max(compact ? 416 : 490, layout.height)
+  return graphFrame(
+    compact,
+    width,
+    height,
+    1,
+    layout.clusters.map(cluster =>
+      h.keyed('div')(
+        cluster.key,
+        [
+          h.Class('graph-cluster'),
+          h.Style({
+            left: `${cluster.x}px`,
+            top: `${cluster.y}px`,
+            width: `${cluster.width}px`,
+            height: `${cluster.height}px`,
+          }),
+        ],
+        [
+          cluster.maybeSystemId
+            ? h.button(
                 [
-                  h.div([
-                    h.Class('edge-layer'),
-                    h.AriaHidden(true),
-                    h.InnerHTML(
-                      `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${edges.join('')}</svg>`,
-                    ),
-                  ]),
-                  ...positions.map(({ item, x, y }) =>
-                    h.keyed('button')(
-                      item.id,
-                      [
-                        h.Type('button'),
-                        h.Class(
-                          `graph-node ${selected === item.id ? 'selected' : ''} ${related.includes(item.id) ? 'related' : ''} ${selected && !related.includes(item.id) ? 'dimmed' : ''} ${runTint(item.id)}`,
-                        ),
-                        h.Style({ left: `${x}px`, top: `${y}px` }),
-                        h.OnClick(Message.SelectedNode({ id: item.id })),
-                        h.Attribute('data-node-id', item.id),
-                        h.AriaLabel(`Inspect ${item.title}`),
-                      ],
-                      [
-                        h.div(
-                          [h.Class('node-meta')],
-                          [
-                            h.span(
-                              [h.Class(`node-icon ${item.kind.toLowerCase()}`)],
-                              [
-                                icon(
-                                  item.kind === 'Test'
-                                    ? 'test'
-                                    : item.kind === 'Design'
-                                      ? 'box'
-                                      : item.kind === 'Interface'
-                                        ? 'plug'
-                                        : 'file',
-                                  h,
-                                ),
-                              ],
-                            ),
-                            h.span([], [item.id]),
-                            h.span([
-                              h.Class(
-                                `node-status ${item.status === 'Verified' ? '' : 'amber'}`,
-                              ),
-                            ]),
-                          ],
-                        ),
-                        h.strong(
-                          [],
-                          [
-                            portionTag(artifactPortion(item), h),
-                            ' ',
-                            item.title,
-                          ],
-                        ),
-                        h.span(
-                          [h.Class('node-kind')],
-                          [item.kind, h.span([], [`r${item.revision}`])],
-                        ),
-                        !compact && preview(item.id)
-                          ? h.span(
-                              [h.Class('node-preview mono')],
-                              [preview(item.id)],
-                            )
-                          : h.empty,
-                      ],
-                    ),
+                  h.Type('button'),
+                  h.Class('graph-cluster-head'),
+                  h.OnClick(
+                    Message.SelectedNode({ id: cluster.maybeSystemId }),
+                  ),
+                  h.Title(`Focus ${cluster.maybeSystemId}`),
+                ],
+                [
+                  h.span([h.Class('mono')], [cluster.maybeSystemId]),
+                  h.strong([], [cluster.title]),
+                  h.span(
+                    [h.Class('mono muted')],
+                    [cluster.members.length.toLocaleString('en-US')],
+                  ),
+                ],
+              )
+            : h.div(
+                [h.Class('graph-cluster-head')],
+                [
+                  h.strong([], [cluster.title]),
+                  h.span(
+                    [h.Class('mono muted')],
+                    [cluster.members.length.toLocaleString('en-US')],
                   ),
                 ],
               ),
+          ...cluster.members.map(({ item, x, y }) =>
+            h.keyed('button')(item.id, [
+              h.Type('button'),
+              h.Class(
+                `graph-dot kind-${item.kind.toLowerCase()} ${item.status === 'Verified' ? '' : 'pending'} ${traceState(scene, item.id)}`,
+              ),
+              h.Style({
+                left: `${x - cluster.x}px`,
+                top: `${y - cluster.y}px`,
+              }),
+              h.Attribute('data-node-id', item.id),
+              h.Title(`${item.id} · ${item.title} · ${item.status}`),
+              h.AriaLabel(`Inspect ${item.id} ${item.title}`),
+              h.OnClick(Message.SelectedNode({ id: item.id })),
+            ]),
+          ),
+        ],
+      ),
+    ),
+    h,
+  )
+}
+const graphMinimap = (model: Model, scene: GraphScene, h: H): Html => {
+  const items = model.workspace.requirements
+  if (scene.isOverview || scene.visible.length === items.length) {
+    return h.empty
+  }
+  const layout = overviewLayout(items, scene.index, 966)
+  const shown = new Set(scene.visible.map(item => item.id))
+  const scale = 180 / 966
+  const shapes = layout.clusters.flatMap(cluster =>
+    [
+      `<rect class="cluster" x="${cluster.x}" y="${cluster.y}" width="${cluster.width}" height="${cluster.height}"/>`,
+    ].concat(
+      cluster.members.map(
+        ({ item, x, y }) =>
+          `<rect class="${item.id === scene.selected ? 'selected' : shown.has(item.id) ? 'shown' : ''}" x="${x}" y="${y}" width="10" height="10"/>`,
+      ),
+    ),
+  )
+  return h.div(
+    [
+      h.Class('graph-minimap'),
+      h.AriaLabel(`${shown.size} of ${items.length} artifacts shown`),
+    ],
+    [
+      h.div([
+        h.AriaHidden(true),
+        h.InnerHTML(
+          `<svg width="180" height="${Math.ceil(layout.height * scale)}" viewBox="0 0 966 ${layout.height}">${shapes.join('')}</svg>`,
+        ),
+      ]),
+    ],
+  )
+}
+const graph = (model: Model, compact: boolean, h: H): Html =>
+  sceneGraph(model, graphScene(model, compact), compact, h)
+const sceneGraph = (
+  model: Model,
+  scene: GraphScene,
+  compact: boolean,
+  h: H,
+): Html =>
+  scene.isOverview
+    ? overviewGraph(scene, compact, h)
+    : cardGraph(model, scene, compact, h)
+const graphSearchMatches = (model: Model): ReadonlyArray<Requirement> => {
+  const query = model.graphQuery.trim().toLowerCase()
+  return query
+    ? model.workspace.requirements
+        .filter(
+          item =>
+            item.id.toLowerCase().includes(query) ||
+            item.title.toLowerCase().includes(query),
+        )
+        .slice(0, 8)
+    : []
+}
+const graphToolbar = (model: Model, scene: GraphScene, h: H): Html => {
+  const matches = graphSearchMatches(model)
+  const kinds = Array.dedupe(
+    model.workspace.requirements.map(item => item.kind),
+  )
+  const total = model.workspace.requirements.length
+  return h.div(
+    [h.Class('graph-toolbar')],
+    [
+      h.div(
+        [h.Class('segmented run-view-toggle'), h.Role('tablist')],
+        GraphView.literals.map(view =>
+          h.keyed('button')(
+            view,
+            [
+              h.Type('button'),
+              h.Role('tab'),
+              h.AriaSelected(model.graphView === view),
+              h.Class(model.graphView === view ? 'active' : ''),
+              h.OnClick(Message.SelectedGraphView({ view })),
             ],
+            [view],
+          ),
+        ),
+      ),
+      h.div(
+        [h.Class('graph-search search-input')],
+        [
+          icon('search', h),
+          h.input([
+            h.Type('search'),
+            h.AriaLabel('Find artifact'),
+            h.Placeholder('Find by ID or title'),
+            h.Value(model.graphQuery),
+            h.OnInput(value => Message.UpdatedGraphQuery({ value })),
+          ]),
+          model.graphQuery.trim()
+            ? h.ul(
+                [h.Class('graph-search-results'), h.Role('listbox')],
+                Array.isReadonlyArrayEmpty(matches)
+                  ? [h.li([h.Class('muted small-text')], ['No matches'])]
+                  : matches.map(item =>
+                      h.keyed('li')(
+                        item.id,
+                        [],
+                        [
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Role('option'),
+                              h.OnClick(
+                                Message.SelectedGraphSearchResult({
+                                  id: item.id,
+                                }),
+                              ),
+                            ],
+                            [
+                              h.span([h.Class('mono')], [item.id]),
+                              h.span([], [item.title]),
+                              h.span([h.Class('muted')], [item.kind]),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+              )
+            : h.empty,
+        ],
+      ),
+      model.graphView === 'Graph'
+        ? h.div(
+            [h.Class('graph-toolbar-group')],
+            [
+              h.span([h.Class('mono muted small-text')], ['TRACE']),
+              h.div(
+                [
+                  h.Class('segmented run-view-toggle'),
+                  h.Role('group'),
+                  h.AriaLabel('Trace depth around the selected artifact'),
+                ],
+                GraphScope.literals.map(scope =>
+                  h.keyed('button')(
+                    scope,
+                    [
+                      h.Type('button'),
+                      h.AriaPressed(
+                        model.graphScope === scope ? 'true' : 'false',
+                      ),
+                      h.Class(model.graphScope === scope ? 'active' : ''),
+                      h.Title(
+                        scene.selected
+                          ? `Show ${scope === 'All' ? 'the whole trace' : scope} up and downstream of ${scene.selected}`
+                          : 'Select an artifact to focus its trace',
+                      ),
+                      h.OnClick(Message.SelectedGraphScope({ scope })),
+                    ],
+                    [scope],
+                  ),
+                ),
+              ),
+            ],
+          )
+        : h.button(
+            [
+              h.Type('button'),
+              h.Class(`kind-chip ${model.isMatrixGapsOnly ? 'on' : ''}`),
+              h.AriaPressed(model.isMatrixGapsOnly ? 'true' : 'false'),
+              h.OnClick(Message.ToggledMatrixGaps()),
+            ],
+            ['Gaps only'],
+          ),
+      model.graphView === 'Graph'
+        ? h.div(
+            [
+              h.Class('graph-toolbar-group'),
+              h.Role('group'),
+              h.AriaLabel('Kinds'),
+            ],
+            kinds.map(kind =>
+              h.keyed('button')(
+                kind,
+                [
+                  h.Type('button'),
+                  h.Class(
+                    `kind-chip kind-${kind.toLowerCase()} ${model.hiddenGraphKinds.includes(kind) ? 'off' : 'on'}`,
+                  ),
+                  h.AriaPressed(
+                    model.hiddenGraphKinds.includes(kind) ? 'false' : 'true',
+                  ),
+                  h.OnClick(Message.ToggledGraphKind({ kind })),
+                ],
+                [h.span([h.Class('kind-swatch')]), kind],
+              ),
+            ),
+          )
+        : h.empty,
+      h.span(
+        [h.Class('graph-count mono muted small-text')],
+        [
+          model.graphView === 'Matrix' || scene.visible.length === total
+            ? `${total.toLocaleString('en-US')} artifacts`
+            : `${scene.visible.length.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} shown`,
+        ],
+      ),
+    ],
+  )
+}
+const traceMatrix = (model: Model, scene: GraphScene, h: H): Html => {
+  const rows = matrixRows(model.workspace.requirements, scene.index)
+  const gaps = rows.filter(row => row.hasGap).length
+  const filtered = model.isMatrixGapsOnly
+    ? rows.filter(row => row.hasGap)
+    : rows
+  const shown = filtered.slice(0, matrixRowLimit)
+  const artifactButton = (item: Requirement): Html =>
+    h.keyed('button')(
+      item.id,
+      [
+        h.Type('button'),
+        h.Class(
+          `matrix-id mono ${item.status === 'Verified' ? 'verified' : 'pending'}`,
+        ),
+        h.Title(`${item.id} · ${item.title} · ${item.status}`),
+        h.OnClick(Message.SelectedMatrixArtifact({ id: item.id })),
+      ],
+      [item.id],
+    )
+  return h.div(
+    [h.Class('trace-matrix-wrap')],
+    [
+      h.p(
+        [h.Class('trace-matrix-summary small-text')],
+        [
+          h.strong([], [`${rows.length.toLocaleString('en-US')} requirements`]),
+          ' · ',
+          h.span(
+            [h.Class(gaps > 0 ? 'gap-text' : '')],
+            [`${gaps.toLocaleString('en-US')} without a linked test`],
+          ),
+          filtered.length > shown.length
+            ? h.span(
+                [h.Class('muted')],
+                [
+                  ` · first ${shown.length} of ${filtered.length.toLocaleString('en-US')} rows; use Find to jump to one`,
+                ],
+              )
+            : h.empty,
+        ],
+      ),
+      h.table(
+        [h.Class('trace-matrix')],
+        [
+          h.thead(
+            [],
+            [
+              h.tr(
+                [],
+                [
+                  h.th([], ['Artifact']),
+                  ...matrixColumns.map(kind => h.th([], [kind])),
+                ],
+              ),
+            ],
+          ),
+          h.tbody(
+            [],
+            shown.map(row =>
+              h.keyed('tr')(
+                row.item.id,
+                [h.Class(row.hasGap ? 'has-gap' : '')],
+                [
+                  h.th(
+                    [],
+                    [
+                      artifactButton(row.item),
+                      h.span([h.Class('matrix-title')], [row.item.title]),
+                    ],
+                  ),
+                  ...row.cells.map((cell, column) => {
+                    const kind = matrixColumns[column] ?? ''
+                    const isGap = row.hasGap && kind === 'Test'
+                    const tone = Array.isReadonlyArrayEmpty(cell)
+                      ? isGap
+                        ? 'gap'
+                        : 'empty'
+                      : cell.every(item => item.status === 'Verified')
+                        ? 'verified'
+                        : 'pending'
+                    return h.td(
+                      [h.Class(`matrix-cell ${tone}`)],
+                      isGap
+                        ? ['No test']
+                        : [
+                            ...cell.slice(0, 3).map(artifactButton),
+                            cell.length > 3
+                              ? h.span(
+                                  [h.Class('muted mono')],
+                                  [`+${cell.length - 3}`],
+                                )
+                              : h.empty,
+                          ],
+                    )
+                  }),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -2180,6 +2582,39 @@ const requirementsPage = (model: Model, h: H): Html => {
   )
 }
 
+const overviewLegend = (h: H): Html =>
+  h.div(
+    [h.Class('graph-legend'), h.AriaLabel('Graph legend')],
+    [
+      ...(
+        [
+          'Requirement',
+          'System',
+          'Function',
+          'Design',
+          'Test',
+          'Interface',
+          'Risk',
+        ] as const
+      ).map(kind =>
+        h.span(
+          [h.Class('legend-item')],
+          [
+            h.span([h.Class(`graph-dot static kind-${kind.toLowerCase()}`)]),
+            kind,
+          ],
+        ),
+      ),
+      h.span(
+        [h.Class('legend-item')],
+        [h.span([h.Class('graph-dot static pending')]), 'Draft / review'],
+      ),
+      h.span(
+        [h.Class('legend-item muted')],
+        ['Click a dot or system to focus'],
+      ),
+    ],
+  )
 const graphLegend = (h: H): Html =>
   h.div(
     [h.Class('graph-legend'), h.AriaLabel('Graph legend')],
@@ -2390,8 +2825,9 @@ const shortcutRows: ReadonlyArray<readonly [ReadonlyArray<string>, string]> = [
   [['J', 'K'], 'Step between findings in the finding panel'],
   [['Esc'], 'Close dialog or finding panel'],
 ]
-const graphPage = (model: Model, h: H): Html =>
-  h.div(
+const graphPage = (model: Model, h: H): Html => {
+  const scene = graphScene(model, false)
+  return h.div(
     [h.Class('graph-page')],
     [
       pageHeading(
@@ -2414,13 +2850,7 @@ const graphPage = (model: Model, h: H): Html =>
             [
               h.div(
                 [h.Class('inline-heading')],
-                [
-                  h.h2([], ['Atlas systems graph']),
-                  h.span(
-                    [h.Class('count-pill')],
-                    [`${model.workspace.requirements.length} artifacts`],
-                  ),
-                ],
+                [h.h2([], ['Atlas systems graph'])],
               ),
               button(
                 'Analyze impact',
@@ -2431,29 +2861,33 @@ const graphPage = (model: Model, h: H): Html =>
               ),
             ],
           ),
-          h.div(
-            [h.Class('graph-stage')],
-            [
-              Array.isReadonlyArrayEmpty(model.workspace.requirements)
-                ? empty(
-                    'No artifacts to graph',
-                    'Import requirements or create an artifact to draw the systems graph.',
-                    h,
-                    'graph',
-                    button(
-                      'Import requirements',
-                      Message.ClickedImport(),
-                      'primary',
-                      h,
-                      'download',
-                    ),
-                  )
-                : graph(model, false, h),
-              h.div([h.Class('graph-overlay')], [graphControls(model, h)]),
-              graphLegend(h),
-              graphPreview(model, h),
-            ],
-          ),
+          graphToolbar(model, scene, h),
+          model.graphView === 'Matrix'
+            ? traceMatrix(model, scene, h)
+            : h.div(
+                [h.Class('graph-stage')],
+                [
+                  Array.isReadonlyArrayEmpty(model.workspace.requirements)
+                    ? empty(
+                        'No artifacts to graph',
+                        'Import requirements or create an artifact to draw the systems graph.',
+                        h,
+                        'graph',
+                        button(
+                          'Import requirements',
+                          Message.ClickedImport(),
+                          'primary',
+                          h,
+                          'download',
+                        ),
+                      )
+                    : sceneGraph(model, scene, false, h),
+                  h.div([h.Class('graph-overlay')], [graphControls(model, h)]),
+                  scene.isOverview ? overviewLegend(h) : graphLegend(h),
+                  graphMinimap(model, scene, h),
+                  graphPreview(model, h),
+                ],
+              ),
           h.div(
             [h.Class('graph-footer')],
             [
@@ -2471,6 +2905,7 @@ const graphPage = (model: Model, h: H): Html =>
       ),
     ],
   )
+}
 
 const agentToggle = (agent: Agent, h: H): Html =>
   h.button(

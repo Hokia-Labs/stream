@@ -7191,3 +7191,281 @@ button:disabled,
     grid-template-columns: 1fr;
   }
 }
+
+/* Scalable systems graph */
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+.graph-toolbar-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.graph-search {
+  position: relative;
+  min-width: 220px;
+}
+.graph-search-results {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: -80px;
+  z-index: 6;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid var(--ink);
+  background: var(--sheet);
+}
+.graph-search-results li > button,
+.graph-search-results li.muted {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+.graph-search-results li > button:hover,
+.graph-search-results li > button:focus-visible {
+  background: var(--accent-wash);
+}
+.graph-count {
+  margin-left: auto;
+}
+.kind-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.kind-chip.off {
+  color: var(--muted);
+  border-style: dashed;
+}
+.kind-chip.off .kind-swatch {
+  opacity: 0.25;
+}
+.kind-chip.on:not([class*='kind-']) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.kind-swatch {
+  width: 8px;
+  height: 8px;
+  background: var(--kind, var(--ink));
+}
+.kind-requirement {
+  --kind: var(--accent);
+}
+.kind-system {
+  --kind: var(--ink);
+}
+.kind-function {
+  --kind: oklch(0.52 0.15 300);
+}
+.kind-design {
+  --kind: oklch(0.55 0.11 210);
+}
+.kind-test {
+  --kind: var(--success);
+}
+.kind-interface {
+  --kind: var(--warning);
+}
+.kind-risk {
+  --kind: var(--error);
+}
+.graph-more {
+  position: absolute;
+  z-index: 2;
+  min-width: 34px;
+  padding: 1px 6px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--sheet);
+  font-size: 10px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.graph-more:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.edge-layer path.muted,
+.edge-layer circle.muted {
+  opacity: 0.08;
+}
+.graph-cluster {
+  position: absolute;
+  border: 1px solid var(--rule-strong);
+  background: color-mix(in srgb, var(--sheet) 85%, transparent);
+  pointer-events: auto;
+}
+.graph-cluster-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font-size: var(--text-xs);
+  text-align: left;
+}
+.graph-cluster-head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+button.graph-cluster-head:hover {
+  background: var(--accent-wash);
+}
+.graph-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  background: var(--kind, var(--rule-strong));
+  cursor: pointer;
+}
+.graph-dot.static {
+  position: static;
+  display: inline-block;
+  cursor: default;
+}
+.graph-dot.pending {
+  box-shadow: inset 0 0 0 2px var(--sheet);
+  outline: 1px solid var(--warning);
+}
+.graph-dot.static.pending {
+  background: var(--sheet);
+}
+.graph-dot:hover,
+.graph-dot.selected {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  z-index: 1;
+}
+.graph-dot.dimmed {
+  opacity: 0.25;
+}
+.graph-minimap {
+  position: absolute;
+  left: 12px;
+  bottom: 64px;
+  padding: 6px;
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  pointer-events: none;
+}
+.graph-minimap svg {
+  display: block;
+}
+.graph-minimap rect {
+  fill: var(--rule);
+}
+.graph-minimap rect.cluster {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 3;
+}
+.graph-minimap rect.shown {
+  fill: var(--accent);
+}
+.graph-minimap rect.selected {
+  fill: var(--ink);
+}
+.trace-matrix-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+}
+.trace-matrix-summary {
+  margin: 0 0 var(--space-2);
+}
+.gap-text {
+  color: var(--error);
+}
+.trace-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.trace-matrix th,
+.trace-matrix td {
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+.trace-matrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.trace-matrix tbody th {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  min-width: 240px;
+}
+.matrix-title {
+  margin-left: 6px;
+}
+.matrix-cell {
+  min-width: 110px;
+}
+.matrix-cell.verified {
+  background: var(--success-wash);
+}
+.matrix-cell.pending {
+  background: var(--warning-wash);
+}
+.matrix-cell.gap {
+  background: var(--error-wash);
+  color: var(--error);
+  font-weight: 600;
+}
+.matrix-id {
+  margin: 0 4px 2px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-line);
+}
+.matrix-id:hover {
+  color: var(--accent-strong);
+}
