@@ -3130,7 +3130,11 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       )
     },
     OpenedBoardReview: () =>
-      model.twinProposal !== 'Pending'
+      model.twinProposal !== 'Pending' &&
+      !(
+        model.twinProposal === 'Approved' &&
+        twinRevision(model.workspace.requirements) === 'B'
+      )
         ? { model }
         : {
             model: modifyFields(model, {
@@ -3140,7 +3144,11 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             }),
           },
     OpenedBoardReviewAt: ({ tab }) =>
-      model.twinProposal !== 'Pending'
+      model.twinProposal !== 'Pending' &&
+      !(
+        model.twinProposal === 'Approved' &&
+        twinRevision(model.workspace.requirements) === 'B'
+      )
         ? { model }
         : {
             model: modifyFields(model, {
@@ -3165,7 +3173,9 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     SelectedTwinPdrFile: ({ files }) => {
       const [file] = files
-      return file ? { model, commands: [ReadTwinPdr({ file })] } : { model }
+      return file && model.twinProposal === 'Pending'
+        ? { model, commands: [ReadTwinPdr({ file })] }
+        : { model }
     },
     LoadedTwinPdr: ({ upload }) =>
       model.twinProposal !== 'Pending'
@@ -3181,9 +3191,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           ),
     FailedLoadTwinPdr: ({ name }) =>
       notifyError(model, `Couldn't read ${name}.`),
-    ClickedRemoveTwinPdr: () => ({
-      model: modifyFields(model, { maybeTwinPdr: () => Option.none() }),
-    }),
+    ClickedRemoveTwinPdr: () =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, { maybeTwinPdr: () => Option.none() }),
+          },
     UpdatedTwinDesign: ({ index, field, value }) =>
       model.twinProposal !== 'Pending'
         ? { model }
@@ -3213,15 +3226,21 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               ],
             }),
           },
-    ClickedRemoveTwinDesignChange: ({ index }) => ({
-      model: modifyFields(model, {
-        twinDesign: design =>
-          design.filter((_, rowIndex) => rowIndex !== index),
-      }),
-    }),
-    ClickedResetTwinDesign: () => ({
-      model: modifyFields(model, { twinDesign: () => agentDesign }),
-    }),
+    ClickedRemoveTwinDesignChange: ({ index }) =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              twinDesign: design =>
+                design.filter((_, rowIndex) => rowIndex !== index),
+            }),
+          },
+    ClickedResetTwinDesign: () =>
+      model.twinProposal !== 'Pending'
+        ? { model }
+        : {
+            model: modifyFields(model, { twinDesign: () => agentDesign }),
+          },
     ClickedApproveTwinProposal: () =>
       model.twinProposal !== 'Pending' ||
       model.storage === 'Loading' ||

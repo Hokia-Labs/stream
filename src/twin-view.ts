@@ -1228,7 +1228,28 @@ const requirementSets = (model: Model, h: H): ReadonlyArray<RequirementSet> => {
             title: 'Power agent proposal',
             trigger: 'Rev A → Rev B board change',
             summary: `+${derived.length} derived`,
-            body: () => changeTable(model, derived, true, h),
+            body: () =>
+              h.div(
+                [],
+                [
+                  changeTable(model, derived, true, h),
+                  isApprovedReview(model)
+                    ? h.p(
+                        [h.Class('twin-req-set-actions')],
+                        [
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('text-button'),
+                              h.OnClick(Message.OpenedBoardReview()),
+                            ],
+                            ['Open approved review →'],
+                          ),
+                        ],
+                      )
+                    : h.empty,
+                ],
+              ),
           },
         ]
       : []
@@ -1601,7 +1622,7 @@ const lifecycle = (model: Model, h: H): Html => {
         proposal === 'Rejected' && !isRevB ? 'Rejected' : proposalReviewer.name,
       isDone: isRevB,
       message:
-        proposal === 'Pending' && !isRevB
+        (proposal === 'Pending' && !isRevB) || isApprovedReview(model)
           ? Message.OpenedBoardReview()
           : Message.SelectedTwinPanelTab({ tab: 'Change' }),
     },
@@ -1673,6 +1694,18 @@ const activityTimeFormat = new Intl.DateTimeFormat('en-US', {
   second: '2-digit',
   hourCycle: 'h23',
 })
+
+const isApprovedReview = (model: Model): boolean =>
+  model.twinProposal === 'Approved' &&
+  twinRevision(model.workspace.requirements) === 'B'
+
+const approvalTime = (model: Model): ReadonlyArray<number> => {
+  const index = model.workspace.events.findIndex(event =>
+    event.startsWith('MPA Rev B proposal approved'),
+  )
+  const at = model.workspace.eventTimes[index]
+  return index >= 0 && at !== undefined && at > 0 ? [at] : []
+}
 
 const activityTime = (at: number | undefined, h: H): Html =>
   at === undefined || at === 0
@@ -2297,6 +2330,7 @@ const designEditor = (model: Model, h: H): Html =>
                         h.input([
                           h.AriaLabel(`${label}, row ${index + 1}`),
                           h.Value(row[field]),
+                          h.Readonly(model.twinProposal !== 'Pending'),
                           h.OnInput(value =>
                             Message.UpdatedTwinDesign({ index, field, value }),
                           ),
@@ -2306,19 +2340,23 @@ const designEditor = (model: Model, h: H): Html =>
                   ),
                   h.td(
                     [],
-                    [
-                      h.button(
-                        [
-                          h.Type('button'),
-                          h.Class('button ghost small'),
-                          h.AriaLabel(`Remove row ${index + 1}`),
-                          h.OnClick(
-                            Message.ClickedRemoveTwinDesignChange({ index }),
+                    model.twinProposal !== 'Pending'
+                      ? []
+                      : [
+                          h.button(
+                            [
+                              h.Type('button'),
+                              h.Class('button ghost small'),
+                              h.AriaLabel(`Remove row ${index + 1}`),
+                              h.OnClick(
+                                Message.ClickedRemoveTwinDesignChange({
+                                  index,
+                                }),
+                              ),
+                            ],
+                            ['Remove'],
                           ),
                         ],
-                        ['Remove'],
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -2326,49 +2364,53 @@ const designEditor = (model: Model, h: H): Html =>
           ),
         ],
       ),
-      h.div(
-        [h.Class('board-review-row')],
-        [
-          h.button(
+      model.twinProposal !== 'Pending'
+        ? h.empty
+        : h.div(
+            [h.Class('board-review-row')],
             [
-              h.Type('button'),
-              h.Class('button outline small'),
-              h.OnClick(Message.ClickedAddTwinDesignChange()),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button outline small'),
+                  h.OnClick(Message.ClickedAddTwinDesignChange()),
+                ],
+                ['Add part change'],
+              ),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button ghost small'),
+                  h.Disabled(!isEngineerDesign(model.twinDesign)),
+                  h.OnClick(Message.ClickedResetTwinDesign()),
+                ],
+                ["Restore agent's design"],
+              ),
             ],
-            ['Add part change'],
           ),
-          h.button(
-            [
-              h.Type('button'),
-              h.Class('button ghost small'),
-              h.Disabled(!isEngineerDesign(model.twinDesign)),
-              h.OnClick(Message.ClickedResetTwinDesign()),
-            ],
-            ["Restore agent's design"],
-          ),
-        ],
-      ),
     ],
   )
 
 const pdrUpload = (model: Model, h: H): Html =>
   Option.match(model.maybeTwinPdr, {
     onNone: () =>
-      h.label(
-        [
-          h.Class('button outline small board-review-upload'),
-          h.Title('PDF, Word, Markdown or text'),
-        ],
-        [
-          'Attach your PDR…',
-          h.input([
-            h.Class('visually-hidden'),
-            h.Type('file'),
-            h.Accept('.pdf,.doc,.docx,.md,.markdown,.txt'),
-            h.OnFileChange(files => Message.SelectedTwinPdrFile({ files })),
-          ]),
-        ],
-      ),
+      model.twinProposal !== 'Pending'
+        ? h.empty
+        : h.label(
+            [
+              h.Class('button outline small board-review-upload'),
+              h.Title('PDF, Word, Markdown or text'),
+            ],
+            [
+              'Attach your PDR…',
+              h.input([
+                h.Class('visually-hidden'),
+                h.Type('file'),
+                h.Accept('.pdf,.doc,.docx,.md,.markdown,.txt'),
+                h.OnFileChange(files => Message.SelectedTwinPdrFile({ files })),
+              ]),
+            ],
+          ),
     onSome: upload =>
       h.div(
         [h.Class('board-review-uploaded')],
@@ -2383,14 +2425,16 @@ const pdrUpload = (model: Model, h: H): Html =>
                   `${Math.max(1, Math.round(upload.size / 1024))} KB · attached to this review`,
                 ],
               ),
-              h.button(
-                [
-                  h.Type('button'),
-                  h.Class('button ghost small'),
-                  h.OnClick(Message.ClickedRemoveTwinPdr()),
-                ],
-                ['Remove'],
-              ),
+              model.twinProposal !== 'Pending'
+                ? h.empty
+                : h.button(
+                    [
+                      h.Type('button'),
+                      h.Class('button ghost small'),
+                      h.OnClick(Message.ClickedRemoveTwinPdr()),
+                    ],
+                    ['Remove'],
+                  ),
             ],
           ),
           Option.match(upload.maybeText, {
@@ -2617,36 +2661,55 @@ export const boardReview = (model: Model, tab: BoardReviewTab, h: H): Html =>
             : tab === '3D model'
               ? modelTab(h)
               : thermalTab(h),
-      h.div(
-        [h.Class('board-review-foot')],
-        [
-          h.p(
-            [h.Class('muted small')],
+      isApprovedReview(model)
+        ? h.div(
+            [h.Class('board-review-foot')],
             [
-              `Signing as ${proposalReviewer.name}, ${proposalReviewer.role}. Rev A stays installed until you approve.`,
+              h.span([h.Class('badge positive')], ['Approved']),
+              h.p(
+                [h.Class('muted small')],
+                [
+                  [
+                    `Approved by ${proposalReviewer.name}, ${proposalReviewer.role}`,
+                    ...approvalTime(model).map(at =>
+                      activityTimeFormat.format(at),
+                    ),
+                  ].join(' · '),
+                  '. Read only.',
+                ],
+              ),
+            ],
+          )
+        : h.div(
+            [h.Class('board-review-foot')],
+            [
+              h.p(
+                [h.Class('muted small')],
+                [
+                  `Signing as ${proposalReviewer.name}, ${proposalReviewer.role}. Rev A stays installed until you approve.`,
+                ],
+              ),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button outline'),
+                  h.OnClick(Message.ClickedRejectTwinProposal()),
+                ],
+                ['Reject'],
+              ),
+              h.button(
+                [
+                  h.Type('button'),
+                  h.Class('button primary'),
+                  h.OnClick(Message.ClickedApproveTwinProposal()),
+                ],
+                [
+                  isEngineerDesign(model.twinDesign)
+                    ? 'Approve edited Rev B and install'
+                    : 'Approve and install Rev B',
+                ],
+              ),
             ],
           ),
-          h.button(
-            [
-              h.Type('button'),
-              h.Class('button outline'),
-              h.OnClick(Message.ClickedRejectTwinProposal()),
-            ],
-            ['Reject'],
-          ),
-          h.button(
-            [
-              h.Type('button'),
-              h.Class('button primary'),
-              h.OnClick(Message.ClickedApproveTwinProposal()),
-            ],
-            [
-              isEngineerDesign(model.twinDesign)
-                ? 'Approve edited Rev B and install'
-                : 'Approve and install Rev B',
-            ],
-          ),
-        ],
-      ),
     ],
   )
