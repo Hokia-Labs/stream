@@ -97,6 +97,7 @@ export const doorsLogo = (h: H): Html =>
     [h.Class('doors-logo'), h.AriaLabel('IBM DOORS')],
     [
       h.img([h.Src('/doors-logo.svg'), h.Alt(''), h.Class('doors-mark')]),
+      h.img([h.Src('/ibm-logo.svg'), h.Alt(''), h.Class('ibm-logo')]),
       h.span([], ['DOORS']),
     ],
   )

@@ -8308,6 +8308,11 @@ p.launch-estimate {
   width: 18px;
   height: 18px;
 }
+.ibm-logo {
+  display: block;
+  height: 13px;
+  width: auto;
+}
 .jira-logo {
   display: block;
   height: 22px;
