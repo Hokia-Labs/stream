@@ -149,7 +149,7 @@ export const twinPage = (model: Model, h: H): Html => {
         model.twinReviewed.includes('Thermal') &&
         model.twinReviewed.includes('Mechanical'),
     },
-    { label: 'Package the HRD', done: Option.isSome(pkg) },
+    { label: 'Package the DO-254 data', done: Option.isSome(pkg) },
     { label: 'Send to customer', done: isSent },
   ]
   const action = !isLoaded
@@ -177,7 +177,7 @@ export const twinPage = (model: Model, h: H): Html => {
             h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
             h.Title(
               isReviewed
-                ? 'Generate HRD package'
+                ? 'Generate DO-254 package'
                 : 'Review the impact to generate',
             ),
             h.OnClick(Message.ClickedGenerateTwinPackage()),
@@ -185,7 +185,7 @@ export const twinPage = (model: Model, h: H): Html => {
           [
             model.isGeneratingTwinPackage
               ? 'Packaging…'
-              : 'Generate HRD package',
+              : 'Generate DO-254 package',
           ],
         )
   return h.div(
@@ -193,7 +193,7 @@ export const twinPage = (model: Model, h: H): Html => {
     [
       pageHeading(
         'Digital twin',
-        'Inspect the hardware, place a change in the systems model, review its impact, and package the updated HRD.',
+        'Inspect the hardware, place a change in the systems model, review its impact, and package the updated DO-254 data.',
         action,
         h,
       ),
@@ -546,7 +546,7 @@ export const twinPage = (model: Model, h: H): Html => {
                 [
                   h.div(
                     [h.Class('twin-section-head')],
-                    [h.h2([h.Class('twin-heading')], ['HRD review package'])],
+                    [h.h2([h.Class('twin-heading')], ['DO-254 data package'])],
                   ),
                   Option.match(pkg, {
                     onNone: () =>
@@ -557,7 +557,7 @@ export const twinPage = (model: Model, h: H): Html => {
                             [h.Class('muted small-text')],
                             [
                               isRevB && isReviewed
-                                ? 'Ready. Generates the updated HRD, traceability matrix, SAMPLE analysis, change record, and a SHA-256 manifest as one zip.'
+                                ? 'Ready. Generates the updated HRD plus DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports), traceability, SAMPLE analysis, and a SHA-256 manifest as one zip.'
                                 : 'Available after Rev B is placed and all three reviews are checked.',
                             ],
                           ),
@@ -575,7 +575,7 @@ export const twinPage = (model: Model, h: H): Html => {
                             [
                               model.isGeneratingTwinPackage
                                 ? 'Packaging…'
-                                : 'Generate HRD package',
+                                : 'Generate DO-254 package',
                             ],
                           ),
                         ],

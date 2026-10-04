@@ -10,6 +10,7 @@ import {
   workingRequirements,
   writeRequirements,
 } from './branches'
+import { do254Files } from './do254'
 import type { Agent, Branch, Run } from './domain'
 import {
   ArtifactField,
@@ -586,11 +587,11 @@ const GenerateTwinPackage = Command.define('GenerateTwinPackage', {
     Effect.tryPromise(async () => {
       const now = new Date()
       const encoder = new TextEncoder()
-      const files = twinPackageFiles(
-        requirements,
-        now.toISOString().slice(0, 10),
-        reviewed,
-      )
+      const date = now.toISOString().slice(0, 10)
+      const files = [
+        ...twinPackageFiles(requirements, date, reviewed),
+        ...do254Files(requirements, date),
+      ]
       const entries = files.map(file => ({
         name: file.name,
         data: encoder.encode(file.content),
@@ -2531,7 +2532,10 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           maybeTwinPackage: () =>
             Option.some({ name, digest, bytes, files, isSent: false }),
         }),
-        record(model.workspace, `HRD package ${name} generated · Ben Juntilla`),
+        record(
+          model.workspace,
+          `DO-254 package ${name} generated · Ben Juntilla`,
+        ),
         `${name} downloaded.`,
       ),
     FailedTwinPackage: ({ error }) =>
@@ -2552,7 +2556,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                 }),
                 record(
                   model.workspace,
-                  `HRD package ${item.name} marked as sent to the customer · Ben Juntilla`,
+                  `DO-254 package ${item.name} marked as sent to the customer · Ben Juntilla`,
                 ),
                 'Package marked as sent to the customer.',
               ),

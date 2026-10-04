@@ -2,6 +2,12 @@ import { Option } from 'effect'
 import { modifyFields } from 'foldkit/struct'
 import { describe, expect, it } from 'vitest'
 
+import {
+  accomplishmentSummaryDocument,
+  do254Files,
+  problemReports,
+  verificationResultsDocument,
+} from './do254'
 import { type Model, initialModel, update } from './main'
 import { Message } from './message'
 import {
@@ -103,6 +109,30 @@ describe('digital twin', () => {
       'analysis-SAMPLE.csv',
       'change-record.json',
     ])
+  })
+
+  it('writes the DO-254 data for Rev B', () => {
+    const requirements = revB.workspace.requirements
+    expect(
+      do254Files(requirements, '2026-10-03').map(file => file.name),
+    ).toEqual([
+      'HAS-PSU-001-RevB.md',
+      'HCI-PSU-001-RevB.md',
+      'HVR-PSU-001-RevB.md',
+      'CIA-PSU-001-RevB.md',
+      'problem-reports.csv',
+    ])
+    const has = accomplishmentSummaryDocument(requirements, '2026-10-03')
+    expect(has).toContain('DO-254 §10.9')
+    expect(has).toContain('Compliance is not yet claimed')
+    expect(has.startsWith('**SECRET//NOFORN**')).toBe(true)
+    expect(problemReports(requirements).map(item => item.id)).toContain(
+      'PR-PSU-0141',
+    )
+    expect(problemReports(loaded.workspace.requirements)).toEqual([])
+    expect(verificationResultsDocument(requirements, '2026-10-03')).toContain(
+      'Not yet run on this configuration',
+    )
   })
 
   it('builds a stored zip archive', () => {
