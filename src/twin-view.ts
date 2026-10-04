@@ -247,7 +247,6 @@ const signoffGate = (
   subsystemCount: number,
   h: H,
 ): Html => {
-  const remaining = twinSignoffs.length - model.twinReviewed.length
   const canSign = isRevB && model.twinReports.length > 0
   return h.section(
     [h.Class('panel twin-wide'), h.AriaLabel('Engineering sign-off')],
@@ -324,16 +323,6 @@ const signoffGate = (
               ),
             ),
           ),
-        ],
-      ),
-      h.p(
-        [h.Class('muted small-text twin-signoff-note')],
-        [
-          !canSign
-            ? 'Each discipline signs off on the drafted DO-254 reports. Draft them first.'
-            : remaining === 0
-              ? 'All disciplines signed. The DO-254 package can be downloaded and sent, with sign-offs recorded in its manifest.'
-              : `Sign off on the drafted DO-254 reports. ${remaining} remaining before the package can be released.`,
         ],
       ),
     ],

@@ -4914,9 +4914,6 @@ body:has(.modal-backdrop) .toast {
   width: 96px;
   text-align: right;
 }
-.twin-signoff-note {
-  margin: var(--space-3) 0 0;
-}
 .twin-package-actions {
   display: flex;
   align-items: center;
