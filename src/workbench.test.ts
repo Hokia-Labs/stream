@@ -432,9 +432,9 @@ describe('display, views, and reruns', () => {
     const selected = update(onGraph, Message.SelectedNode({ id: 'REQ-001' }))
     expect(selected.model.maybeSelectedNode).toEqual(Option.some('REQ-001'))
     expect(selected.commands).toHaveLength(1)
-    const onOverview = modifyFields(ready, { page: () => 'Overview' as const })
+    const onFiles = modifyFields(ready, { page: () => 'Files' as const })
     expect(
-      update(onOverview, Message.SelectedNode({ id: 'REQ-001' })).commands,
+      update(onFiles, Message.SelectedNode({ id: 'REQ-001' })).commands,
     ).toBeUndefined()
   })
 

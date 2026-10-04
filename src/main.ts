@@ -190,7 +190,7 @@ export type Model = typeof Model.Type
 type UpdateReturn = Update.Return<Model, Message>
 export const initialModel: Model = {
   workspace: seedWorkspace,
-  page: 'Overview',
+  page: 'Files',
   artifactView: 'Table',
   collapsedArtifactIds: [],
   visibleArtifactFields: ArtifactField.literals,

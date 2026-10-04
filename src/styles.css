@@ -7929,3 +7929,23 @@ button.graph-cluster-head:hover {
 .settings-dialog .credentials-panel {
   margin: 16px 0;
 }
+.tc-lockup {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 6px;
+  padding: 0 var(--space-6);
+}
+.tc-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.tc-logo {
+  height: 12px;
+  width: auto;
+}
+.tc-brand strong {
+  font-weight: 600;
+}

@@ -192,7 +192,7 @@ const chip = (label: string, value: string, h: H): Html =>
     [h.span([h.Class('chip-label mono')], [label]), value],
   )
 const pages: ReadonlyArray<{ page: Page; icon: string }> = [
-  { page: 'Overview', icon: 'grid' },
+  { page: 'Files', icon: 'file' },
   { page: 'Digital twin', icon: 'box' },
   { page: 'Systems graph', icon: 'graph' },
   { page: 'Requirements', icon: 'file' },
@@ -687,12 +687,12 @@ const breadcrumbItems = (model: Model, h: H): ReadonlyArray<Html> => {
     crumb(
       'Atlas launch program',
       'crumb-program',
-      model.page === 'Overview' && Option.isNone(detail)
+      model.page === 'Files' && Option.isNone(detail)
         ? Option.none()
-        : Option.some(Message.SelectedPage({ page: 'Overview' })),
-      'Program overview',
+        : Option.some(Message.SelectedPage({ page: 'Files' })),
+      'Files',
     ),
-    ...(model.page === 'Overview'
+    ...(model.page === 'Files'
       ? []
       : [
           icon('chevron', h),
@@ -1800,32 +1800,40 @@ const overview = (model: Model, h: H): Html => {
   return h.div(
     [],
     [
-      pageHeading('Overview', '', h.empty, h),
+      pageHeading(
+        'Files',
+        '',
+        h.div(
+          [h.Class('tc-lockup')],
+          [
+            h.div(
+              [h.Class('tc-brand')],
+              [
+                h.span([h.Class('muted')], ['Synced with']),
+                h.img([
+                  h.Src('/siemens-logo.svg'),
+                  h.Alt('Siemens'),
+                  h.Class('tc-logo'),
+                ]),
+                h.strong([], ['Teamcenter']),
+              ],
+            ),
+            h.span(
+              [h.Class(`sync-status ${pending > 0 ? 'pending' : 'ok'}`)],
+              [
+                h.span([h.Class('live-dot')]),
+                pending > 0
+                  ? `${pending} pending check-in · ${teamcenterSyncedAt}`
+                  : `In sync · ${teamcenterSyncedAt}`,
+              ],
+            ),
+          ],
+        ),
+        h,
+      ),
       h.section(
-        [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter sync')],
+        [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
         [
-          h.div(
-            [h.Class('panel-heading')],
-            [
-              h.div(
-                [],
-                [
-                  h.h2([], ['Teamcenter sync']),
-                  h.p(
-                    [],
-                    [`Source of truth · last sync ${teamcenterSyncedAt}`],
-                  ),
-                ],
-              ),
-              h.span(
-                [h.Class(`sync-status ${pending > 0 ? 'pending' : 'ok'}`)],
-                [
-                  h.span([h.Class('live-dot')]),
-                  pending > 0 ? `${pending} pending check-in` : 'In sync',
-                ],
-              ),
-            ],
-          ),
           h.table(
             [h.Class('sync-table')],
             [
@@ -2707,7 +2715,7 @@ const shortcutRows: ReadonlyArray<readonly [ReadonlyArray<string>, string]> = [
   [['⌘', 'K'], 'Open command palette'],
   [['?'], 'Show keyboard shortcuts'],
   [['['], 'Collapse or expand sidebar'],
-  [['G', 'O'], 'Go to Overview'],
+  [['G', 'F'], 'Go to Files'],
   [['G', 'S'], 'Go to Systems graph'],
   [['G', 'R'], 'Go to Requirements'],
   [['G', 'B'], 'Go to Branches'],
@@ -5316,7 +5324,7 @@ export const view = (sourceModel: Model, h: H): Document => {
             h.main(
               [h.Class('main-content'), h.Id('main')],
               [
-                model.page === 'Overview'
+                model.page === 'Files'
                   ? overview(model, h)
                   : model.page === 'Inbox'
                     ? inboxPage(model, h)
