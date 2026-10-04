@@ -30,6 +30,7 @@ const ready = modifyFields(initialModel, {
   storage: () => 'Ready',
   executionMode: () => 'Simulation',
   hasAcknowledgedConsent: () => true,
+  hiddenPages: () => [],
 })
 
 describe('workspace UI wiring', () => {

@@ -248,7 +248,7 @@ export const initialModel: Model = {
   selectedArtifactIds: [],
   maybeSelectedAgent: Option.none(),
   isSidebarCollapsed: false,
-  hiddenPages: [],
+  hiddenPages: OptionalPage.literals,
   runView: 'Matrix',
   runLogQuery: '',
   viewedApprovalIds: [],
@@ -440,7 +440,8 @@ export const LoadHiddenPages = Command.define('LoadHiddenPages', {
   messages: [Message.LoadedHiddenPages],
   execute: Effect.try(() => {
     const saved: unknown = JSON.parse(
-      localStorage.getItem(hiddenPagesKey) ?? '[]',
+      localStorage.getItem(hiddenPagesKey) ??
+        JSON.stringify(OptionalPage.literals),
     )
     return Message.LoadedHiddenPages({
       pages: OptionalPage.literals.filter(
@@ -449,7 +450,9 @@ export const LoadHiddenPages = Command.define('LoadHiddenPages', {
     })
   }).pipe(
     Effect.catch(() =>
-      Effect.succeed(Message.LoadedHiddenPages({ pages: [] })),
+      Effect.succeed(
+        Message.LoadedHiddenPages({ pages: OptionalPage.literals }),
+      ),
     ),
   ),
 })

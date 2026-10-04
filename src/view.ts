@@ -4692,7 +4692,7 @@ const modalContent = (model: Model, h: H): Html =>
               h.h3([], ['Pages']),
               h.p(
                 [h.Class('subtitle')],
-                ['Hide pages you don’t use. Saved in this browser.'],
+                ['Show extra pages. Off by default, saved in this browser.'],
               ),
               ...OptionalPage.literals.map(page =>
                 h.keyed('label')(

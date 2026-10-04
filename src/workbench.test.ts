@@ -21,7 +21,10 @@ import { type Model, initialModel, motionTransition, update } from './main'
 import { Message } from './message'
 import { paletteItems } from './palette'
 
-const ready: Model = modifyFields(initialModel, { storage: () => 'Ready' })
+const ready: Model = modifyFields(initialModel, {
+  storage: () => 'Ready',
+  hiddenPages: () => [],
+})
 const ids = (model: Model): ReadonlyArray<string> =>
   visibleArtifacts(model, model.workspace.requirements).map(item => item.id)
 
