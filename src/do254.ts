@@ -590,6 +590,12 @@ export const do254Figures: ReadonlyArray<Do254Figure> = [
     caption: 'Buck power sheet, Rev B (KiCad export). Q401–Q404 changed.',
   },
   {
+    file: 'figures/board-assemblies.webp',
+    url: '/figures/board-assemblies.webp',
+    caption:
+      'KiCad 3D assemblies, Rev A (left) and Rev B (right). The changed Rev B power stage is highlighted.',
+  },
+  {
     file: 'figures/thermal-rev-a.webp',
     url: '/ansys-thermal-rev-a.webp',
     caption: 'Ansys steady-state thermal map, Rev A power stage.',
