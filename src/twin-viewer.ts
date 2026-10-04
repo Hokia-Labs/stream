@@ -414,7 +414,9 @@ export class StreamTwin extends HTMLElement {
     const hit = raycaster.intersectObjects(targets, true)[0]
     if (hit && hit.point.z > 0.85) {
       this.#pick('Power supply')
+      return
     }
+    this.#pick('None')
   }
 
   #pick(part: string): void {

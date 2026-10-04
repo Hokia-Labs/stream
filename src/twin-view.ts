@@ -1850,7 +1850,9 @@ export const twinPage = (model: Model, h: H): Html => {
                 twin.TwinRevision(revision),
                 twin.TwinAvionicsUpgraded(isUpgraded),
                 twin.OnTwinPick(detail =>
-                  Message.ClickedTwinPart({ part: detail.part }),
+                  detail.part === 'None'
+                    ? Message.SelectedTwinFocus({ focus: 'Airframe' })
+                    : Message.ClickedTwinPart({ part: detail.part }),
                 ),
               ]),
               h.div(
