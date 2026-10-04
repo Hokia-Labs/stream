@@ -2109,6 +2109,7 @@ const modelTab = (h: H): Html => {
   return h.div(
     [h.Class('board-review-body')],
     [
+      toolHead(kicadLogo(h), [`${revBStem}.kicad_pcb`], h),
       board([
         h.Class('board-review-canvas board-review-assembly'),
         h.AriaLabel('3D model of the KiCad power board, Rev A and Rev B'),
