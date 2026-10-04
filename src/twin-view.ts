@@ -460,11 +460,13 @@ const slotCard = (model: Model, slot: TwinSlot, h: H): Html => {
         ],
       ),
       h.p(
-        [h.Class('twin-slot-part')],
-        [h.span([h.Class('mono')], [`${part.id} · Rev ${part.revision}`])],
+        [h.Class(`twin-slot-health ${health.tone}`), h.Title(health.text)],
+        [
+          slot === 'Cockpit'
+            ? (part.specs[0] ?? health.text)
+            : (health.text.split(' · ').at(-1) ?? health.text),
+        ],
       ),
-      h.p([h.Class('twin-slot-title')], [part.title]),
-      h.p([h.Class(`twin-slot-health ${health.tone}`)], [health.text]),
     ],
   )
 }
