@@ -989,7 +989,7 @@ export type CatalogItem = Readonly<{
   revision: string
   slot: TwinSlot
   title: string
-  status: 'Released' | 'In work'
+  status: 'Released' | 'Proposed' | 'In work'
   released: string
   value: number
   specs: ReadonlyArray<string>
@@ -1046,7 +1046,7 @@ export const assemblyRevB: CatalogItem = {
   revision: 'B',
   slot: 'Power',
   title: 'Modular power assembly, 5-slot',
-  status: 'Released',
+  status: 'Proposed',
   released: '2026-09-24',
   value: 5,
   specs: ['5 × 3.0 kW', '15.0 kW', '12.0 kW', '0.65 kW', '75 A SSPC · 8 AWG'],
@@ -1075,16 +1075,16 @@ export const catalogBlocker = (
   requirements: ReadonlyArray<Requirement>,
   item: CatalogItem,
 ): string | undefined =>
-  item.status !== 'Released'
-    ? 'Not released in Teamcenter. Only released items can be installed.'
-    : item.id === installedPart(requirements, item.slot).id
-      ? 'Already installed.'
-      : item.id === legacyAvionics.id && twinRevision(requirements) === 'B'
-        ? 'Put power assembly Rev A back first.'
-        : item.id === assemblyRevB.id && !isAvionicsUpgraded(requirements)
-          ? 'Rev A carries the current 8.4 kW load. Swap in the new avionics first.'
-          : item.id === assemblyRevB.id
-            ? 'Rev B comes from the agent proposal. An electrical engineer approves it on the Digital twin page.'
+  item.id === installedPart(requirements, item.slot).id
+    ? 'Already installed.'
+    : item.id === legacyAvionics.id && twinRevision(requirements) === 'B'
+      ? 'Put power assembly Rev A back first.'
+      : item.id === assemblyRevB.id && !isAvionicsUpgraded(requirements)
+        ? 'Rev A carries the current 8.4 kW load. Swap in the new avionics first.'
+        : item.id === assemblyRevB.id
+          ? 'Rev B comes from the agent proposal. An electrical engineer approves it on the Digital twin page.'
+          : item.status !== 'Released'
+            ? 'Not released in Teamcenter. Only released items can be installed.'
             : undefined
 
 export type Health = Readonly<{ text: string; tone: 'ok' | 'low' | 'bad' }>
