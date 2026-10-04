@@ -132,8 +132,8 @@ export type TwinCheck = typeof TwinCheck.Type
 export const TwinPanelTab = Schema.Literals([
   'Change',
   'Requirements',
-  'Sign-off',
   'DO-254',
+  'Sign-off',
   'Activity',
 ])
 export type TwinPanelTab = typeof TwinPanelTab.Type
