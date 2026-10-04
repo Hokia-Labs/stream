@@ -26,9 +26,9 @@ import { idLink, linkifyIds } from './id-link'
 import {
   ansysLogo,
   jiraChip,
+  kicadLogo,
   ltspiceLogo,
   toolHead,
-  xpeditionLogo,
 } from './integration-view'
 import { jiraHandoffs, ltspiceResults } from './integrations'
 import type { Model } from './main'
@@ -1697,6 +1697,23 @@ export const twinPage = (model: Model, h: H): Html => {
 
 const diffClass = (state: DiffState): string => `diff-${state.toLowerCase()}`
 
+const schematicNote = (board: number, sheet: string, h: H): Html => {
+  const isBuck = sheet === 'Buck power'
+  if (board === 0 && !isBuck) {
+    return h.empty
+  }
+  return h.span(
+    [h.Class(isBuck ? 'schematic-note changed' : 'schematic-note')],
+    [
+      isBuck
+        ? board === 0
+          ? 'Q401–Q404 replaced in Rev B'
+          : 'Q401–Q404: CSD19532Q5B → CSD19536KTT'
+        : 'No change from Rev A',
+    ],
+  )
+}
+
 const schematicViewer = (model: Model, h: H): Html => {
   const board = schematicBoards[model.schematicBoard] ?? schematicBoards[0]
   const page = Math.min(model.schematicPage, board.sheets.length - 1)
@@ -1761,6 +1778,7 @@ const schematicViewer = (model: Model, h: H): Html => {
               ),
             ),
           ),
+          schematicNote(model.schematicBoard, sheet, h),
         ],
       ),
       h.img([
@@ -1783,7 +1801,7 @@ const schematicTab = (model: Model, h: H): Html =>
   h.div(
     [h.Class('board-review-body')],
     [
-      toolHead(xpeditionLogo(h), [`${revBStem}_ECAD.zip`, 'DRC 0 errors'], h),
+      toolHead(kicadLogo(h), [`${revBStem}.kicad_sch`], h),
       schematicViewer(model, h),
       h.table(
         [h.Class('table board-review-table')],

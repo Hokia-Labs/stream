@@ -7656,6 +7656,15 @@ button.graph-cluster-head:hover {
   color: var(--accent);
   font-weight: 600;
 }
+.schematic-note {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.schematic-note.changed {
+  color: var(--error);
+  font-weight: 600;
+}
 .schematic-image {
   display: block;
   width: 100%;

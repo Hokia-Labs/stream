@@ -116,6 +116,9 @@ const brandLockup = (
 export const xpeditionLogo = (h: H): Html =>
   brandLockup('/siemens-logo.svg', 'Xpedition', h)
 
+export const kicadLogo = (h: H): Html =>
+  brandLockup('/kicad-logo.png', 'KiCad', h)
+
 export const ltspiceLogo = (h: H): Html =>
   brandLockup('/adi-logo.svg', 'LTspice', h, 'adi-logo')
 
