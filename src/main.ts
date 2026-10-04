@@ -26,6 +26,7 @@ import {
   GraphView,
   GroupBy,
   Modal,
+  OptionalPage,
   Page,
   Requirement,
   ReviewDecision,
@@ -46,6 +47,7 @@ import {
   TwinReviewItem,
   Workspace,
   agentOutput,
+  isPageHidden,
   seedWorkspace,
   validCloudflareAccountId,
   validCloudflareToken,
@@ -152,6 +154,7 @@ export const Model = Schema.Struct({
   selectedArtifactIds: Schema.Array(Schema.String),
   maybeSelectedAgent: Schema.Option(Schema.String),
   isSidebarCollapsed: Schema.Boolean,
+  hiddenPages: Schema.Array(OptionalPage),
   runView: RunView,
   runLogQuery: Schema.String,
   viewedApprovalIds: Schema.Array(Schema.String),
@@ -240,6 +243,7 @@ export const initialModel: Model = {
   selectedArtifactIds: [],
   maybeSelectedAgent: Option.none(),
   isSidebarCollapsed: false,
+  hiddenPages: [],
   runView: 'Matrix',
   runLogQuery: '',
   viewedApprovalIds: [],
@@ -294,6 +298,7 @@ const StoredCloudflareCredentials = Schema.Struct({
 
 export const storageKey = 'stream.workspace.v1'
 export const legacyStorageKey = 'relay.workspace.v1'
+export const hiddenPagesKey = 'stream.hidden-pages.v1'
 const recoverWorkspace = (workspace: Workspace): Workspace =>
   modifyFields(workspace, {
     runs: runs =>
@@ -421,6 +426,34 @@ export const LoadSidebarWidth = Command.define('LoadSidebarWidth', {
       ),
     ),
   ),
+})
+export const LoadHiddenPages = Command.define('LoadHiddenPages', {
+  messages: [Message.LoadedHiddenPages],
+  execute: Effect.try(() => {
+    const saved: unknown = JSON.parse(
+      localStorage.getItem(hiddenPagesKey) ?? '[]',
+    )
+    return Message.LoadedHiddenPages({
+      pages: OptionalPage.literals.filter(
+        page => globalThis.Array.isArray(saved) && saved.includes(page),
+      ),
+    })
+  }).pipe(
+    Effect.catch(() =>
+      Effect.succeed(Message.LoadedHiddenPages({ pages: [] })),
+    ),
+  ),
+})
+export const SaveHiddenPages = Command.define('SaveHiddenPages', {
+  args: { pages: Schema.Array(OptionalPage) },
+  messages: [Message.CompletedSaveHiddenPages],
+  execute: ({ pages }) =>
+    Effect.try(() => {
+      localStorage.setItem(hiddenPagesKey, JSON.stringify(pages))
+      return Message.CompletedSaveHiddenPages()
+    }).pipe(
+      Effect.catch(() => Effect.succeed(Message.CompletedSaveHiddenPages())),
+    ),
 })
 export const SaveSidebarWidth = Command.define('SaveSidebarWidth', {
   args: { width: Schema.Number },
@@ -1377,17 +1410,21 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         'Workspace imported. Unfinished runs are paused until you resume them.',
       )
     },
-    SelectedPage: ({ page }) => ({
-      model: modifyFields(model, {
-        page: () => page,
-        search: () => '',
-        filter: () => 'All artifacts',
-        maybeSelectedNode: () => Option.none(),
-      }),
-      commands: [ScrollActiveNav()],
-    }),
+    SelectedPage: ({ page }) =>
+      isPageHidden(model.hiddenPages, page)
+        ? { model }
+        : {
+            model: modifyFields(model, {
+              page: () => page,
+              search: () => '',
+              filter: () => 'All artifacts',
+              maybeSelectedNode: () => Option.none(),
+            }),
+            commands: [ScrollActiveNav()],
+          },
     LoadedNavigation: ({ page, scrollTop }) =>
-      page === model.page && scrollTop === 0
+      isPageHidden(model.hiddenPages, page) ||
+      (page === model.page && scrollTop === 0)
         ? {
             model: modifyFields(model, { hasLoadedNavigation: () => true }),
           }
@@ -3500,6 +3537,21 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           }),
       }),
     }),
+    ToggledPageVisibility: ({ page }) => {
+      const hiddenPages = model.hiddenPages.includes(page)
+        ? model.hiddenPages.filter(hidden => hidden !== page)
+        : OptionalPage.literals.filter(
+            item => item === page || model.hiddenPages.includes(item),
+          )
+      return {
+        model: withHiddenPages(model, hiddenPages),
+        commands: [SaveHiddenPages({ pages: hiddenPages })],
+      }
+    },
+    LoadedHiddenPages: ({ pages }) => ({
+      model: withHiddenPages(model, pages),
+    }),
+    CompletedSaveHiddenPages: () => ({ model }),
     ToggledSidebar: () => ({
       model: modifyFields(model, {
         isSidebarCollapsed: collapsed => !collapsed,
@@ -4094,11 +4146,23 @@ const decide = (
 
 // INIT
 
+const withHiddenPages = (
+  model: Model,
+  hiddenPages: ReadonlyArray<OptionalPage>,
+): Model =>
+  modifyFields(model, {
+    hiddenPages: () => hiddenPages,
+    page: page => (isPageHidden(hiddenPages, page) ? 'Files' : page),
+    maybeActiveBranch: branch =>
+      hiddenPages.includes('Branches') ? Option.none() : branch,
+  })
+
 export const init: Runtime.ApplicationInit<Model, Message> = () => ({
   model: initialModel,
   commands: [
     LoadWorkspace(),
     LoadSidebarWidth(),
+    LoadHiddenPages(),
     LoadNavigation(),
     LoadTwinReports(),
     SyncCloudflareCredentials({

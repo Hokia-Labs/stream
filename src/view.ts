@@ -20,9 +20,11 @@ import {
   GroupBy,
   LaunchScope,
   Modal,
+  OptionalPage,
   Requirement,
   RunView,
   downstream,
+  isPageHidden,
   stageNames,
   validCloudflareAccountId,
   validCloudflareToken,
@@ -440,37 +442,41 @@ const sidebar = (model: Model, h: H): Html =>
             [h.AriaLabel('Workspace navigation')],
             [
               sidebarInbox(model, h),
-              ...pages.map(item =>
-                h.keyed('button')(
-                  item.page,
-                  [
-                    h.Type('button'),
-                    h.Class(
-                      `nav-item ${model.page === item.page ? 'active' : ''}`,
-                    ),
-                    h.OnClick(Message.SelectedPage({ page: item.page })),
-                    h.Title(item.page),
-                    h.AriaCurrent(model.page === item.page ? 'page' : 'false'),
-                  ],
-                  [
-                    icon(item.icon, h),
+              ...pages
+                .filter(item => !isPageHidden(model.hiddenPages, item.page))
+                .map(item =>
+                  h.keyed('button')(
                     item.page,
-                    item.page === 'Runs' &&
-                    model.workspace.runs.some(run => run.status === 'Running')
-                      ? h.span(
-                          [h.Class('nav-count')],
-                          [
-                            String(
-                              model.workspace.runs.filter(
-                                run => run.status === 'Running',
-                              ).length,
-                            ),
-                          ],
-                        )
-                      : h.empty,
-                  ],
+                    [
+                      h.Type('button'),
+                      h.Class(
+                        `nav-item ${model.page === item.page ? 'active' : ''}`,
+                      ),
+                      h.OnClick(Message.SelectedPage({ page: item.page })),
+                      h.Title(item.page),
+                      h.AriaCurrent(
+                        model.page === item.page ? 'page' : 'false',
+                      ),
+                    ],
+                    [
+                      icon(item.icon, h),
+                      item.page,
+                      item.page === 'Runs' &&
+                      model.workspace.runs.some(run => run.status === 'Running')
+                        ? h.span(
+                            [h.Class('nav-count')],
+                            [
+                              String(
+                                model.workspace.runs.filter(
+                                  run => run.status === 'Running',
+                                ).length,
+                              ),
+                            ],
+                          )
+                        : h.empty,
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -652,32 +658,36 @@ const topbar = (model: Model, h: H): Html =>
             ],
             [icon('search', h), 'Jump to…', h.kbd([], ['⌘K'])],
           ),
-          h.label(
-            [h.Class('branch-field')],
-            [
-              h.span([h.Class('branch-field-label')], ['Branch:']),
-              h.select(
+          isPageHidden(model.hiddenPages, 'Branches')
+            ? h.empty
+            : h.label(
+                [h.Class('branch-field')],
                 [
-                  h.Class('branch-select'),
-                  h.AriaLabel('Active branch'),
-                  h.Value(Option.getOrElse(model.maybeActiveBranch, () => '')),
-                  h.OnChange(id => Message.SelectedBranch({ id })),
-                ],
-                [
-                  h.option([h.Value('')], ['Base']),
-                  ...model.workspace.branches
-                    .filter(branch => branch.status === 'Draft')
-                    .map(branch =>
-                      h.keyed('option')(
-                        branch.id,
-                        [h.Value(branch.id)],
-                        [branch.title],
+                  h.span([h.Class('branch-field-label')], ['Branch:']),
+                  h.select(
+                    [
+                      h.Class('branch-select'),
+                      h.AriaLabel('Active branch'),
+                      h.Value(
+                        Option.getOrElse(model.maybeActiveBranch, () => ''),
                       ),
-                    ),
+                      h.OnChange(id => Message.SelectedBranch({ id })),
+                    ],
+                    [
+                      h.option([h.Value('')], ['Base']),
+                      ...model.workspace.branches
+                        .filter(branch => branch.status === 'Draft')
+                        .map(branch =>
+                          h.keyed('option')(
+                            branch.id,
+                            [h.Value(branch.id)],
+                            [branch.title],
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
           h.span(
             [
               h.Class(
@@ -4720,10 +4730,37 @@ const modalContent = (model: Model, h: H): Html =>
       h.div(
         [h.Class('settings-dialog')],
         [
+          h.h2([h.Id('dialog-title')], ['Settings']),
+          h.section(
+            [h.Class('settings-section')],
+            [
+              h.h3([], ['Pages']),
+              h.p(
+                [h.Class('subtitle')],
+                ['Hide pages you don’t use. Saved in this browser.'],
+              ),
+              ...OptionalPage.literals.map(page =>
+                h.keyed('label')(
+                  page,
+                  [h.Class('field-checkbox')],
+                  [
+                    h.input([
+                      h.Type('checkbox'),
+                      h.Checked(!isPageHidden(model.hiddenPages, page)),
+                      h.OnClick(Message.ToggledPageVisibility({ page })),
+                    ]),
+                    page === 'Branches'
+                      ? 'Branches, including the branch switch'
+                      : page,
+                  ],
+                ),
+              ),
+            ],
+          ),
           h.div(
             [h.Class('settings-head')],
             [
-              h.h2([h.Id('dialog-title')], ['Cloudflare Workers AI']),
+              h.h3([], ['Cloudflare Workers AI']),
               model.hasStoredCloudflareToken
                 ? h.span(
                     [h.Class('token-status saved'), h.Role('status')],

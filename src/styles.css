@@ -7896,6 +7896,12 @@ button.graph-cluster-head:hover {
   border: 1px solid var(--ink);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.12);
 }
+.settings-section {
+  margin: 16px 0 24px;
+}
+.settings-section .field-checkbox {
+  padding: 6px 0;
+}
 .settings-head {
   display: flex;
   align-items: center;

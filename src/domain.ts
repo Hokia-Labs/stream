@@ -12,6 +12,12 @@ export const Page = Schema.Literals([
   'Branches',
 ])
 export type Page = typeof Page.Type
+export const OptionalPage = Schema.Literals(['Branches', 'Agent fleet', 'Runs'])
+export type OptionalPage = typeof OptionalPage.Type
+export const isPageHidden = (
+  hiddenPages: ReadonlyArray<OptionalPage>,
+  page: Page,
+): boolean => hiddenPages.some(hidden => hidden === page)
 export const SortKey = Schema.Literals([
   'Artifact',
   'Type',

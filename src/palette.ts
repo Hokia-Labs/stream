@@ -1,5 +1,6 @@
 import { Array, Order } from 'effect'
 
+import { isPageHidden } from './domain'
 import type { Page } from './domain'
 import type { Model } from './main'
 import { Message } from './message'
@@ -113,25 +114,39 @@ export const paletteItems = (
   query: string,
 ): ReadonlyArray<PaletteItem> => {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const isHidden = (page: Page): boolean =>
+    isPageHidden(model.hiddenPages, page)
+  const pageActions: Readonly<Record<string, Page>> = {
+    'action-launch': 'Runs',
+    'action-agent': 'Agent fleet',
+    'action-branch': 'Branches',
+  }
   const items: ReadonlyArray<PaletteItem> = [
     ...contextualActions(model, requirements),
-    ...actions,
-    ...model.workspace.runs.slice(0, 3).map((run): PaletteItem => ({
-      id: `recent-${run.id}`,
-      group: 'Recent',
-      label: `${run.id} · ${run.title}`,
-      path: `Runs › ${run.status}`,
-      hint: '',
-      message: Message.SelectedRun({ id: run.id }),
-    })),
-    ...pageShortcuts.map(({ page, key }): PaletteItem => ({
-      id: `page-${page}`,
-      group: 'Go to',
-      label: page,
-      path: 'Pages',
-      hint: `G ${key}`,
-      message: Message.SelectedPage({ page }),
-    })),
+    ...actions.filter(item => {
+      const page = pageActions[item.id]
+      return page === undefined || !isHidden(page)
+    }),
+    ...(isHidden('Runs') ? [] : model.workspace.runs)
+      .slice(0, 3)
+      .map((run): PaletteItem => ({
+        id: `recent-${run.id}`,
+        group: 'Recent',
+        label: `${run.id} · ${run.title}`,
+        path: `Runs › ${run.status}`,
+        hint: '',
+        message: Message.SelectedRun({ id: run.id }),
+      })),
+    ...pageShortcuts
+      .filter(({ page }) => !isHidden(page))
+      .map(({ page, key }): PaletteItem => ({
+        id: `page-${page}`,
+        group: 'Go to',
+        label: page,
+        path: 'Pages',
+        hint: `G ${key}`,
+        message: Message.SelectedPage({ page }),
+      })),
     ...requirements.map((item): PaletteItem => ({
       id: `artifact-${item.id}`,
       group: 'Go to',
@@ -140,14 +155,16 @@ export const paletteItems = (
       hint: '',
       message: Message.SelectedNode({ id: item.id }),
     })),
-    ...model.workspace.agents.map((agent): PaletteItem => ({
-      id: `agent-${agent.id}`,
-      group: 'Go to',
-      label: `Configure ${agent.name}`,
-      path: `Agent fleet › Stage ${agent.wave + 1}`,
-      hint: '',
-      message: Message.ClickedEditAgent({ id: agent.id }),
-    })),
+    ...(isHidden('Agent fleet') ? [] : model.workspace.agents).map(
+      (agent): PaletteItem => ({
+        id: `agent-${agent.id}`,
+        group: 'Go to',
+        label: `Configure ${agent.name}`,
+        path: `Agent fleet › Stage ${agent.wave + 1}`,
+        hint: '',
+        message: Message.ClickedEditAgent({ id: agent.id }),
+      }),
+    ),
   ]
   const needle = query.trim().toLowerCase()
   const rank = (item: PaletteItem): number => {
