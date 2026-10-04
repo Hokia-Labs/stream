@@ -17,6 +17,7 @@ import {
   SortKey,
   TwinFocus,
   TwinOverlay,
+  TwinReport,
   TwinReviewItem,
   TwinRevision,
   Workspace,
@@ -190,6 +191,10 @@ export const Message = defineMessageUnion({
   ClickedInstallTwinRevision: { revision: TwinRevision },
   ToggledTwinReview: { item: TwinReviewItem },
   ClickedGenerateTwinPackage: {},
+  DraftedTwinReports: { files: Schema.Array(TwinReport) },
+  SelectedTwinReport: { name: Schema.String },
+  EditedTwinReport: { name: Schema.String, markdown: Schema.String },
+  ClickedDownloadTwinPackage: {},
   GeneratedTwinPackage: {
     name: Schema.String,
     digest: Schema.String,

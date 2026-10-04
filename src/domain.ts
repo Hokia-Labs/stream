@@ -101,6 +101,12 @@ export const TwinPackage = Schema.Struct({
   isSent: Schema.Boolean,
 })
 export type TwinPackage = typeof TwinPackage.Type
+export const TwinReport = Schema.Struct({
+  name: Schema.String,
+  content: Schema.String,
+  isEdited: Schema.Boolean,
+})
+export type TwinReport = typeof TwinReport.Type
 export const GraphPreviewTab = Schema.Literals(['Inputs', 'Output', 'Settings'])
 export type GraphPreviewTab = typeof GraphPreviewTab.Type
 export const GroupBy = Schema.Literals(['None', 'Status', 'Owner', 'Type'])

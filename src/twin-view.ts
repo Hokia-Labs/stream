@@ -36,6 +36,83 @@ const twinSpec = CustomElement.define({
   },
 })
 
+const reportEditorSpec = CustomElement.define({
+  tag: 'stream-report-editor',
+  properties: {
+    reportName: Schema.String,
+    markdown: Schema.String,
+  },
+  events: {
+    'report-input': Schema.Struct({
+      name: Schema.String,
+      markdown: Schema.String,
+    }),
+  },
+})
+
+const reportLabel = (name: string): string =>
+  name.replace(/-PSU-001-Rev[AB]\.md$/, '')
+
+const reportEditor = (model: Model, h: H): Html => {
+  const editor = reportEditorSpec.withMessage(h)
+  const reports = model.twinReports.filter(report =>
+    report.name.endsWith('.md'),
+  )
+  const active =
+    reports.find(report => report.name === model.twinReportTab) ?? reports[0]
+  const editedCount = reports.filter(report => report.isEdited).length
+  return h.div(
+    [h.Class('report-workspace')],
+    [
+      h.div(
+        [h.Class('report-head')],
+        [
+          h.div(
+            [
+              h.Class('segmented run-view-toggle report-tabs'),
+              h.Role('group'),
+              h.AriaLabel('Reports'),
+            ],
+            reports.map(report =>
+              h.keyed('button')(
+                report.name,
+                [
+                  h.Type('button'),
+                  h.Class(
+                    `${report.name === active?.name ? 'active' : ''} ${report.isEdited ? 'edited' : ''}`,
+                  ),
+                  h.AriaPressed(String(report.name === active?.name)),
+                  h.Title(
+                    report.isEdited ? `${report.name} · edited` : report.name,
+                  ),
+                  h.OnClick(Message.SelectedTwinReport({ name: report.name })),
+                ],
+                [reportLabel(report.name)],
+              ),
+            ),
+          ),
+          h.span(
+            [h.Class('muted small-text')],
+            [
+              editedCount > 0
+                ? `${editedCount} edited · edits go into the zip`
+                : 'Drafts · edit before you download',
+            ],
+          ),
+        ],
+      ),
+      active
+        ? editor([
+            h.Class('report-editor'),
+            editor.ReportName(active.name),
+            editor.Markdown(active.content),
+            editor.OnReportInput(detail => Message.EditedTwinReport(detail)),
+          ])
+        : h.empty,
+    ],
+  )
+}
+
 const badgeClass = (status: Requirement['status']): string =>
   status === 'Verified'
     ? 'badge positive'
@@ -133,6 +210,7 @@ export const twinPage = (model: Model, h: H): Html => {
   const isReviewed = model.twinReviewed.length === 3
   const pkg = model.maybeTwinPackage
   const isSent = Option.exists(pkg, item => item.isSent)
+  const hasReports = model.twinReports.length > 0
   const steps: ReadonlyArray<Readonly<{ label: string; done: boolean }>> = [
     {
       label: 'Inspect the aft bay',
@@ -177,15 +255,21 @@ export const twinPage = (model: Model, h: H): Html => {
             h.Disabled(!isReviewed || model.isGeneratingTwinPackage),
             h.Title(
               isReviewed
-                ? 'Generate DO-254 package'
+                ? 'Draft DO-254 reports'
                 : 'Review the impact to generate',
             ),
-            h.OnClick(Message.ClickedGenerateTwinPackage()),
+            h.OnClick(
+              hasReports
+                ? Message.ClickedDownloadTwinPackage()
+                : Message.ClickedGenerateTwinPackage(),
+            ),
           ],
           [
             model.isGeneratingTwinPackage
               ? 'Packaging…'
-              : 'Generate DO-254 package',
+              : hasReports
+                ? 'Download DO-254 package'
+                : 'Draft DO-254 reports',
           ],
         )
   return h.div(
@@ -550,36 +634,65 @@ export const twinPage = (model: Model, h: H): Html => {
                   ),
                   Option.match(pkg, {
                     onNone: () =>
-                      h.div(
-                        [],
-                        [
-                          h.p(
-                            [h.Class('muted small-text')],
+                      hasReports
+                        ? h.div(
+                            [],
                             [
-                              isRevB && isReviewed
-                                ? 'Ready. Generates the updated HRD plus DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports), traceability, SAMPLE analysis, and a SHA-256 manifest as one zip.'
-                                : 'Available after Rev B is placed and all three reviews are checked.',
-                            ],
-                          ),
-                          h.button(
-                            [
-                              h.Type('button'),
-                              h.Class('button primary'),
-                              h.Disabled(
-                                !isRevB ||
-                                  !isReviewed ||
-                                  model.isGeneratingTwinPackage,
+                              reportEditor(model, h),
+                              h.div(
+                                [h.Class('twin-package-actions')],
+                                [
+                                  h.button(
+                                    [
+                                      h.Type('button'),
+                                      h.Class('button primary'),
+                                      h.Disabled(model.isGeneratingTwinPackage),
+                                      h.OnClick(
+                                        Message.ClickedDownloadTwinPackage(),
+                                      ),
+                                    ],
+                                    [
+                                      model.isGeneratingTwinPackage
+                                        ? 'Packaging…'
+                                        : 'Download DO-254 package',
+                                    ],
+                                  ),
+                                ],
                               ),
-                              h.OnClick(Message.ClickedGenerateTwinPackage()),
                             ],
+                          )
+                        : h.div(
+                            [],
                             [
-                              model.isGeneratingTwinPackage
-                                ? 'Packaging…'
-                                : 'Generate DO-254 package',
+                              h.p(
+                                [h.Class('muted small-text')],
+                                [
+                                  isRevB && isReviewed
+                                    ? 'Ready. Drafts the updated HRD and DO-254 data (accomplishment summary, configuration index, verification results, change impact analysis, problem reports) for you to review and edit, then packages them with traceability, SAMPLE analysis, and a SHA-256 manifest as one zip.'
+                                    : 'Available after Rev B is placed and all three reviews are checked.',
+                                ],
+                              ),
+                              h.button(
+                                [
+                                  h.Type('button'),
+                                  h.Class('button primary'),
+                                  h.Disabled(
+                                    !isRevB ||
+                                      !isReviewed ||
+                                      model.isGeneratingTwinPackage,
+                                  ),
+                                  h.OnClick(
+                                    Message.ClickedGenerateTwinPackage(),
+                                  ),
+                                ],
+                                [
+                                  model.isGeneratingTwinPackage
+                                    ? 'Packaging…'
+                                    : 'Draft DO-254 reports',
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
                     onSome: item =>
                       h.div(
                         [h.Class('twin-package')],
@@ -603,6 +716,7 @@ export const twinPage = (model: Model, h: H): Html => {
                               h.dd([h.Class('mono')], [item.files.join(' · ')]),
                             ],
                           ),
+                          reportEditor(model, h),
                           h.div(
                             [h.Class('twin-package-actions')],
                             [
@@ -611,7 +725,7 @@ export const twinPage = (model: Model, h: H): Html => {
                                   h.Type('button'),
                                   h.Class('button outline'),
                                   h.OnClick(
-                                    Message.ClickedGenerateTwinPackage(),
+                                    Message.ClickedDownloadTwinPackage(),
                                   ),
                                 ],
                                 ['Download again'],

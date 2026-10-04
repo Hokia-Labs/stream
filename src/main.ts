@@ -33,6 +33,7 @@ import {
   TwinFocus,
   TwinOverlay,
   TwinPackage,
+  TwinReport,
   TwinReviewItem,
   Workspace,
   agentOutput,
@@ -144,6 +145,8 @@ export const Model = Schema.Struct({
   twinOverlay: TwinOverlay,
   twinReviewed: Schema.Array(TwinReviewItem),
   maybeTwinPackage: Schema.Option(TwinPackage),
+  twinReports: Schema.Array(TwinReport),
+  twinReportTab: Schema.String,
   isGeneratingTwinPackage: Schema.Boolean,
   cloudflareAccountId: Schema.String,
   cloudflareTokenDraft: Schema.String,
@@ -207,6 +210,8 @@ export const initialModel: Model = {
   twinOverlay: 'Shaded',
   twinReviewed: [],
   maybeTwinPackage: Option.none(),
+  twinReports: [],
+  twinReportTab: '',
   isGeneratingTwinPackage: false,
   cloudflareAccountId: '3d275686d20e190931adbada39b35957',
   cloudflareTokenDraft: '',
@@ -577,30 +582,46 @@ const sha256 = async (data: Uint8Array<ArrayBuffer>): Promise<string> => {
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('')
 }
-const GenerateTwinPackage = Command.define('GenerateTwinPackage', {
+const DraftTwinReports = Command.define('DraftTwinReports', {
   args: {
     requirements: Schema.Array(Requirement),
     reviewed: Schema.Array(TwinReviewItem),
   },
-  messages: [Message.GeneratedTwinPackage, Message.FailedTwinPackage],
+  messages: [Message.DraftedTwinReports],
   execute: ({ requirements, reviewed }) =>
+    Effect.sync(() => {
+      const date = new Date().toISOString().slice(0, 10)
+      return Message.DraftedTwinReports({
+        files: [
+          ...twinPackageFiles(requirements, date, reviewed),
+          ...do254Files(requirements, date),
+        ].map(file => ({
+          name: file.name,
+          content: file.content,
+          isEdited: false,
+        })),
+      })
+    }),
+})
+
+const BuildTwinPackage = Command.define('BuildTwinPackage', {
+  args: { files: Schema.Array(TwinReport) },
+  messages: [Message.GeneratedTwinPackage, Message.FailedTwinPackage],
+  execute: ({ files }) =>
     Effect.tryPromise(async () => {
       const now = new Date()
       const encoder = new TextEncoder()
-      const date = now.toISOString().slice(0, 10)
-      const files = [
-        ...twinPackageFiles(requirements, date, reviewed),
-        ...do254Files(requirements, date),
-      ]
       const entries = files.map(file => ({
         name: file.name,
         data: encoder.encode(file.content),
+        isEdited: file.isEdited,
       }))
       const hashes = await Promise.all(
         entries.map(async entry => ({
           name: entry.name,
           bytes: entry.data.length,
           sha256: await sha256(entry.data),
+          editedInStream: entry.isEdited,
         })),
       )
       const manifest = encoder.encode(
@@ -616,7 +637,10 @@ const GenerateTwinPackage = Command.define('GenerateTwinPackage', {
         ),
       )
       const archive = createZip(
-        entries.concat([{ name: 'manifest.json', data: manifest }]),
+        [
+          ...entries.map(entry => ({ name: entry.name, data: entry.data })),
+          { name: 'manifest.json', data: manifest },
+        ],
         now,
       )
       const digest = await sha256(archive)
@@ -2488,6 +2512,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinFocus: () => 'Aft bay',
           twinReviewed: () => [],
           maybeTwinPackage: () => Option.none(),
+          twinReports: () => [],
         }),
         record(writeRequirements(model, updated), `${summary} · Ben Juntilla`),
         `${summary}.`,
@@ -2521,10 +2546,41 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return {
         model: modifyFields(model, { isGeneratingTwinPackage: () => true }),
         commands: [
-          GenerateTwinPackage({ requirements, reviewed: model.twinReviewed }),
+          DraftTwinReports({ requirements, reviewed: model.twinReviewed }),
         ],
       }
     },
+    DraftedTwinReports: ({ files }) => ({
+      model: modifyFields(model, {
+        isGeneratingTwinPackage: () => false,
+        twinReports: () => files,
+        twinReportTab: () =>
+          files.find(file => file.name.endsWith('.md'))?.name ?? '',
+      }),
+    }),
+    SelectedTwinReport: ({ name }) => ({
+      model: modifyFields(model, { twinReportTab: () => name }),
+    }),
+    EditedTwinReport: ({ name, markdown }) => ({
+      model: modifyFields(model, {
+        twinReports: reports =>
+          reports.map(report =>
+            report.name === name && report.content !== markdown
+              ? modifyFields(report, {
+                  content: () => markdown,
+                  isEdited: () => true,
+                })
+              : report,
+          ),
+      }),
+    }),
+    ClickedDownloadTwinPackage: () =>
+      model.twinReports.length === 0 || model.isGeneratingTwinPackage
+        ? { model }
+        : {
+            model: modifyFields(model, { isGeneratingTwinPackage: () => true }),
+            commands: [BuildTwinPackage({ files: model.twinReports })],
+          },
     GeneratedTwinPackage: ({ name, digest, bytes, files }) =>
       persist(
         modifyFields(model, {

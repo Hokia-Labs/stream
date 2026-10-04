@@ -4917,6 +4917,101 @@ body:has(.modal-backdrop) .toast {
   gap: var(--space-3);
   margin: var(--space-3) 0;
 }
+.report-workspace {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.report-tabs button.edited::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  vertical-align: middle;
+}
+stream-report-editor {
+  display: block;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+stream-report-editor:focus-within {
+  border-color: var(--accent);
+}
+.report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+.report-toolbar button {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.report-toolbar button:hover,
+.report-toolbar button:focus-visible {
+  background: var(--surface);
+  color: var(--ink);
+}
+.report-toolbar button[aria-pressed='true'] {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.report-toolbar-separator {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--rule);
+}
+.report-surface {
+  max-height: 560px;
+  overflow: auto;
+  padding: 0 var(--space-4) var(--space-4);
+}
+.report-prose {
+  min-height: 240px;
+  outline: none;
+}
+.report-prose .tableWrapper {
+  overflow-x: auto;
+  margin: 0 0 0.9em;
+}
+.report-prose table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  table-layout: auto;
+}
+.report-prose td p,
+.report-prose th p {
+  margin: 0;
+}
+.report-prose .selectedCell {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
 .twin-empty {
   margin-top: var(--space-4);
   padding: var(--space-5, 32px);

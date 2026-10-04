@@ -27,3 +27,4 @@ const application = Runtime.makeApplication({
 Runtime.run(application)
 
 import('./twin-viewer').catch(() => undefined)
+import('./report-editor').catch(() => undefined)

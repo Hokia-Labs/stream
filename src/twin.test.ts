@@ -70,8 +70,32 @@ describe('digital twin', () => {
     const started = update(reviewed, Message.ClickedGenerateTwinPackage())
     expect(started.commands).toHaveLength(1)
     expect(started.model.isGeneratingTwinPackage).toBe(true)
-    const done = update(
+    const drafted = update(
       started.model,
+      Message.DraftedTwinReports({
+        files: [
+          { name: 'HRD-PSU-001-RevB.md', content: '# HRD', isEdited: false },
+          { name: 'traceability.csv', content: 'ID', isEdited: false },
+        ],
+      }),
+    ).model
+    expect(drafted.twinReportTab).toBe('HRD-PSU-001-RevB.md')
+    const edited = update(
+      drafted,
+      Message.EditedTwinReport({
+        name: 'HRD-PSU-001-RevB.md',
+        markdown: '# HRD edited',
+      }),
+    ).model
+    expect(edited.twinReports[0]).toEqual({
+      name: 'HRD-PSU-001-RevB.md',
+      content: '# HRD edited',
+      isEdited: true,
+    })
+    const downloading = update(edited, Message.ClickedDownloadTwinPackage())
+    expect(downloading.commands).toHaveLength(1)
+    const done = update(
+      downloading.model,
       Message.GeneratedTwinPackage({
         name: 'HRD-PSU-001-RevB-package.zip',
         digest: 'abc',
