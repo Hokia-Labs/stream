@@ -1649,7 +1649,7 @@ const changePanel = (model: Model, h: H): Html => {
         [slotCard(model, 'Cockpit', h), slotCard(model, 'Power', h)],
       ),
       isRevB ? checkPanel(model, h) : h.empty,
-      proposalPanel(model, isUpgraded, isRevB, h),
+      isRevB ? h.empty : proposalPanel(model, isUpgraded, isRevB, h),
     ],
   )
 }
