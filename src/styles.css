@@ -7901,6 +7901,13 @@ button.graph-cluster-head:hover {
 .sync-table .sync-file {
   padding-left: 28px;
 }
+.sync-file .file-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  vertical-align: -3px;
+  color: var(--muted);
+}
 .profile-menu-root {
   position: relative;
 }

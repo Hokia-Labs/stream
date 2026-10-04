@@ -58,6 +58,7 @@ import {
 import {
   doorsLogo,
   doorsPanel,
+  fileIcon,
   jiraLogo,
   jiraPanel,
   syncedWith,
@@ -1741,7 +1742,10 @@ const overview = (model: Model, h: H): Html => {
                         `${group.id}:${file.type}:${file.teamcenter}`,
                         [],
                         [
-                          h.td([h.Class('sync-file')], [file.name]),
+                          h.td(
+                            [h.Class('sync-file')],
+                            [fileIcon(file.type, h), file.name],
+                          ),
                           h.td([h.Class('muted')], [file.type]),
                           h.td([h.Class('mono')], [file.teamcenter]),
                           h.td([h.Class('mono')], [file.stream]),
