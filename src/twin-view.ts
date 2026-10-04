@@ -81,9 +81,9 @@ const twinSpec = CustomElement.define({
   },
 })
 
-const rackSpec = CustomElement.define({
-  tag: 'stream-rack',
-  properties: { rackRevision: TwinRevision },
+const boardSpec = CustomElement.define({
+  tag: 'stream-board',
+  properties: {},
   events: {},
 })
 
@@ -2075,40 +2075,24 @@ const schematicTab = (model: Model, h: H): Html =>
   )
 
 const modelTab = (h: H): Html => {
-  const rack = rackSpec.withMessage(h)
+  const board = boardSpec.withMessage(h)
   return h.div(
     [h.Class('board-review-body')],
     [
-      h.div(
-        [h.Class('board-review-pair')],
-        (['A', 'B'] as const).map(revision =>
-          h.keyed('figure')(
-            revision,
-            [h.Class('board-review-3d')],
-            [
-              h.figcaption(
-                [],
-                [
-                  revision === 'A'
-                    ? 'Rev A · 4 modules, single cold plate'
-                    : 'Rev B · 5 modules, dual cold plate, added module outlined',
-                ],
-              ),
-              rack([
-                h.Class('board-review-canvas'),
-                h.AriaLabel(`3D model of the power assembly, Rev ${revision}`),
-                rack.RackRevision(revision),
-              ]),
-            ],
-          ),
-        ),
-      ),
-      h.p(
-        [h.Class('muted small')],
+      h.figure(
+        [h.Class('board-review-3d')],
         [
-          'Drag to orbit. One module is shown failed (dark), the N−1 case. Colours use the thermal scale.',
+          h.figcaption(
+            [],
+            ['KiCad assemblies, Rev F · Board 1, Board 2, Board 3 from left'],
+          ),
+          board([
+            h.Class('board-review-canvas board-review-assembly'),
+            h.AriaLabel('3D model of the three KiCad board assemblies'),
+          ]),
         ],
       ),
+      h.p([h.Class('muted small')], ['Drag to orbit, scroll to zoom.']),
     ],
   )
 }

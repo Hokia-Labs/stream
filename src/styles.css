@@ -7681,6 +7681,19 @@ button.graph-cluster-head:hover {
 .board-review-canvas {
   height: 300px;
 }
+.board-review-3d {
+  margin: 0;
+  border: 1px solid var(--rule);
+  padding: var(--space-2);
+}
+.board-review-3d figcaption {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.board-review-assembly {
+  height: 440px;
+}
 .schematic-sheet svg {
   width: 100%;
   height: auto;
