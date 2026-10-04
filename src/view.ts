@@ -1677,22 +1677,18 @@ const overview = (model: Model, h: H): Html => {
       pageHeading(
         'Datasets',
         '',
-        h.div(
-          [h.Class('heading-actions')],
-          [
-            syncedWith(
-              [
-                h.img([
-                  h.Src('/teamcenter-logo.png'),
-                  h.Alt('Teamcenter'),
-                  h.Class('tc-logo'),
-                ]),
-              ],
-              h,
-            ),
-          ],
-        ),
+        h.empty,
         h,
+        syncedWith(
+          [
+            h.img([
+              h.Src('/teamcenter-logo.png'),
+              h.Alt('Teamcenter'),
+              h.Class('tc-logo'),
+            ]),
+          ],
+          h,
+        ),
       ),
       h.section(
         [h.Class('panel sync-panel'), h.AriaLabel('Teamcenter datasets')],
@@ -1785,7 +1781,7 @@ const inboxPage = (model: Model, h: H): Html => {
   return h.div(
     [],
     [
-      pageHeading('Inbox', '', syncedWith([jiraLogo(h)], h), h),
+      pageHeading('Inbox', '', h.empty, h, syncedWith([jiraLogo(h)], h)),
       h.section(
         [h.Class('panel attention-panel')],
         [
@@ -1956,8 +1952,9 @@ const requirementsPage = (model: Model, h: H): Html => {
       pageHeading(
         'Requirements',
         '',
-        h.div([h.Class('heading-actions')], [syncedWith([doorsLogo(h)], h)]),
+        h.empty,
         h,
+        syncedWith([doorsLogo(h)], h),
       ),
       h.section(
         [h.Class('panel')],

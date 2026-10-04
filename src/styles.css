@@ -8320,6 +8320,15 @@ p.launch-estimate {
 .tool-head .tc-lockup {
   padding: 0;
 }
+.page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+}
+.page-title-row .tc-lockup {
+  padding: 0;
+}
 .tool-meta {
   display: flex;
   flex-wrap: wrap;
