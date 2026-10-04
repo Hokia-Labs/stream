@@ -1,6 +1,6 @@
 import { Array, Order } from 'effect'
 
-import type { GraphScope, Requirement } from './domain'
+import type { Requirement } from './domain'
 
 export type ArtifactKind = Requirement['kind']
 
@@ -92,9 +92,6 @@ const reach = (
   return seen
 }
 
-export const scopeHops = (scope: GraphScope): number =>
-  scope === '1 hop' ? 1 : scope === '2 hops' ? 2 : Number.POSITIVE_INFINITY
-
 export const traceSet = (
   index: GraphIndex,
   id: string,
@@ -107,21 +104,10 @@ export const traceSet = (
 
 export const focusItems = (
   items: ReadonlyArray<Requirement>,
-  index: GraphIndex,
   selected: string,
-  scope: GraphScope,
   hiddenKinds: ReadonlyArray<ArtifactKind>,
-): ReadonlyArray<Requirement> => {
-  const inScope =
-    selected && index.byId.has(selected) && scope !== 'All'
-      ? traceSet(index, selected, scopeHops(scope))
-      : undefined
-  return items.filter(
-    item =>
-      (!inScope || inScope.has(item.id)) &&
-      (item.id === selected || !hiddenKinds.includes(item.kind)),
-  )
-}
+): ReadonlyArray<Requirement> =>
+  items.filter(item => item.id === selected || !hiddenKinds.includes(item.kind))
 
 export const hiddenNeighbours = (
   index: GraphIndex,

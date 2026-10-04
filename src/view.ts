@@ -16,7 +16,6 @@ import {
   AgentWave,
   ArtifactField,
   ExecutionMode,
-  GraphScope,
   GraphView,
   GroupBy,
   LaunchScope,
@@ -734,13 +733,7 @@ const graphScene = (model: Model, compact: boolean): GraphScene => {
   const selected = Option.getOrElse(model.maybeSelectedNode, () => '')
   const visible = compact
     ? items
-    : focusItems(
-        items,
-        index,
-        selected,
-        model.graphScope,
-        model.hiddenGraphKinds,
-      )
+    : focusItems(items, selected, model.hiddenGraphKinds)
   return {
     index,
     visible,
@@ -1138,38 +1131,7 @@ const graphToolbar = (model: Model, scene: GraphScene, h: H): Html => {
         ],
       ),
       model.graphView === 'Graph'
-        ? h.div(
-            [h.Class('graph-toolbar-group')],
-            [
-              h.span([h.Class('mono muted small-text')], ['TRACE']),
-              h.div(
-                [
-                  h.Class('segmented run-view-toggle'),
-                  h.Role('group'),
-                  h.AriaLabel('Trace depth around the selected artifact'),
-                ],
-                GraphScope.literals.map(scope =>
-                  h.keyed('button')(
-                    scope,
-                    [
-                      h.Type('button'),
-                      h.AriaPressed(
-                        model.graphScope === scope ? 'true' : 'false',
-                      ),
-                      h.Class(model.graphScope === scope ? 'active' : ''),
-                      h.Title(
-                        scene.selected
-                          ? `Show ${scope === 'All' ? 'the whole trace' : scope} up and downstream of ${scene.selected}`
-                          : 'Select an artifact to focus its trace',
-                      ),
-                      h.OnClick(Message.SelectedGraphScope({ scope })),
-                    ],
-                    [scope],
-                  ),
-                ),
-              ),
-            ],
-          )
+        ? h.empty
         : h.button(
             [
               h.Type('button'),

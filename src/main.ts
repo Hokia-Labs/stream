@@ -23,7 +23,6 @@ import {
   Execution,
   ExecutionMode,
   GraphPreviewTab,
-  GraphScope,
   GraphView,
   GroupBy,
   Modal,
@@ -162,7 +161,6 @@ export const Model = Schema.Struct({
   pauseAfter: Schema.Array(Schema.Number),
   graphPreviewTab: GraphPreviewTab,
   graphView: GraphView,
-  graphScope: GraphScope,
   graphQuery: Schema.String,
   hiddenGraphKinds: Schema.Array(ArtifactKind),
   isMatrixGapsOnly: Schema.Boolean,
@@ -248,7 +246,6 @@ export const initialModel: Model = {
   pauseAfter: [],
   graphPreviewTab: 'Output',
   graphView: 'Graph',
-  graphScope: 'All',
   graphQuery: '',
   hiddenGraphKinds: [],
   isMatrixGapsOnly: false,
@@ -2684,16 +2681,6 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     SelectedGraphView: ({ view }) => ({
       model: modifyFields(model, { graphView: () => view }),
     }),
-    SelectedGraphScope: ({ scope }) =>
-      Option.match(model.maybeSelectedNode, {
-        onNone: () => ({
-          model: modifyFields(model, { graphScope: () => scope }),
-        }),
-        onSome: id => ({
-          model: modifyFields(model, { graphScope: () => scope }),
-          commands: [RevealGraphNode({ id })],
-        }),
-      }),
     UpdatedGraphQuery: ({ value }) => ({
       model: modifyFields(model, { graphQuery: () => value }),
     }),

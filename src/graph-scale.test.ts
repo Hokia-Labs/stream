@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { seedWorkspace } from './domain'
 import {
   cardLayout,
-  cardLimit,
   focusItems,
   graphIndex,
   matrixRows,
@@ -14,14 +13,6 @@ import {
 describe('scalable systems graph', () => {
   const items = stressRequirements(2000)
   const index = graphIndex(items)
-
-  it('keeps a focused trace small in a 2,000-artifact workspace', () => {
-    const selected = items[400]?.id ?? ''
-    const focused = focusItems(items, index, selected, '2 hops', [])
-    expect(focused.map(item => item.id)).toContain(selected)
-    expect(focused.length).toBeLessThan(cardLimit)
-    expect(focusItems(items, index, '', '2 hops', [])).toHaveLength(2000)
-  })
 
   it('lays out 2,000 artifacts into system clusters quickly', () => {
     const start = performance.now()
@@ -36,7 +27,7 @@ describe('scalable systems graph', () => {
 
   it('hides filtered kinds but keeps the selected artifact', () => {
     const selected = items.find(item => item.kind === 'Test')?.id ?? ''
-    const focused = focusItems(items, index, selected, 'All', ['Test'])
+    const focused = focusItems(items, selected, ['Test'])
     expect(
       focused.filter(item => item.kind === 'Test').map(item => item.id),
     ).toEqual([selected])
