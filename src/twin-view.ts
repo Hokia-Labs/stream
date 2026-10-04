@@ -902,17 +902,15 @@ const checkPanel = (model: Model, h: H): Html => {
               [
                 h.p(
                   [h.Class('muted small-text')],
-                  [
-                    'Rev B is installed. Check every revised requirement against it and find what needs re-verifying.',
-                  ],
+                  ['Requirement check did not finish.'],
                 ),
                 h.button(
                   [
                     h.Type('button'),
-                    h.Class('button primary small'),
+                    h.Class('button outline small'),
                     h.OnClick(Message.ClickedRunTwinCheck()),
                   ],
-                  ['Check requirements against Rev B'],
+                  ['Run again'],
                 ),
               ],
             ),

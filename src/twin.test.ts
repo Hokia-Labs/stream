@@ -156,10 +156,8 @@ describe('digital twin', () => {
       ),
     ).toBe(true)
 
-    const running = update(approved, Message.ClickedRunTwinCheck())
-    expect(running.model.twinCheck).toBe('Running')
-    expect(running.commands).toHaveLength(1)
-    const checked = update(running.model, Message.CompletedTwinCheck()).model
+    expect(approved.twinCheck).toBe('Running')
+    const checked = update(approved, Message.CompletedTwinCheck()).model
     expect(checked.twinCheck).toBe('Done')
     const reset = update(checked, Message.ClickedResetTwin()).model
     expect(twinChanges(reset.workspace.requirements)).toHaveLength(0)

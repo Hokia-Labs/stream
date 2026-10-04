@@ -3021,7 +3021,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         revision === 'B'
           ? `Power assembly Rev B placed in the systems model · ${count} artifacts revised`
           : `Power assembly reverted to Rev A · ${count} artifacts restored`
-      return persist(
+      const installed = persist(
         modifyFields(model, {
           twinFocus: () => 'Aft bay',
           twinProposal: () =>
@@ -3030,7 +3030,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               : isAvionicsUpgraded(updated)
                 ? 'Pending'
                 : 'None',
-          twinCheck: () => 'Not run',
+          twinCheck: () => (revision === 'B' ? 'Running' : 'Not run'),
           twinReviewed: () => [],
           maybeTwinPackage: () => Option.none(),
           twinReports: () => [],
@@ -3042,6 +3042,12 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ),
         `${summary}.`,
       )
+      return revision === 'B'
+        ? {
+            ...installed,
+            commands: [...(installed.commands ?? []), WaitTwinCheck()],
+          }
+        : installed
     },
     ClickedDraftTwinProposal: () => {
       const requirements = workingRequirements(model)
