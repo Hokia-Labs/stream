@@ -8354,6 +8354,10 @@ p.launch-estimate {
   margin-bottom: 12px;
 }
 .twin-head-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
   min-width: 0;
 }
 .twin-head .eyebrow {
@@ -8435,10 +8439,11 @@ p.launch-estimate {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-left: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
+  white-space: nowrap;
 }
 .twin-life-stage:first-child {
   border-left: 0;
@@ -8453,6 +8458,7 @@ p.launch-estimate {
 }
 .twin-life-meta {
   overflow: hidden;
+  color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
   text-overflow: ellipsis;

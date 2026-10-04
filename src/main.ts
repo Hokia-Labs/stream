@@ -78,6 +78,7 @@ import {
   requirementChecks,
   seedTwinArtifacts,
   signoffTitle,
+  stampHrdSignoff,
   suggestedPart,
   swapTwinAvionics,
   twinCatalog,
@@ -3133,17 +3134,34 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       ) {
         return { model }
       }
-      const summary = `${signoffTitle(item)} ${model.twinReviewed.includes(item) ? 'sign-off revoked' : 'signed off'}`
-      return persist(
+      const isSigned = !model.twinReviewed.includes(item)
+      const summary = `${signoffTitle(item)} ${isSigned ? 'signed off' : 'sign-off revoked'}`
+      const token = model.twinReportSaveToken + 1
+      const result = persist(
         modifyFields(model, {
           twinReviewed: reviewed =>
-            reviewed.includes(item)
-              ? reviewed.filter(value => value !== item)
-              : reviewed.concat([item]),
+            isSigned
+              ? reviewed.concat([item])
+              : reviewed.filter(value => value !== item),
+          twinReports: reports =>
+            reports.map(report =>
+              report.name.startsWith('HRD-')
+                ? modifyFields(report, {
+                    content: content =>
+                      stampHrdSignoff(content, item, isSigned),
+                  })
+                : report,
+            ),
+          twinReportSync: () => 'Saving',
+          twinReportSaveToken: () => token,
         }),
         record(model.workspace, `${summary} · Dakota Edwards`),
         `${summary}.`,
       )
+      return {
+        ...result,
+        commands: [...(result.commands ?? []), WaitTwinReportSave({ token })],
+      }
     },
     ClickedGenerateTwinPackage: () => {
       const requirements = workingRequirements(model)

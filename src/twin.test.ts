@@ -19,6 +19,7 @@ import {
   loadBudget,
   requirementChecks,
   seedTwinArtifacts,
+  stampHrdSignoff,
   swapTwinAvionics,
   teamcenterSync,
   twinChanges,
@@ -337,5 +338,21 @@ describe('teamcenterSync', () => {
     expect(
       pending[2]?.files.every(file => file.state === 'Awaiting EE approval'),
     ).toBe(true)
+  })
+
+  it('stamps and clears HRD sign-off rows', () => {
+    const doc = [
+      '# HRD',
+      'Date: 2026-10-04',
+      '## 12. Review & sign-off',
+      '| Thermal analysis | | | |',
+      '| Customer | | | |',
+    ].join(String.fromCharCode(10))
+    const signed = stampHrdSignoff(doc, 'Thermal', true)
+    expect(signed).toContain(
+      '| Thermal analysis | Dakota Edwards | Signed in Stream | 2026-10-04 |',
+    )
+    expect(signed).toContain('| Customer | | | |')
+    expect(stampHrdSignoff(signed, 'Thermal', false)).toBe(doc)
   })
 })

@@ -938,6 +938,36 @@ export const twinSignoffs: ReadonlyArray<
   { item: 'Mechanical', title: 'Mechanical analysis', role: 'Structures' },
 ]
 
+const hrdSignoffRole: Readonly<Record<TwinReviewItem, string>> = {
+  Requirements: 'Responsible engineer',
+  Thermal: 'Thermal analysis',
+  Mechanical: 'Structures',
+}
+
+export const stampHrdSignoff = (
+  content: string,
+  item: TwinReviewItem,
+  isSigned: boolean,
+): string => {
+  const start = content.indexOf('## 12. Review & sign-off')
+  if (start < 0) {
+    return content
+  }
+  const role = hrdSignoffRole[item]
+  const date = /Date: (\d{4}-\d{2}-\d{2})/.exec(content)?.[1] ?? ''
+  const row = isSigned
+    ? `| ${role} | Dakota Edwards | Signed in Stream | ${date} |`
+    : `| ${role} | | | |`
+  return (
+    content.slice(0, start) +
+    content
+      .slice(start)
+      .split('\n')
+      .map(line => (line.startsWith(`| ${role} |`) ? row : line))
+      .join('\n')
+  )
+}
+
 export const signoffTitle = (item: TwinReviewItem): string =>
   twinSignoffs.find(signoff => signoff.item === item)?.title ?? item
 

@@ -1498,58 +1498,29 @@ const changeHeader = (model: Model, h: H): Html => {
   const requirements = model.workspace.requirements
   const isUpgraded = isAvionicsUpgraded(requirements)
   const isRevB = twinRevision(requirements) === 'B'
-  const cockpit = installedPart(requirements, 'Cockpit')
-  const power = installedPart(requirements, 'Power')
   const status = changeStatus(model)
   const action = nextAction(model)
   const title = !isUpgraded
     ? 'Baseline configuration'
     : isRevB
-      ? `Power assembly ${power.id} · Rev ${power.revision}`
-      : `Power assembly ${power.id} Rev ${power.revision} → ${assemblyRevB.id} Rev ${assemblyRevB.revision}`
-  const meta = !isUpgraded
-    ? `Cockpit ${cockpit.id} Rev ${cockpit.revision} · Power ${power.id} Rev ${power.revision}`
-    : `Triggered by cockpit avionics ${cockpit.id} Rev ${cockpit.revision} · ${avionicsRequirementIds.length} requirements revised`
+      ? 'Power assembly Rev B'
+      : 'Power assembly Rev A → Rev B'
   return h.header(
     [h.Class('twin-head')],
     [
       h.div(
         [h.Class('twin-head-main')],
         [
-          h.p(
-            [h.Class('eyebrow')],
-            [isUpgraded ? 'Digital twin · Change' : 'Digital twin'],
-          ),
           h.h1([h.Class('twin-title')], [title]),
-          h.div(
-            [h.Class('twin-head-meta')],
-            [
-              h.span([h.Class(`badge ${status.tone}`)], [status.label]),
-              ...jiraHandoffs(requirements, model.twinProposal).map(ticket =>
-                jiraChip(ticket, h),
-              ),
-              h.span([h.Class('muted')], [meta]),
-            ],
+          h.span([h.Class(`badge ${status.tone}`)], [status.label]),
+          ...jiraHandoffs(requirements, model.twinProposal).map(ticket =>
+            jiraChip(ticket, h),
           ),
         ],
       ),
       h.div(
         [h.Class('twin-head-actions')],
         [
-          isUpgraded
-            ? h.button(
-                [
-                  h.Type('button'),
-                  h.Class('button outline'),
-                  h.OnClick(
-                    Message.ClickedTraceTwinArtifact({
-                      id: avionicsRequirementIds[0] ?? 'REQ-AVN-01',
-                    }),
-                  ),
-                ],
-                ['Trace in graph'],
-              )
-            : h.empty,
           h.button(
             [
               h.Type('button'),
@@ -1569,6 +1540,18 @@ const changeHeader = (model: Model, h: H): Html => {
               h.div(
                 [h.Class('twin-more-menu')],
                 [
+                  h.button(
+                    [
+                      h.Type('button'),
+                      h.Disabled(!isUpgraded),
+                      h.OnClick(
+                        Message.ClickedTraceTwinArtifact({
+                          id: avionicsRequirementIds[0] ?? 'REQ-AVN-01',
+                        }),
+                      ),
+                    ],
+                    ['Trace in graph'],
+                  ),
                   h.button(
                     [
                       h.Type('button'),
@@ -1661,12 +1644,12 @@ const lifecycle = (model: Model, h: H): Html => {
         [
           h.span([h.Class('twin-life-mark'), h.AriaHidden(true)], []),
           h.span(
-            [h.Class('twin-life-text')],
-            [
-              h.span([h.Class('twin-life-label')], [stage.label]),
-              h.span([h.Class('twin-life-meta')], [stage.meta]),
-            ],
+            [h.Class('twin-life-label'), h.Title(stage.meta)],
+            [stage.label],
           ),
+          index === current
+            ? h.span([h.Class('twin-life-meta')], [stage.meta])
+            : h.empty,
         ],
       ),
     ),
