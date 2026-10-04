@@ -179,6 +179,7 @@ export const Message = defineMessageUnion({
   ClosedModal: {},
   DismissedToast: {},
   DismissedStackedToast: { id: Schema.Number },
+  TickedClock: { at: Schema.Number },
   CompletedLoadWorkspace: { workspace: Workspace, restored: Schema.Boolean },
   FailedLoadWorkspace: { error: Schema.String },
   CompletedSaveWorkspace: {},

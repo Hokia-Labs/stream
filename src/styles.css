@@ -8582,13 +8582,14 @@ p.launch-estimate {
 .twin-activity li:last-child {
   border-bottom: 0;
 }
-.twin-activity-dot {
+.twin-activity-time {
   flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--muted);
-  transform: translateY(-1px);
+  margin-left: auto;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.twin-tabs > .twin-tab:last-child {
+  margin-left: auto;
 }
 .twin-derived {
   margin: 12px 0;

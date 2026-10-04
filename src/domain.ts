@@ -273,6 +273,9 @@ export const Workspace = Schema.Struct({
   runs: Schema.Array(Run),
   approvals: Schema.Array(Approval),
   events: Schema.Array(Schema.String),
+  eventTimes: Schema.Array(Schema.Number).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed([])),
+  ),
   branches: Schema.Array(Branch).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
@@ -536,6 +539,7 @@ export const seedWorkspace: Workspace = {
     'Battery pack revision C linked to power requirements',
     'Verification evidence flagged for engineering review',
   ],
+  eventTimes: [],
 }
 
 export const downstream = (

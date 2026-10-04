@@ -1,4 +1,4 @@
-import { Array, Effect, Option, Order, Schema, Stream } from 'effect'
+import { Array, Clock, Effect, Option, Order, Schema, Stream } from 'effect'
 import { Command, Dom, type Runtime, Subscription, type Update } from 'foldkit'
 import * as FoldkitFile from 'foldkit/file'
 import { modifyFields } from 'foldkit/struct'
@@ -119,6 +119,7 @@ export const Model = Schema.Struct({
     }),
   ),
   toastSeq: Schema.Number,
+  clockMs: Schema.Number,
   hasInvalidSubmit: Schema.Boolean,
   maybeLeavingToast: Schema.Option(
     Schema.Struct({ text: Schema.String, token: Schema.Number }),
@@ -218,6 +219,7 @@ export const initialModel: Model = {
   isToastError: false,
   stackedToasts: [],
   toastSeq: 0,
+  clockMs: 0,
   hasInvalidSubmit: false,
   maybeLeavingToast: Option.none(),
   maybeClosingNode: Option.none(),
@@ -1245,8 +1247,11 @@ const replaceRun = (workspace: Workspace, run: Run): Workspace =>
   modifyFields(workspace, {
     runs: runs => runs.map(item => (item.id === run.id ? run : item)),
   })
-const record = (workspace: Workspace, event: string): Workspace =>
-  modifyFields(workspace, { events: events => [event, ...events].slice(0, 60) })
+const record = (at: number, workspace: Workspace, event: string): Workspace =>
+  modifyFields(workspace, {
+    events: events => [event, ...events].slice(0, 60),
+    eventTimes: times => [at, ...times].slice(0, 60),
+  })
 
 const controlCloudflare = (
   model: Model,
@@ -1265,6 +1270,7 @@ const controlCloudflare = (
   const result = persist(
     model,
     record(
+      model.clockMs,
       replaceRun(model.workspace, nextRun),
       `${run.id} · ${operation.toLowerCase()} requested from Pi`,
     ),
@@ -1361,6 +1367,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           storage: () => 'Ready',
         }),
         record(
+          model.clockMs,
           recoverWorkspace(workspace.value),
           'Workspace imported from JSON · local workspace owner',
         ),
@@ -1519,6 +1526,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           maybeSelectedNode: () => Option.none(),
         }),
         record(
+          model.clockMs,
           modifyFields(model.workspace, {
             branches: branches => [branch, ...branches],
             nextId: nextId => nextId + 1,
@@ -1556,6 +1564,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         model,
         record(
+          model.clockMs,
           modifyFields(model.workspace, {
             branches: branches =>
               branches.map(item =>
@@ -1597,6 +1606,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         )
       }
       const workspace = record(
+        model.clockMs,
         modifyFields(model.workspace, {
           requirements: requirements => mergeRequirements(branch, requirements),
           branches: branches =>
@@ -1749,6 +1759,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         status: 'Needs review',
       }
       const workspace = record(
+        model.clockMs,
         modifyFields(
           writeRequirements(
             model,
@@ -1831,6 +1842,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             color: 'mint',
           }
       const workspace = record(
+        model.clockMs,
         modifyFields(model.workspace, {
           agents: agents =>
             existing
@@ -1987,6 +1999,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         model,
         run.status !== synchronized.status || run.wave !== synchronized.wave
           ? record(
+              model.clockMs,
               workspace,
               `${id} · Workers AI stage ${synchronized.wave + 1} · ${synchronized.status.toLowerCase()}`,
             )
@@ -2194,6 +2207,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               : 'Running',
       })
       const workspace = record(
+        model.clockMs,
         modifyFields(replaceRun(model.workspace, nextRun), {
           approvals: approvals =>
             nextRun.status === 'Completed'
@@ -2244,6 +2258,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ? persist(
             model,
             record(
+              model.clockMs,
               replaceRun(
                 model.workspace,
                 modifyFields(run, {
@@ -2274,6 +2289,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       const result = persist(
         model,
         record(
+          model.clockMs,
           replaceRun(model.workspace, resumed),
           `${id} resumed by engineer`,
         ),
@@ -2298,6 +2314,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         ? persist(
             model,
             record(
+              model.clockMs,
               replaceRun(
                 model.workspace,
                 modifyFields(run, {
@@ -2376,7 +2393,13 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       }
       const workspace = staged.reduce(
         (current, item) =>
-          applyDecision(current, item.id, item.decision, item.reason.trim()),
+          applyDecision(
+            model.clockMs,
+            current,
+            item.id,
+            item.decision,
+            item.reason.trim(),
+          ),
         model.workspace,
       )
       return persist(
@@ -2462,6 +2485,9 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
     }),
     DismissedToast: () => ({
       model: modifyFields(model, { maybeToast: () => Option.none() }),
+    }),
+    TickedClock: ({ at }) => ({
+      model: modifyFields(model, { clockMs: () => at }),
     }),
     DismissedStackedToast: ({ id }) => ({
       model: modifyFields(model, {
@@ -2580,6 +2606,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, { selectedArtifactIds: () => [] }),
         record(
+          model.clockMs,
           writeRequirements(model, updated),
           `${summary} · Dakota Edwards`,
         ),
@@ -2625,6 +2652,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, { selectedArtifactIds: () => [] }),
         record(
+          model.clockMs,
           writeRequirements(model, updated),
           `${summary} · Dakota Edwards`,
         ),
@@ -2813,6 +2841,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         model,
         record(
+          model.clockMs,
           writeRequirements(model, requirements.concat(seedTwinArtifacts())),
           'F-35 modular power assembly scenario added · Dakota Edwards',
         ),
@@ -2845,6 +2874,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinCheck: () => 'Not run',
         }),
         record(
+          model.clockMs,
           writeRequirements(model, swapTwinAvionics(requirements)),
           `Cockpit avionics module swapped in · ${avionicsRequirementIds.length} requirements revised · Dakota Edwards`,
         ),
@@ -2896,6 +2926,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                 twinCheck: () => 'Not run',
               }),
               record(
+                model.clockMs,
                 writeRequirements(
                   model,
                   installTwinRevision(requirements, 'A'),
@@ -2924,6 +2955,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinReports: () => [],
         }),
         record(
+          model.clockMs,
           writeRequirements(
             model,
             isAvionicsUpgraded(requirements)
@@ -2968,6 +3000,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinReports: () => [],
         }),
         record(
+          model.clockMs,
           writeRequirements(model, updated),
           `${summary} · Dakota Edwards`,
         ),
@@ -2997,6 +3030,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, { twinProposal: () => 'Pending' }),
         record(
+          model.clockMs,
           model.workspace,
           `Power agent proposed MPA Rev B (${proposalPartChanges.length} part changes, ${derivedArtifacts.length} derived requirements) · awaiting ${proposalReviewer.role.toLowerCase()} approval`,
         ),
@@ -3036,6 +3070,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
         : persist(
             modifyFields(model, { maybeTwinPdr: () => Option.some(upload) }),
             record(
+              model.clockMs,
               model.workspace,
               `PDR uploaded for MPA Rev B · ${upload.name}`,
             ),
@@ -3095,6 +3130,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modal: () => Modal.Closed(),
               workspace: workspace =>
                 record(
+                  model.clockMs,
                   workspace,
                   [
                     `MPA Rev B proposal approved · ${proposalReviewer.name}, ${proposalReviewer.role}`,
@@ -3119,6 +3155,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
               modal: () => Modal.Closed(),
             }),
             record(
+              model.clockMs,
               model.workspace,
               `MPA Rev B proposal rejected · ${proposalReviewer.name}, ${proposalReviewer.role}`,
             ),
@@ -3145,6 +3182,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
       return persist(
         modifyFields(model, { twinCheck: () => 'Done' }),
         record(
+          model.clockMs,
           model.workspace,
           `Rev B requirement check · ${passed}/${checks.length} pass · ${pending} artifacts to re-verify`,
         ),
@@ -3170,6 +3208,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           modal: () => Modal.Closed(),
         }),
         record(
+          model.clockMs,
           writeRequirements(model, installTwinRevision(requirements, 'A')),
           'Digital twin reset to the baseline configuration · Dakota Edwards',
         ),
@@ -3209,7 +3248,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
           twinReportSync: () => 'Saving',
           twinReportSaveToken: () => token,
         }),
-        record(model.workspace, `${summary} · Dakota Edwards`),
+        record(model.clockMs, model.workspace, `${summary} · Dakota Edwards`),
         `${summary}.`,
       )
       return {
@@ -3337,6 +3376,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
             Option.some({ name, digest, bytes, files, isSent: false }),
         }),
         record(
+          model.clockMs,
           model.workspace,
           `DO-254 package ${name} generated · Dakota Edwards`,
         ),
@@ -3359,6 +3399,7 @@ const updateMessage = (model: Model, message: Message): UpdateReturn =>
                     Option.some(modifyFields(item, { isSent: () => true })),
                 }),
                 record(
+                  model.clockMs,
                   model.workspace,
                   `DO-254 package ${item.name} marked as sent to the customer · Dakota Edwards`,
                 ),
@@ -3599,6 +3640,7 @@ const launchRun = (model: Model, spec: LaunchSpec): UpdateReturn => {
     })),
   }
   const workspace = record(
+    model.clockMs,
     modifyFields(model.workspace, {
       runs: runs => [run, ...runs],
       nextId: next => next + 1,
@@ -3663,6 +3705,20 @@ const panelSafeZone = [
 ].join(', ')
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
+  clock: entry(
+    {},
+    {
+      modelToDependencies: () => ({}),
+      dependenciesToStream: () =>
+        Stream.tick('1 second').pipe(
+          Stream.mapEffect(() =>
+            Effect.map(Clock.currentTimeMillis, at =>
+              Message.TickedClock({ at }),
+            ),
+          ),
+        ),
+    },
+  ),
   keyboard: entry(
     {
       isModalOpen: Schema.Boolean,
@@ -3957,6 +4013,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
 }))
 
 const applyDecision = (
+  at: number,
   workspace: Workspace,
   id: string,
   decision: 'Approved' | 'Rejected',
@@ -3967,6 +4024,7 @@ const applyDecision = (
     return workspace
   }
   return record(
+    at,
     modifyFields(workspace, {
       approvals: approvals =>
         approvals.map(item =>
@@ -3992,7 +4050,7 @@ const decide = (
     modifyFields(model, {
       stagedDecisions: staged => staged.filter(item => item.id !== id),
     }),
-    applyDecision(model.workspace, id, decision, ''),
+    applyDecision(model.clockMs, model.workspace, id, decision, ''),
     `${decision}. Decision recorded in the audit trail; artifacts are unchanged.`,
   )
 }

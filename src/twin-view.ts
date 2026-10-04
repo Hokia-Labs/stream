@@ -1683,6 +1683,26 @@ const twinActivity = (model: Model): ReadonlyArray<string> => {
   return start < 0 ? [] : events.slice(0, start + 1)
 }
 
+const activityTimeFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+})
+
+const activityTime = (at: number | undefined, h: H): Html =>
+  at === undefined || at === 0
+    ? h.empty
+    : h.span(
+        [
+          h.Class('twin-activity-time mono muted'),
+          h.Title(new Date(at).toISOString()),
+        ],
+        [activityTimeFormat.format(at)],
+      )
+
 const activityPanel = (model: Model, h: H): Html => {
   const events = twinActivity(model)
   return h.section(
@@ -1697,11 +1717,8 @@ const activityPanel = (model: Model, h: H): Html => {
                 String(events.length - index),
                 [],
                 [
-                  h.span(
-                    [h.Class('twin-activity-dot'), h.AriaHidden(true)],
-                    [],
-                  ),
                   h.span([], [event]),
+                  activityTime(model.workspace.eventTimes[index], h),
                 ],
               ),
             ),
