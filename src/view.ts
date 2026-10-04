@@ -109,6 +109,7 @@ const paths: Readonly<Record<string, string>> = {
     '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
   inbox:
     '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/>',
+  twin: '<path d="M16.5 7.5C15.6 4.2 14 2 12 2 9.2 2 7 6.5 7 12s2.2 10 5 10c.3 0 .7-.1 1-.2"/><path d="m15.2 13.7 3.8 1.9-1.9 3.8"/><path d="M19 15.6c-1.8.9-4.3 1.4-7 1.4-5.5 0-10-2.2-10-5s4.5-5 10-5c4.8 0 8.9 1.7 9.8 4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
@@ -200,7 +201,7 @@ const empty = (
 const pages: ReadonlyArray<{ page: Page; icon: string }> = [
   { page: 'Requirements', icon: 'requirements' },
   { page: 'Datasets', icon: 'database' },
-  { page: 'Digital twin', icon: 'box' },
+  { page: 'Digital twin', icon: 'twin' },
   { page: 'Systems graph', icon: 'graph' },
   { page: 'Branches', icon: 'layers' },
   { page: 'Agent fleet', icon: 'agent' },
