@@ -1269,7 +1269,7 @@ h3 {
 }
 .approval-content h3 {
   font-size: var(--text-sm);
-  color: var(--muted);
+  color: var(--ink);
   font-weight: 550;
   margin-bottom: 7px;
 }
@@ -3467,8 +3467,10 @@ tbody tr.is-current td {
 .approval-diff summary {
   cursor: pointer;
   font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--muted);
+}
+.approval-diff summary:hover {
+  color: var(--ink);
 }
 .diff-table {
   margin-top: var(--space-2);
@@ -3697,25 +3699,17 @@ body:has(.modal-backdrop) .toast {
   background: var(--sheet);
 }
 .run-summary-cell,
-.impact-cell {
-  padding: var(--space-2) var(--space-3);
-  border-right: 1px solid var(--rule);
-  min-width: 0;
-}
-.run-summary-cell:last-child,
-.impact-cell:last-child {
+.run-summary-cell:last-child {
   border-right: 0;
 }
-.run-summary dt,
-.impact-strip dt {
+.run-summary dt {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
 }
-.run-summary dd,
-.impact-strip dd {
+.run-summary dd {
   margin: 2px 0 0;
   font-size: var(--text-md);
   font-weight: 600;
@@ -3996,27 +3990,12 @@ body:has(.modal-backdrop) .toast {
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--rule-strong);
-  border-top: 3px solid var(--accent);
+  border-bottom: 1px solid var(--rule);
   background: var(--sheet);
-}
-.review-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex: 1;
-  min-width: 220px;
-}
-.review-progress .progress-track {
-  flex: 1;
-  max-width: 220px;
 }
 .review-actions {
   display: flex;
   gap: var(--space-2);
-}
-.approval-row.viewed .approval-content h3 {
-  color: var(--muted);
 }
 .approval-row.staged-approved {
   box-shadow: inset 3px 0 0 var(--success);
@@ -4024,26 +4003,22 @@ body:has(.modal-backdrop) .toast {
 .approval-row.staged-rejected {
   box-shadow: inset 3px 0 0 var(--error);
 }
-.viewed-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  font-family: var(--font-mono);
-  color: var(--muted);
-}
 .button.danger {
   border: 1px solid var(--error);
   background: var(--error);
   color: var(--accent-fg);
 }
-.impact-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+.impact-line {
   margin: var(--space-2) 0 0;
-  border: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  color: var(--muted);
 }
-.impact-cell.alert dd {
+.impact-line strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.impact-line .alert,
+.impact-line .alert strong {
   color: var(--error);
 }
 .dismiss-reason {
@@ -6401,16 +6376,14 @@ button:disabled,
 .log-line {
   grid-template-columns: 3ch minmax(10ch, 18ch) 1fr;
 }
-.run-summary,
-.impact-strip {
+.run-summary {
   gap: 1px;
   background: var(--rule);
 }
 .run-summary {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
-.run-summary-cell,
-.impact-cell {
+.run-summary-cell {
   border-right: 0;
   background: var(--sheet);
 }
@@ -6420,8 +6393,7 @@ button:disabled,
   }
 }
 @media (max-width: 480px) {
-  .run-summary,
-  .impact-strip {
+  .run-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -1106,23 +1106,30 @@ const approvalDiff = (model: Model, approval: Approval, h: H): Html => {
 
 const impactStrip = (model: Model, approval: Approval, h: H): Html => {
   const counts = impactCounts(model.workspace, approval)
-  const cells: ReadonlyArray<readonly [string, string, boolean]> = [
-    ['Added', counts.hasSnapshot ? String(counts.added) : '—', false],
-    ['Changed', counts.hasSnapshot ? String(counts.changed) : '—', false],
-    ['Removed', counts.hasSnapshot ? String(counts.removed) : '—', false],
-    ['Downstream', String(counts.downstream), false],
-    ['Tests affected', String(counts.tests), false],
-    ['Broken links', String(counts.brokenLinks), counts.brokenLinks > 0],
+  const parts: ReadonlyArray<readonly [number, string, boolean]> = [
+    [counts.hasSnapshot ? counts.added : 0, 'added', false],
+    [counts.hasSnapshot ? counts.changed : 0, 'changed', false],
+    [counts.hasSnapshot ? counts.removed : 0, 'removed', false],
+    [counts.downstream, 'downstream', false],
+    [counts.tests, counts.tests === 1 ? 'test' : 'tests', false],
+    [
+      counts.brokenLinks,
+      counts.brokenLinks === 1 ? 'broken link' : 'broken links',
+      true,
+    ],
   ]
-  return h.dl(
-    [h.Class('impact-strip'), h.AriaLabel(`Impact of ${approval.id}`)],
-    cells.map(([label, value, isAlert]) =>
-      h.keyed('div')(
-        label,
-        [h.Class(isAlert ? 'impact-cell alert' : 'impact-cell')],
-        [h.dt([], [label]), h.dd([h.Class('mono')], [value])],
-      ),
-    ),
+  const shown = parts.filter(([count]) => count > 0)
+  return h.p(
+    [h.Class('impact-line'), h.AriaLabel(`Impact of ${approval.id}`)],
+    Array.isArrayEmpty(shown)
+      ? ['No downstream impact']
+      : shown.flatMap(([count, label, isAlert], index) => [
+          index > 0 ? h.span([h.AriaHidden(true)], [' · ']) : h.empty,
+          h.span(
+            [h.Class(isAlert ? 'alert' : '')],
+            [h.strong([], [String(count)]), ` ${label}`],
+          ),
+        ]),
   )
 }
 
@@ -1132,7 +1139,6 @@ const reviewBar = (
   h: H,
 ): Html => {
   const ids = pending.map(approval => approval.id)
-  const viewed = ids.filter(id => model.viewedApprovalIds.includes(id)).length
   const staged = model.stagedDecisions.filter(item => ids.includes(item.id))
   const missingReason = staged.some(
     item => item.decision === 'Rejected' && !item.reason.trim(),
@@ -1140,26 +1146,12 @@ const reviewBar = (
   return h.div(
     [h.Class('review-bar'), h.AriaLive('polite')],
     [
-      h.div(
-        [h.Class('review-progress')],
+      h.span(
+        [h.Class('muted small-text')],
         [
-          h.strong([h.Class('mono')], [`${viewed}/${ids.length} reviewed`]),
-          h.div(
-            [h.Class('progress-track')],
-            [
-              h.div([
-                h.Style({
-                  width: `${ids.length ? (viewed / ids.length) * 100 : 0}%`,
-                }),
-              ]),
-            ],
-          ),
-          h.span(
-            [h.Class('muted small-text')],
-            [
-              `${staged.length} pending decision${staged.length === 1 ? '' : 's'}`,
-            ],
-          ),
+          Array.isArrayEmpty(staged)
+            ? 'Approve or dismiss findings, then submit them together.'
+            : `${staged.length} of ${ids.length} decided`,
         ],
       ),
       h.div(
@@ -1167,7 +1159,7 @@ const reviewBar = (
         [
           Array.isArrayEmpty(staged)
             ? h.empty
-            : button('Clear', Message.ClearedReview(), 'ghost small', h),
+            : button('Clear', Message.ClearedReview(), 'outline small', h),
           h.button(
             [
               h.Type('button'),
@@ -1177,12 +1169,6 @@ const reviewBar = (
             ],
             [icon('check', h), `Submit review (${staged.length})`],
           ),
-          Array.isArrayEmpty(staged)
-            ? h.span(
-                [h.Class('muted small-text')],
-                ['Approve or dismiss at least one finding to submit.'],
-              )
-            : h.empty,
         ],
       ),
     ],
@@ -1224,7 +1210,6 @@ const approvals = (
               ),
             ],
             [
-              h.span([h.Class('review-icon')], [icon('alert', h)]),
               h.div(
                 [h.Class('approval-content')],
                 [
@@ -1286,26 +1271,11 @@ const approvals = (
                 ? h.div(
                     [h.Class('approval-actions')],
                     [
-                      h.label(
-                        [h.Class('viewed-toggle')],
-                        [
-                          h.input([
-                            h.Type('checkbox'),
-                            h.Checked(isViewed),
-                            h.OnChange(() =>
-                              Message.ToggledApprovalViewed({
-                                id: approval.id,
-                              }),
-                            ),
-                          ]),
-                          'Viewed',
-                        ],
-                      ),
                       h.button(
                         [
                           h.Type('button'),
                           h.Class(
-                            `button small ${maybeStaged?.decision === 'Rejected' ? 'danger' : 'ghost'}`,
+                            `button small ${maybeStaged?.decision === 'Rejected' ? 'danger' : 'outline'}`,
                           ),
                           h.AriaPressed(
                             String(maybeStaged?.decision === 'Rejected'),
