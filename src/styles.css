@@ -6695,3 +6695,13 @@ button:disabled,
     display: none;
   }
 }
+
+.workspace-avatar.has-logo {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.workspace-avatar.has-logo img {
+  display: block;
+  width: 92%;
+  height: auto;
+}

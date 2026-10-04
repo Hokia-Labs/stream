@@ -406,7 +406,10 @@ const workspaceMenu = (model: Model, h: H): Html =>
           h.OnClick(Message.ToggledWorkspaceMenu()),
         ],
         [
-          h.span([h.Class('workspace-avatar')], ['M']),
+          h.span(
+            [h.Class('workspace-avatar has-logo')],
+            [h.img([h.Src('/moneywell-mark.webp'), h.Alt('')])],
+          ),
           h.div(
             [],
             [
@@ -431,7 +434,10 @@ const workspaceMenu = (model: Model, h: H): Html =>
                   h.OnClick(Message.ClosedWorkspaceMenu()),
                 ],
                 [
-                  h.span([h.Class('workspace-avatar small')], ['M']),
+                  h.span(
+                    [h.Class('workspace-avatar small has-logo')],
+                    [h.img([h.Src('/moneywell-mark.webp'), h.Alt('')])],
+                  ),
                   h.strong(
                     [h.Class('org-name')],
                     [currentOrg.name, tenantBadge(currentOrg.tenant, h)],
