@@ -1672,9 +1672,6 @@ const lifecycle = (model: Model, h: H): Html => {
             [h.Class('twin-life-label'), h.Title(stage.hint ?? stage.meta)],
             [stage.label],
           ),
-          index === current
-            ? h.span([h.Class('twin-life-meta')], [stage.meta])
-            : h.empty,
         ],
       ),
     ),

@@ -8492,13 +8492,6 @@ p.launch-estimate {
 .twin-life-label {
   font-weight: 600;
 }
-.twin-life-meta {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 11px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 .twin-life-mark {
   flex: none;
   display: grid;
