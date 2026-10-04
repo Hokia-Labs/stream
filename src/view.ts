@@ -4141,17 +4141,19 @@ const cloudflareCredentialsPanel = (model: Model, h: H): Html => {
               Option.match(model.maybeCloudflareTest, {
                 onNone: () => h.empty,
                 onSome: test =>
-                  h.span(
-                    [
-                      h.Class(`credentials-result ${test.state.toLowerCase()}`),
-                      h.Role('status'),
-                    ],
-                    [
-                      test.state === 'Testing'
-                        ? 'Testing…'
-                        : `${test.state === 'Passed' ? 'Passed' : 'Failed'}${test.latencyMs ? ` · ${(test.latencyMs / 1000).toFixed(1)} s` : ''} — ${test.detail}`,
-                    ],
-                  ),
+                  test.state === 'Testing'
+                    ? h.empty
+                    : h.span(
+                        [
+                          h.Class(
+                            `credentials-result ${test.state.toLowerCase()}`,
+                          ),
+                          h.Role('status'),
+                        ],
+                        [
+                          `${test.state === 'Passed' ? 'Passed' : 'Failed'}${test.latencyMs ? ` · ${(test.latencyMs / 1000).toFixed(1)} s` : ''} — ${test.detail}`,
+                        ],
+                      ),
               }),
             ],
           ),
